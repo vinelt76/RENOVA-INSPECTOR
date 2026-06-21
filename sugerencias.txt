@@ -1,0 +1,351 @@
+
+---
+name: Estructura y tokens
+overview: Primero dejar el repo bien estructurado y documentado (forma del proyecto + tokens). Los pasos grandes de lógica y código vienen después, en sesiones pair contigo + Claude.
+todos:
+  - id: cleanup-docs
+    content: Archivar idea preliminar.md; crear specs/flujo_inspeccion.md; corregir inconsistencias en implementation_plan.md; crear STATUS.md
+    status: pending
+  - id: create-adrs
+    content: Crear borradores decisions/0003-jwt-offline.md y 0004-catalog-sync.md (tú validas antes de commitear)
+    status: pending
+  - id: scaffold-repo
+    content: Crear árbol backend/ y mobile/ vacío según CLAUDE.md + pyproject.toml + .gitignore
+    status: pending
+  - id: cursor-config
+    content: Agregar .cursorignore + reglas .cursor/rules/ por capa
+    status: pending
+isProject: false
+---
+
+# Estructura del proyecto y reducción de tokens
+
+## Fase actual: dejar la forma del proyecto lista
+
+Antes de codear lógica de negocio, el repo debe quedar **estructurado y documentado**. Cuatro pasos simples:
+
+
+| #   | Todo            | Resultado                                               |
+| --- | --------------- | ------------------------------------------------------- |
+| 1   | `cleanup-docs`  | Docs sin duplicados, `STATUS.md`, `flujo_inspeccion.md` |
+| 2   | `create-adrs`   | ADRs 0003 y 0004 en borrador                            |
+| 3   | `scaffold-repo` | Carpetas `backend/` y `mobile/` con árbol vacío         |
+| 4   | `cursor-config` | `.cursorignore` + reglas mínimas por capa               |
+
+
+**Después** de estos 4 pasos → Fase 0 de lógica (fixtures, golden test, pair con Claude).
+
+---
+
+## Cómo queda estructurado el proyecto
+
+### Árbol final del repo
+
+```
+RENOVA INSPECTOR/
+├── CLAUDE.md                    ← constitución global (~100 líneas, siempre)
+├── STATUS.md                    ← sprint actual + blockers + checklist motor cálculo
+├── implementation_plan.md       ← roadmap (recortado a índice + links por sprint)
+│
+├── specs/                       ← QUÉ construir (producto)
+│   ├── reglas_negocio.md        ← fórmulas — fuente de verdad única
+│   └── flujo_inspeccion.md      ← UX del inspector (extraído del plan)
+│
+├── decisions/                   ← POR QUÉ (ADRs cortos, ~40 líneas c/u)
+│   ├── 0001-tenancy.md          ← row-level empresa_id
+│   ├── 0002-calc-parity.md      ← golden test Python = Dart
+│   ├── 0003-jwt-offline.md      ← estrategia JWT en campo
+│   └── 0004-catalog-sync.md     ← versionado catálogo PATRON
+│
+├── docs/archive/                ← material histórico (no indexado)
+│   └── idea-preliminar.md
+│
+├── backend/                     ← FastAPI + PostgreSQL
+│   ├── CLAUDE.md                ← reglas backend (carga lazy)
+│   ├── pyproject.toml
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── api/                 ← auth, catalogo, inspecciones, vehiculos, reportes
+│   │   ├── core/                ← calculations.py, security.py
+│   │   ├── db/                  ← models, schemas, migrations/
+│   │   └── reports/             ← excel_builder.py
+│   └── tests/
+│       ├── fixtures/            ← real_sample.xlsx (local, gitignored)
+│       ├── test_calculations_golden.py
+│       ├── test_api.py
+│       └── test_excel.py
+│
+├── mobile/                      ← Flutter offline-first
+│   ├── CLAUDE.md                ← reglas mobile (carga lazy)
+│   ├── lib/
+│   │   ├── core/                ← calculations.dart, sync, auth
+│   │   ├── db/                  ← Drift (SQLite espejo)
+│   │   ├── features/            ← splash, auth, inspeccion, dashboard, reporte
+│   │   └── shared/widgets/      ← steppers, semáforo, anomalía picker
+│   └── test/
+│       ├── golden_test.dart
+│       └── fixtures/real_sample.json
+│
+├── .cursorignore                ← excluye Excel, venv, build del indexado
+└── .cursor/rules/               ← contexto automático mínimo por carpeta
+    ├── 00-proyecto.mdc
+    ├── 10-calculos.mdc
+    └── 20-backend.mdc
+```
+
+### Qué va en cada capa (regla simple)
+
+```mermaid
+flowchart TB
+    subgraph docs ["Documentación — leer antes de codear"]
+        CLAUDE["CLAUDE.md\nstack + reglas globales"]
+        specs["specs/\nqué hacer"]
+        decisions["decisions/\npor qué"]
+        STATUS["STATUS.md\ndónde estamos"]
+    end
+    subgraph code ["Código — escribir después"]
+        backend["backend/\nPython + tests"]
+        mobile["mobile/\nDart + tests"]
+    end
+    CLAUDE --> backend
+    CLAUDE --> mobile
+    specs --> backend
+    specs --> mobile
+    decisions --> backend
+    STATUS --> backend
+    STATUS --> mobile
+```
+
+
+
+
+| Carpeta             | Contiene                          | NO contiene                            |
+| ------------------- | --------------------------------- | -------------------------------------- |
+| `specs/`            | Fórmulas, flujo UX, umbrales      | Código, decisiones de infra            |
+| `decisions/`        | ADRs de arquitectura (~40 líneas) | Lógica de negocio (eso va en specs)    |
+| `backend/CLAUDE.md` | Estructura API, sync, DB          | Repetir reglas de RTD (apunta a specs) |
+| `mobile/CLAUDE.md`  | Drift, UX formulario, sync        | Repetir fórmulas (apunta a specs)      |
+| `docs/archive/`     | Borradores viejos                 | Nada activo                            |
+
+
+### Jerarquía cuando hay conflicto
+
+```
+reglas_negocio.md  >  CLAUDE.md  >  backend/mobile CLAUDE.md  >  implementation_plan.md
+decisions/000X     >  implementation_plan.md
+STATUS.md          >  implementation_plan.md  (para "¿en qué paso estoy?")
+```
+
+### Estado actual vs objetivo
+
+
+| Existe hoy                                                 | Falta crear                              |
+| ---------------------------------------------------------- | ---------------------------------------- |
+| `CLAUDE.md`, `specs/reglas_negocio.md`                     | `specs/flujo_inspeccion.md`, `STATUS.md` |
+| `decisions/0001`, `0002`                                   | `decisions/0003`, `0004`                 |
+| `backend/CLAUDE.md`, `mobile/CLAUDE.md`                    | Carpetas `app/`, `lib/`, `tests/` vacías |
+| `implementation_plan.md` (400 líneas, con inconsistencias) | Recorte + correcciones                   |
+| `idea preliminar.md` (duplicado)                           | Mover a `docs/archive/`                  |
+
+
+**Inconsistencias a corregir en paso 1:**
+
+- `implementation_plan.md` líneas 66–69 dice "multi-schema" → debe ser row-level (ADR 0001)
+- Fotos: la versión correcta es **Sprint 3**, no Sprint 2
+
+---
+
+## Los 4 pasos a ejecutar ahora
+
+### Paso 1 — `cleanup-docs`
+
+- Mover `idea preliminar.md` → `docs/archive/idea-preliminar.md`
+- Crear `specs/flujo_inspeccion.md` (extraer UX de `implementation_plan.md` L200–242)
+- Corregir `implementation_plan.md`: tenancy row-level, fotos Sprint 3
+- Crear `STATUS.md` (~25 líneas): fase actual, blockers, próximo paso
+
+### Paso 2 — `create-adrs`
+
+- Borrador `decisions/0003-jwt-offline.md` (refresh token 30d, banner si expira)
+- Borrador `decisions/0004-catalog-sync.md` (`catalog_version` + re-sync al login)
+- **Tú validas** cada ADR antes de que se commitee
+
+### Paso 3 — `scaffold-repo`
+
+- Crear carpetas vacías `backend/app/{api,core,db,reports}`, `backend/tests/fixtures/`
+- Crear carpetas vacías `mobile/lib/{core,db,features,shared}`, `mobile/test/fixtures/`
+- `backend/pyproject.toml` mínimo (fastapi, pytest, openpyxl)
+- `.gitignore` (Excel, venv, `.dart_tool/`, `build/`)
+
+### Paso 4 — `cursor-config`
+
+- `.cursorignore` (Excel, fixtures xlsx, archive, venv, build)
+- `.cursor/rules/00-proyecto.mdc`, `10-calculos.mdc`, `20-backend.mdc`
+
+**Al terminar estos 4 pasos:** el repo tiene forma definitiva. Recién ahí empieza la lógica.
+
+---
+
+## Reducción de tokens (aplicada en paso 4)
+
+### 1. Capas de contexto — cargar solo lo necesario
+
+El diseño de Claude ya apunta a **lazy loading**. En Cursor, replicarlo con reglas por carpeta:
+
+
+| Sesión de trabajo | Contexto mínimo a incluir                                                   |
+| ----------------- | --------------------------------------------------------------------------- |
+| Cualquier tarea   | `CLAUDE.md` + `STATUS.md`                                                   |
+| Motor de cálculo  | + `specs/reglas_negocio.md` secciones 1–4 + `decisions/0002-calc-parity.md` |
+| Backend API/DB    | + `backend/CLAUDE.md` + ADR 0001                                            |
+| Flutter UI        | + `mobile/CLAUDE.md` + `specs/flujo_inspeccion.md`                          |
+| Planificación     | + `implementation_plan.md` (solo el sprint activo)                          |
+
+
+**Regla de oro:** nunca adjuntar `implementation_plan.md` completo si la tarea es "implementar `calcular_rtd_movi`".
+
+### 2. Recortar documentos gordos
+
+
+| Acción                                                                                                           | Ahorro estimado                               |
+| ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Mover [idea preliminar.md](idea%20preliminar.md) a `docs/archive/`                                               | ~1k tokens/sesión (evita duplicar CLAUDE.md)  |
+| Extraer UX a `specs/flujo_inspeccion.md`; dejar en `implementation_plan.md` solo checklists por sprint con links | ~3k tokens cuando no trabajas en UX           |
+| Crear `STATUS.md` (sprint, blockers, próximo paso)                                                               | Evita releer 400 líneas de plan               |
+| ADRs 0003/0004 como docs de 30–50 líneas                                                                         | Evita re-explicar JWT y catálogo en cada chat |
+
+
+### 3. `.cursorignore` — excluir lo pesado del indexado
+
+```
+# Excel y datos sensibles
+**/*.xlsx
+backend/tests/fixtures/
+docs/archive/
+
+# Build artifacts (cuando existan)
+backend/.venv/
+mobile/.dart_tool/
+mobile/build/
+```
+
+El Excel **nunca** va al contexto del modelo. Solo el slice JSON derivado (~50 filas) para golden tests.
+
+### 4. Reglas Cursor (`.cursor/rules/`)
+
+Crear 2–3 reglas pequeñas en lugar de un mega-prompt:
+
+- `00-proyecto.mdc` — stack cerrado, spec-first, español, no hardcodear umbrales (~30 líneas)
+- `10-calculos.mdc` — "lee `@specs/reglas_negocio.md`; evaluación secuencial if/elif" (~15 líneas)
+- `20-backend.mdc` — glob `backend/`**: row-level `empresa_id`, UUID cliente, golden test primero
+
+Así Cursor inyecta contexto **automático y mínimo** según el archivo que editas.
+
+### 5. Patrones de prompt (tú controlas ~70% del gasto)
+
+**Mal (caro):**
+
+> "Lee todos los documentos y empieza a codear"
+
+**Bien (barato):**
+
+> "Sprint 1 — implementa solo `backend/app/core/calculations.py` según `@specs/reglas_negocio.md` secciones 1–4. El golden test debe pasar contra `@backend/tests/fixtures/real_sample.xlsx`. No toques endpoints."
+
+Otros hábitos:
+
+- **Una tarea = un módulo** (calculations → golden test → models → sync endpoint)
+- **Citar paths con `@`** en lugar de pegar contenido
+- **No re-adjuntar** specs ya en el repo; el agente las lee bajo demanda
+- **Cerrar decisiones abiertas** (presión CALIENTE, JWT offline) en ADRs antes de codear — evita loops de "¿cómo lo hacemos?"
+
+### 6. Fixtures derivados vs Excel crudo
+
+
+| Artefacto          | Uso                                  | Tamaño                 |
+| ------------------ | ------------------------------------ | ---------------------- |
+| `real_sample.xlsx` | Generación manual, local             | Grande — gitignored    |
+| `real_sample.json` | Golden test Dart + referencia Python | ~50 filas, commiteable |
+| CSV en fixtures    | Alternativa ligera al xlsx           | Mínimo                 |
+
+
+Convertir Excel → JSON **una vez**; en adelante la IA solo ve JSON.
+
+### Claude vs Cursor — cuándo usar cada uno
+
+
+| Herramienta              | Mejor para                                                                                             | Contexto mínimo                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| **Claude** (chat aparte) | Validar lógica de negocio, discutir casos del Excel, redactar ADRs, revisar propuestas antes de codear | Pegar solo § de `reglas_negocio.md` + 2–3 filas del Excel    |
+| **Cursor** (aquí)        | Escribir código, correr pytest/flutter test, scaffolding, reglas `.cursor/`                            | `@specs/reglas_negocio.md` + `@STATUS.md` + archivo concreto |
+
+
+**Flujo recomendado:**
+
+1. Claude → propuesta + casos de prueba (Fase 2–3)
+2. Tú → OK o correcciones
+3. Cursor → implementación + tests (Fase 4)
+4. Tú → corres `pytest` y confirmas
+5. Actualizas `STATUS.md` (Fase 5)
+
+Así Claude no necesita ver todo el repo; Cursor no reinterpreta la lógica sin tu filtro previo.
+
+---
+
+## Fase siguiente — lógica de negocio (después de los 4 pasos)
+
+Cuando el repo tenga forma, empiezas a ir **a la par con Claude** en cada función. Una sesión = una función.
+
+### Flujo pair por función
+
+```mermaid
+flowchart LR
+    spec["1. Spec §N"]
+    propuesta["2. Claude propone\ncasos del Excel"]
+    ok["3. Tú OK"]
+    code["4. Cursor codea\n+ pytest"]
+    status["5. STATUS.md"]
+    spec --> propuesta --> ok --> code --> status
+    ok -->|"rechazar"| propuesta
+```
+
+
+
+
+| Sesión | Qué                                   | Tu checkpoint                          |
+| ------ | ------------------------------------- | -------------------------------------- |
+| C0     | Blocker presión CALIENTE con RENOVA   | Valor documentado en §3                |
+| C1     | Fixture ~50 filas del Excel           | Cubre 3ch, 4ch, 3 estados RTD, presión |
+| C2     | `calcular_rtd_movi` + `calcular_idi`  | Bus 8260 pos 7 → IDI=6                 |
+| C3     | `calcular_estado_rtd`                 | 3mm→Para, 6mm→Próximo, 9mm→Normal      |
+| C4     | `calcular_estado_presion` (solo FRÍO) | 110 PSI → alta≥116, baja≤99            |
+| C5     | `calcular_vur`                        | NULL/0/casos especiales                |
+| C6     | Port Dart + golden Flutter            | Mismos outputs que Python              |
+| D      | Backend DB + API sync                 | Un endpoint por sesión                 |
+
+
+**Claude** valida lógica y casos. **Cursor** escribe código y corre tests. **Tú** apruebas cada paso.
+
+Plantilla de prompt para Claude:
+
+```
+Sesión C2 — calcular_rtd_movi
+Modo pair: propuesta primero, sin código.
+1. Pseudocódigo según reglas_negocio.md §1
+2. Tres casos input → output del Excel
+3. Espera mi OK
+```
+
+---
+
+## Estimación de ahorro
+
+
+| Antes                                       | Después                                 |
+| ------------------------------------------- | --------------------------------------- |
+| ~15–20k tokens de docs en cada sesión larga | ~3–5k con capas + STATUS + reglas       |
+| Excel en contexto (prohibido)               | JSON fixture (~2k tokens max)           |
+| Re-explicar reglas de negocio               | `@specs/reglas_negocio.md` bajo demanda |
+| Duplicado idea preliminar + CLAUDE          | Un solo CLAUDE.md                       |
+
+
+

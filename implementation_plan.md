@@ -28,10 +28,16 @@
 > **Hosting:** Railway.app — FastAPI + PostgreSQL desplegados con `git push`. Sin configurar servidores Linux. Escala cuando sea necesario. Precio: gratis para empezar, luego ~$5/mes.
 
 > [!NOTE]
+> **Multi-tenancia:** Row-level con `empresa_id` en todas las tablas de negocio. NO schema-per-company. Ver `decisions/0001-tenancy.md`.
+
+> [!NOTE]
+> **IDs de inspección:** `inspeccion_cabecera.id` e `inspeccion_neumatico.id` son **UUID v4 generados en el dispositivo** al crear la inspección. NUNCA autoincrement de servidor — el sync offline colisionaría.
+
+> [!NOTE]
 > **Vehículos nuevos:** Cualquier inspector puede crear una unidad en campo. Búsqueda fuzzy para prevenir duplicados.
 
 > [!NOTE]
-> **Fotos en anomalías:** Incluidas en Fase 1 (Sprint 2), usando `image_picker` Flutter. Opcionales, activas solo cuando DESECHO=SÍ o anomalía significativa.
+> **Fotos en anomalías:** Movidas a Sprint 3. Sprint 2 (el más complejo) entrega el formulario base sin fotos para mantener el scope manejable.
 
 ---
 
@@ -80,7 +86,7 @@
 
 ## Modelo de Datos
 
-### Tablas del catálogo PATRON (schema `public`, compartido)
+### Tablas del catálogo PATRON (compartido, sin empresa_id)
 
 | Tabla | Campos clave |
 |---|---|
@@ -91,19 +97,22 @@
 | `configuracion_vehiculo` | tipo_vehiculo, configuracion, posicion, tipo_eje, piso |
 | `umbral_rtd` | medida, empresa_id, rtd_cambio, rtd_proximo, rtd_normal |
 | `umbral_presion` | medida, tipo_eje, empresa_id, presion_frio, delta_alto_pct, delta_bajo_pct |
+| `catalog_version` | id, updated_at — permite al cliente detectar si el catálogo cambió |
 
 **Tipos de vehículo confirmados en PATRON:** BUS, TRACTO, FURGON, CARRETA, SEMIREMOLQUE
 **Configuraciones:** BUS 2-4-2 (8 pos), TRACTO 2-2-2/2-4/2-2-4-4, CARRETA 4-4/4-4-4, SEMIREMOLQUE 4-4-4, FURGON 2-4
 
-### Tablas por empresa (schema `empresa_{id}`)
+### Tablas por empresa (row-level con empresa_id)
 
 ```sql
 inspeccion_cabecera
-  id (= CONTA INSPECCIÓN)
-  empresa_id, numero_vehiculo, fecha, km_odometro, inspector_id
+  id UUID PRIMARY KEY  -- ⚠️ UUID generado en el CLIENTE (no serial/autoincrement)
+  empresa_id UUID, numero_vehiculo TEXT, fecha DATE, km_odometro INT (nullable)
+  inspector_id UUID, sincronizado_at TIMESTAMPTZ
 
 inspeccion_neumatico
-  id, cabecera_id, posicion
+  id UUID PRIMARY KEY  -- ⚠️ UUID generado en el CLIENTE
+  cabecera_id UUID, empresa_id UUID, posicion INT, updated_at TIMESTAMPTZ
   -- Datos del neumático
   codigo, medida, marca, diseno_original, diseno_actual, condicion (N/R1/R2)
   -- Mediciones
@@ -137,26 +146,50 @@ RTD MOVI = MIN(RTD_A, RTD_B, RTD_C, RTD_D)       # 4 canales (Libre, Dual)
 
 ### ESTADO RTD (umbrales configurables por empresa y medida)
 ```
-RTD MOVI ≤ rtd_cambio (default 4mm)  → "Para Reencauche"  🔴
-RTD MOVI ≤ rtd_proximo (default 7mm) → "Próximo a Reencauche"  🟡
-RTD MOVI > rtd_proximo               → "Normal"  🟢
+# Evaluación SECUENCIAL (if/elif) — NO condiciones paralelas
+if   RTD_MOVI ≤ rtd_cambio:   → "Para Reencauche"         🔴
+elif RTD_MOVI ≤ rtd_proximo:  → "Próximo a Reencauche"    🟡
+else:                          → "Normal"                  🟢
+
+Defaults: rtd_cambio=4mm, rtd_proximo=7mm — NUNCA hardcodear.
 ```
+
+> ⚠️ La versión anterior listaba las condiciones como si fueran paralelas. Son secuenciales.
+> Un RTD de 3mm cumple ≤4 Y ≤7 — solo debe clasificarse como "Para Reencauche".
 
 ### ESTADO PRESIÓN (umbrales configurables por empresa)
 ```
-PRESIÓN vacía                          → "Sin Medir"  ⚫
-PRESIÓN > ref × 1.05  (FRÍO)          → "Alta Presión"  🔴
-PRESIÓN < ref × 0.90  (FRÍO)          → "Baja Presión"  🔴
-Dentro del rango                       → "Normal"  🟢
-(Temperatura CALIENTE tiene referencia ajustada)
+# Evaluación SECUENCIAL
+if   sin_medir o presion IS NULL:                  → "Sin Medir"     ⚫
+elif presion > presion_ref × (1 + delta_alto/100): → "Alta Presión"  🔴
+elif presion < presion_ref × (1 - delta_bajo/100): → "Baja Presión"  🔴
+else:                                               → "Normal"        🟢
+
+Defaults: delta_alto=5%, delta_bajo=10% — NUNCA hardcodear.
 ```
+
+> ⚠️ PRESIÓN CALIENTE: el ajuste de referencia para temperatura CALIENTE NO está
+> definido en la documentación actual. NO implementar hasta tener el valor correcto
+> del equipo RENOVA. Ver `specs/reglas_negocio.md` sección 3.
 
 ### IDI (Índice de Desgaste Irregular)
 ```
-IDI = MAX(RTD_A..D) - MIN(RTD_A..D)
-IDI 0-1: Normal  🟢
-IDI 2-3: Monitorear  🟡
-IDI ≥ 4: Alerta  🔴
+IDI = MAX(canales_medidos) - MIN(canales_medidos)
+# Usar los mismos canales que RTD MOVI (3 o 4 según tipo_eje de la posición)
+
+IDI 0–1: Normal      🟢
+IDI 2–3: Monitorear  🟡
+IDI ≥ 4: Alerta      🔴
+```
+
+### VUR — casos especiales obligatorios
+```
+VUR (km) = (RTD_MOVI - rtd_cambio) / tasa_acumulada × 1000
+
+Casos especiales:
+  tasa_acumulada = 0 o NULL  → VUR = NULL ("Sin datos suficientes")
+  RTD_MOVI ≤ rtd_cambio      → VUR = 0   ("Cambio inmediato")
+  tasa_acumulada < 0         → VUR = NULL ("Dato inválido — revisar mediciones")
 ```
 
 ### DESECHO automático
@@ -213,54 +246,72 @@ Si `anomalia_neumatico.desecho = TRUE` en catálogo → campo `desecho` del regi
 ## Hoja de Ruta — 5 Sprints (acelerados con IA, ~1 semana c/u)
 
 ### Sprint 1 (Semana 1): Backend y modelo de datos
-**Objetivo:** El backend existe, acepta y persiste datos correctamente.
+**Objetivo:** El backend existe, acepta y persiste datos correctamente. La lógica de cálculo está validada contra el Excel real.
 
-- [ ] Esquema PostgreSQL completo (todas las tablas descritas arriba)
+**Prerequisito ANTES de escribir código de feature:**
+- [ ] Slice real del Excel → `backend/tests/fixtures/real_sample.xlsx`
+- [ ] Confirmar con RENOVA el ajuste de presión CALIENTE → documentar en `specs/reglas_negocio.md`
+
+**Backend:**
+- [ ] Esquema PostgreSQL con row-level `empresa_id` (ver `decisions/0001-tenancy.md`)
+- [ ] IDs UUID en `inspeccion_cabecera` e `inspeccion_neumatico` (generados en cliente)
 - [ ] Poblar catálogo PATRON desde el Excel (`REPORTES Y PATRON.xlsx`)
-- [ ] API FastAPI: CRUD inspecciones, sync offline, endpoints catálogo
-- [ ] Motor de cálculo: `calcular_rtd_movi()`, `calcular_estado_rtd()`, `calcular_estado_presion()`, `calcular_idi()`
-- [ ] JWT auth + multi-tenant por empresa
-- [ ] Tests: insertar inspección vía API y comparar con datos del Excel original
+- [ ] `catalog_version` table para versionado de sync
+- [ ] Motor de cálculo puro: `calcular_rtd_movi()`, `calcular_estado_rtd()`, `calcular_estado_presion()`, `calcular_idi()`
+- [ ] **Golden test** `tests/test_calculations_golden.py` ← verde ANTES de endpoints
+- [ ] API FastAPI: CRUD inspecciones, endpoint sync (UPSERT por UUID), endpoints catálogo
+- [ ] JWT auth con `empresa_id` en payload, row-level filtering en todas las queries
 
-**Criterio de completitud:** Se puede insertar una inspección completa vía API y recuperarla con los 3 campos calculados correctos.
+**Criterio de completitud:** Golden test verde contra el Excel real. Se puede insertar una inspección vía API (con UUID de cliente) y recuperarla con los 4 campos calculados correctos (RTD MOVI, ESTADO RTD, ESTADO PRESIÓN, IDI).
 
 ---
 
-### Sprint 2 (Semana 2): App Flutter — Formulario + Fotos
-**Objetivo:** El inspector puede registrar una inspección completa con fotos, con o sin conexión.
+### Sprint 2 (Semana 2): App Flutter — Formulario base (sin fotos)
+**Objetivo:** El inspector puede registrar una inspección completa sin conexión. Sin fotos — eso es Sprint 3.
 
 - [ ] Setup Flutter + Drift + configuración de Railway
+- [ ] Motor de cálculo Dart `lib/core/calculations.dart` + golden test Flutter
 - [ ] Pantalla splash con logo RENOVA
-- [ ] Login (JWT)
+- [ ] Login (JWT + refresh token; estrategia offline documentada en `mobile/CLAUDE.md`)
+- [ ] Sync del catálogo PATRON al login (con `catalog_version` check)
 - [ ] Selección empresa → número vehículo → inspección nueva
+- [ ] UUID generado en cliente al crear `inspeccion_cabecera`
 - [ ] Diagrama de posiciones visual (CustomPainter tocable, coloreado por estado)
-- [ ] Formulario de neumático por posición (todos los campos)
-- [ ] Cálculo en tiempo real (semáforo RTD, IDI, presión) — lógica en el cliente
+- [ ] Formulario de neumático por posición (todos los campos, defaults inteligentes)
+- [ ] Cálculo en tiempo real (semáforo RTD, IDI, presión) — funciones Dart del paso anterior
 - [ ] Valores anteriores como referencia tenue
 - [ ] Steppers grandes para RTD y presión (sin teclado virtual)
 - [ ] Buscador de anomalías (65+ tipos, agrupados por categoría)
-- [ ] **Captura de foto** con `image_picker` — activa cuando DESECHO=SÍ
-- [ ] **Subida de foto** al backend (Cloudflare R2)
-- [ ] Autoguardado por neumático en Drift (offline-first)
-- [ ] Sync en background al recuperar red
+- [ ] DESECHO auto-marcado + advertencia cuando anomalía tiene `desecho=TRUE`
+- [ ] Autoguardado por neumático en Drift (no esperar al final de la inspección)
+- [ ] Sync en background al recuperar red (UPSERT por UUID, por neumático individual)
 - [ ] Registro rápido de vehículo nuevo (búsqueda fuzzy + alta rápida)
 
-**Criterio de completitud:** Inspector completa bus de 8 posiciones sin red, con foto en anomalía; datos y fotos sincronizados correctamente.
+**Criterio de completitud:** Inspector completa bus de 8 posiciones sin red; datos sincronizados correctamente al recuperar red. Golden test Dart verde.
 
 ---
 
-### Sprint 3 (Semana 3): Dashboard y métricas (sin odómetro)
-**Objetivo:** Las métricas que no requieren km están operativas.
+### Sprint 3 (Semana 3): Fotos + Dashboard y métricas (sin odómetro)
+**Objetivo:** Fotos en anomalías activas. Las métricas sin km operativas.
 
-- [ ] IDI: mostrado en formulario + almacenado + alerta visual si IDI ≥ 4
+**Fotos (movidas de Sprint 2):**
+- [ ] Cloudflare R2: cuenta + bucket + credenciales (prerequisito externo)
+- [ ] `image_picker`: captura de foto activa cuando `desecho=TRUE`
+- [ ] Compresión antes de upload + retry con back-off
+- [ ] Upload a R2 vía backend → guardar `foto_url` en `inspeccion_neumatico`
+- [ ] Foto encolada junto al sync cuando está offline
+
+**Métricas:**
+- [ ] IDI: alerta visual en formulario cuando IDI ≥ 4 (ya calculado en Sprint 2)
+- [ ] Endpoints de agregación: cumplimiento presión, ISA, distribución RTD
 - [ ] Cumplimiento de Presión % por vehículo/flota/mes
-- [ ] Tasa de Incidentes (Alta Presión, Baja Presión, Sin Medir) por TIPO EJE
-- [ ] Tasa y Severidad de Anomalías (ISA con peso por DESECHO)
+- [ ] Tasa de Incidentes (Alta/Baja Presión, Sin Medir) por TIPO EJE
+- [ ] Tasa y Severidad de Anomalías (ISA con peso por DESECHO, configurable)
 - [ ] Distribución ESTADO RTD por vehículo y por flota
-- [ ] Dashboard principal: 5 tarjetas de indicadores
+- [ ] Dashboard Flutter: 5 tarjetas de indicadores
 - [ ] Filtros: por empresa, mes, tipo de eje, vehículo
 
-**Criterio de completitud:** Supervisor ve de un vistazo cuántos vehículos tienen neumáticos críticos, cumplimiento de presión, y anomalías frecuentes.
+**Criterio de completitud:** Fotos capturadas y sincronizadas. Supervisor ve métricas completas de salud de flota.
 
 ---
 
@@ -309,10 +360,12 @@ Si `anomalia_neumatico.desecho = TRUE` en catálogo → campo `desecho` del regi
 
 ---
 
-## Panel de Administración (Supervisores)
+## Panel de Administración (Supervisores) — FASE 2, no en ningún sprint de Fase 1
+
+> Explícitamente fuera del alcance de Fase 1. Funcionalidad prevista pero no priorizada.
 
 - Ver/editar/dar de baja unidades
-- Validar unidades creadas por inspectores (si se implementa el flujo "pendiente")
+- Validar unidades creadas por inspectores (flujo "pendiente de validar")
 - Import masivo CSV/Excel para flotas nuevas
 - Gestión de usuarios y roles
 - Configuración de umbrales RTD y presión por empresa y medida
@@ -342,5 +395,5 @@ pytest tests/test_excel.py            # Comparar output vs. Excel original
 | Inconsistencias en el PATRON del Excel | Limpiar y cargar el catálogo en Sprint 1, validar contra el Excel original |
 | Pérdida de datos offline si el dispositivo falla | Autoguardado por neumático individual, no solo al final |
 | Duplicados de vehículos por tipeo | Flujo "pendiente de validar" + búsqueda difusa por número |
-| Sincronización de conflictos | Last-write-wins por `cabecera_id` único + timestamp |
+| Sincronización de conflictos | LWW por `inspeccion_neumatico.id` + `updated_at` (NO a nivel cabecera — destruiría syncs parciales) |
 | Curva de aprendizaje de Flutter en campo | UI con steppers grandes, defaults inteligentes, diagrama visual |
