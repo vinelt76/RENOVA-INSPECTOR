@@ -1,0 +1,41 @@
+# Python / Backend
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/.coverage
+backend/coverage.xml
+backend/*.egg-info/
+backend/dist/
+backend/.env
+backend/.env.local
+
+# Fixtures con datos reales (local only — usar JSON derivado en su lugar)
+backend/tests/fixtures/*.xlsx
+backend/tests/fixtures/*.xls
+
+# Flutter / Mobile
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.packages
+mobile/pubspec.lock
+mobile/android/local.properties
+mobile/android/.gradle/
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/flutter_export_environment.sh
+
+# Docs / Data
+docs/archive/
+*.xlsx
+*.xls
+*.docx
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.zip
