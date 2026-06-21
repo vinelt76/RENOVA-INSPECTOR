@@ -1,0 +1,33 @@
+Aquí está el flujo general que propongo, y abajo el detalle de cada parte.
+
+## Captura de datos del inspector
+
+El reto real es: 8 neumáticos × varios campos cada uno, en campo, con sol, manos sucias o guantes, y necesidad de ir rápido. Algunas ideas concretas:
+
+**Diagrama tocable en vez de lista.** En lugar de un formulario largo con 8 secciones, mostrar el bus/vehículo como un diagrama simple (ya tienes la lógica: TIPO VEHÍCULO + CONFIGURACIÓN define las posiciones y el TIPO EJE de cada una, eso sale directo del catálogo PATRON). El inspector toca la posición 3, se abre el formulario de ESE neumático, lo completa, vuelve al diagrama, toca la 4, y así. El diagrama se va coloreando (gris = pendiente, verde/amarillo/rojo = ya inspeccionado según su ESTADO RTD) — eso le da al inspector una sensación de progreso real, no una barra abstracta.
+
+**"Normal" como default, no como opción.** En el 90% de los casos ANOMALÍA NEUMÁTICO y ANOMALÍA ARO van a ser "Normal". Que el campo nazca con eso seleccionado y el inspector solo lo toque cuando hay algo que reportar, en vez de obligarlo a elegir "Normal" de una lista cada vez. Lo mismo con TAPA VÁLVULA.
+
+**Steppers grandes para RTD, no teclado.** Los valores de RTD están casi siempre en un rango chico (2-18mm aprox según tus datos). Un botón +/- grande o un dial, en vez de abrir el teclado numérico, es más rápido y más confiable con dedos sucios o guantes. Mismo criterio para presión.
+
+**Semáforo en vivo mientras captura.** En cuanto ingresa RTD A/B/C(/D), calculas RTD MOVI y ESTADO RTD al instante y se lo muestras como un chip de color arriba del formulario. Igual con presión. El inspector ve el resultado de su medición sin tener que esperar a generar el reporte — esto también sirve como autocontrol: si pone un RTD raro, el semáforo rojo inesperado lo hace dudar y revisar.
+
+**Mostrar el valor anterior como referencia.** Si ya existe una inspección previa de ese mismo CÓDIGO en esa posición, mostrar el RTD anterior como texto tenue al lado del campo nuevo ("anterior: 9mm"). Ayuda al inspector a detectar errores de tipeo (si pone 19 en vez de 9, salta a la vista) y de paso es la base visual de la tasa de desgaste que ya definimos.
+
+**Anomalías como grid de búsqueda, no dropdown gigante.** Con 65+ tipos de anomalía en el catálogo, un dropdown plano es lento. Mejor: campo de búsqueda con autocompletado, o agrupado por categoría (cortes, desgastes, desgarros, separaciones...) con un buscador arriba. Cuando selecciona una con DESECHO=SÍ en el catálogo, el campo DESECHO se marca automático y se le muestra una advertencia clara ("este neumático debe retirarse").
+
+**Captura de foto opcional en anomalías.** Sobre todo para las que implican desecho — evidencia útil para el reporte y para reclamos de garantía con el proveedor.
+
+**Todo esto funciona offline y autoguarda por neumático**, no solo al final — así si se traba el teléfono o pierde batería a mitad de inspección, no se pierde lo ya capturado.
+
+## Registro de nuevas unidades
+
+Esto necesita vivir en dos niveles:
+
+**Alta rápida desde el flujo de inspección.** Si el inspector busca un vehículo y no aparece, un botón "Registrar nueva unidad" ahí mismo, sin salir del flujo. Pide lo mínimo: NÚMERO VEHÍCULO, OPERACIÓN (empresa/cliente), TIPO VEHÍCULO, CONFIGURACIÓN. En cuanto elige TIPO VEHÍCULO + CONFIGURACIÓN, el sistema ya sabe —por el catálogo PATRON— cuántas posiciones tiene y qué tipo de eje es cada una, así que genera el diagrama de posiciones automáticamente. El inspector no tiene que definir nada de eso a mano.
+
+**Gestión completa en un panel de administración** (probablemente para supervisores, no para cualquier inspector): ver/editar/dar de baja unidades, y un import masivo (CSV/Excel) para cuando se suma una flota nueva completa de un cliente — dado que ya manejas 5 empresas, esto te va a ahorrar mucho trabajo cuando llegue el cliente número 6.
+
+**Un tema a decidir:** ¿quién puede dar de alta una unidad nueva — cualquier inspector en campo, o solo supervisor/admin? Si dejas que el inspector la cree libremente podrías terminar con duplicados o números de vehículo mal tipeados; una alternativa intermedia es que el inspector la cree pero quede en estado "pendiente de validar" hasta que un supervisor la confirme, sin bloquear la inspección de ese día.
+
+¿Quieres que profundice en alguno de estos puntos —por ejemplo el detalle del formulario rápido por neumático, campo por campo, o las reglas de validación para el alta de unidades?
