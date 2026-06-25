@@ -118,8 +118,10 @@ class TestEstadoPresion:
         assert calcular_estado_presion(116, PRESION_REF_DIR, DELTA_ALTO, DELTA_BAJO) == "Alta Presión"
 
     def test_baja_presion_direccion(self):
-        # ref=110 PSI → Baja desde 99 (110 * 0.90 = 99)
-        assert calcular_estado_presion(99, PRESION_REF_DIR, DELTA_ALTO, DELTA_BAJO) == "Baja Presión"
+        # ref=110 PSI → límite bajo = 110*0.90 = 99.0 exacto.
+        # Con '<' estricto: 99 es Normal (borde), 98 es Baja.
+        assert calcular_estado_presion(99, PRESION_REF_DIR, DELTA_ALTO, DELTA_BAJO) == "Normal"
+        assert calcular_estado_presion(98, PRESION_REF_DIR, DELTA_ALTO, DELTA_BAJO) == "Baja Presión"
         assert calcular_estado_presion(90, PRESION_REF_DIR, DELTA_ALTO, DELTA_BAJO) == "Baja Presión"
 
     def test_normal_direccion(self):
