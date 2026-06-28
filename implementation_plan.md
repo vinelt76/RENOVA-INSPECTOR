@@ -1,5 +1,13 @@
 # RENOVA INSPECTOR — Plan de Implementación Fase 1
 
+> ⚠️ **STACK REEMPLAZADO (2026-06-25).** Este documento se conserva como **referencia del
+> roadmap de features y del modelo de datos**, que siguen vigentes. El **stack** descrito aquí
+> (Flutter · FastAPI · PostgreSQL · Railway · Drift · image_picker · share_plus) **ya NO aplica**:
+> la app se construye en **React + Vite + Capacitor con SQLite local** (offline-first); el
+> servidor/sync y los cálculos de servidor son fase futura. La constitución activa es `CLAUDE.md`.
+> Lo que sobrevive intacto: reglas de negocio (`specs/reglas_negocio.md`), flujo de usuario,
+> modelo de datos y la secuencia de features por sprint.
+
 > Basado en el análisis completo de: `Aquí está el flujo general.txt`, `la idea Entonces es poder.txt`, `fase1_desarrollo_renova.docx` y `REPORTES Y PATRON.xlsx`.
 
 **✅ Decisiones finales confirmadas:**

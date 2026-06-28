@@ -1,41 +1,32 @@
-# Python / Backend
-backend/.venv/
-backend/__pycache__/
-backend/**/__pycache__/
-backend/**/*.pyc
-backend/.pytest_cache/
-backend/.coverage
-backend/coverage.xml
-backend/*.egg-info/
-backend/dist/
-backend/.env
-backend/.env.local
+# ── App: React + Vite + Capacitor (app/) ──────────────────────────────
+app/node_modules/
+app/dist/
+app/.vite/
+app/coverage/
+app/.env
+app/.env.local
 
-# Fixtures con datos reales (local only — usar JSON derivado en su lugar)
-backend/tests/fixtures/*.xlsx
-backend/tests/fixtures/*.xls
+# Capacitor / Android (proyecto nativo generado)
+app/android/
+app/ios/
+app/.capacitor/
+*.apk
+*.aab
+*.keystore
 
-# Flutter / Mobile
-mobile/.dart_tool/
-mobile/.flutter-plugins
-mobile/.flutter-plugins-dependencies
-mobile/build/
-mobile/.packages
-mobile/pubspec.lock
-mobile/android/local.properties
-mobile/android/.gradle/
-mobile/ios/Pods/
-mobile/ios/.symlinks/
-mobile/ios/Flutter/Generated.xcconfig
-mobile/ios/Flutter/flutter_export_environment.sh
+# ── Referencia Python (reference/) ────────────────────────────────────
+reference/__pycache__/
+reference/**/__pycache__/
+reference/**/*.pyc
 
-# Docs / Data
+# ── Docs / Data (Excels reales — local only) ──────────────────────────
 docs/archive/
 *.xlsx
 *.xls
 *.docx
 
-# Sistema
+# ── Sistema ───────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *.zip
+node_modules/

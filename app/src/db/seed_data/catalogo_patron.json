@@ -1,0 +1,1404 @@
+{
+  "tapas_valvula": [
+  {
+      "nombre": "Fuga de aire"
+    },
+   
+    {
+      "nombre": "Neumatico sin Aro"
+    },
+    {
+      "nombre": "No tiene"
+    },
+    
+    {
+      "nombre": "Pitón averiado"
+    },
+    
+    {
+      "nombre": "Pitón hacia adentro"
+    },
+    {
+      "nombre": "Pitón pegado al aro"
+    },
+
+    {
+      "nombre": "Plástica"
+    },
+    
+    {
+      "nombre": "SIN MEDIR"
+    },
+    {
+      "nombre": "Sin extensión de válvula"
+    },
+    {
+      "nombre": "METALICA"
+    },
+    {
+      "nombre": "ENDURECIDO"
+    }
+  ],
+  "anomalia_neumatico": [
+    {
+      "nombre": "Avería pasante en banda de rodado",
+      "posible_causa": "Servicio",
+      "desecho": false
+    },
+    {
+      "nombre": "Carcasa fatigada",
+      "posible_causa": "Neumático",
+      "desecho": true
+    },
+    {
+      "nombre": "Corte profundo en banda de rodado",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte profundo en banda de rodado/contacto con chasis",
+      "posible_causa": "Conducción-Mecánico",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte profundo en flanco externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte profundo en flanco interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte profundo en hombro externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte profundo en hombro interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte superficial en banda de rodado",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte superficial en flanco externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte superficial en flanco interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte superficial en hombro externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte superficial en hombro interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Cuerdas expuestas en banda de rodado",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Daño en el flanco por rozamiento con el chasis",
+      "posible_causa": "Conducción-Mecánico",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgarro de banda de rodado e pliegues expuestas",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgarro en banda de rodado",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgarro en flanco cuerdas expuestas externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Desgarro en flanco cuerdas expuestas interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Desgarro en flanco externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgarro en flanco interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgarro en hombro externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgarro en hombro interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste circunferencial en banda de rodado/contacto con chasis",
+      "posible_causa": "Conducción-Mecánico",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste en hombro externo",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste en hombro interno",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste en hombro(s)",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste excesivo en banda de rodamiento",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste excesivo en hombro externo",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste excesivo en hombro interno",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste excesivo en hombro(s)",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste excesivo por pegada de zapata",
+      "posible_causa": "Chofer-Mantenimiento",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste irregular en banda de rodado",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste irregular excesivo en banda de rodado",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste leve en hombro externo",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste leve en hombro interno",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste leve en hombro(s)",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste puntual en banda de rodamiento",
+      "posible_causa": "Conducción-Mantenimiento",
+      "desecho": false
+    },
+    {
+      "nombre": "Despegue de hombro(s)",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Desprendimiento de banda de rodado",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Diseño de tracción",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Exceso de rodado",
+      "posible_causa": "Conducción-Operario",
+      "desecho": true
+    },
+    {
+      "nombre": "Incrustación de objeto en banda de rodado",
+      "posible_causa": "Ruta-Conducción",
+      "desecho": false
+    },
+    {
+      "nombre": "Mal emparejamiento por medida",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Mal emparejamiento por rtd",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Normal",
+      "posible_causa": "Normal",
+      "desecho": false
+    },
+    {
+      "nombre": "Picaduras en banda de rodado",
+      "posible_causa": "Neumático",
+      "desecho": false
+    },
+    {
+      "nombre": "Pitón recto",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Rotura de cuerda(s) radial(es) externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Rotura de cuerda(s) radial(es) interno",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Se Cambio Válvula",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Sentido de giro invertido",
+      "posible_causa": "Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Separación de paquete de cinturones con la cuerdas radiales",
+      "posible_causa": "Neumático-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Separación estructural",
+      "posible_causa": "Neumático-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Separación por filtración en banda de rodamiento",
+      "posible_causa": "Neumático-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Separación por filtración en pestaña",
+      "posible_causa": "Neumático-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Telas expuestas en flanco",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Válvula averiada",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Zipper en flanco",
+      "posible_causa": "Neumático",
+      "desecho": true
+    },
+    {
+      "nombre": "Exceso de frenado",
+      "posible_causa": "Conducción-Operario",
+      "desecho": true
+    },
+    {
+      "nombre": "Cuerdas expuestas en flanco",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Desprendimiento de banda de rodado externo",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Neumatico sin Aro",
+      "posible_causa": "Supervisor-Operario",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte profundo en flanco",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": true
+    },
+    {
+      "nombre": "Desgaste irregular en el hombro",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Desprendimiento de la union de banda de rodamiento en desgaste final",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Separacion de la union de la banda de rodamiento",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Despegue en la línea de unión del reencauchado",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Objeto punzocortante en flanco",
+      "posible_causa": "Neumático-Ruta",
+      "desecho": false
+    }
+  ],
+  "configuracion_vehiculo": [
+    {
+      "tipo_vehiculo": "BUS",
+      "configuracion": "2-4",
+      "mvp": true,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "BUS",
+      "configuracion": "2-4-2",
+      "mvp": true,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "CARRETA",
+      "configuracion": "4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Carreta",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Carreta",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "CARRETA",
+      "configuracion": "4-4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 9,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 10,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 11,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 12,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Carreta",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Carreta",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "CISTERNA",
+      "configuracion": "2-2-2",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Tolva",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Tolva",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "CISTERNA",
+      "configuracion": "2-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Cisterna",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "CISTERNA",
+      "configuracion": "2-4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 9,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 10,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 11,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 12,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Cisterna",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Cisterna",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "CISTERNA",
+      "configuracion": "4-4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 9,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 10,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 11,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 12,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Cisterna",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Cisterna",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "FURGON",
+      "configuracion": "2-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Furgón",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "SEMIREMOLQUE",
+      "configuracion": "2-2",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Semirremolque",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Semirremolque",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "SEMIREMOLQUE",
+      "configuracion": "2-2-2",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Semirremolque",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Semirremolque",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "SEMIREMOLQUE",
+      "configuracion": "4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": true,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Semirremolque",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Semirremolque",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "SEMIREMOLQUE",
+      "configuracion": "4-4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": true,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 9,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 10,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 11,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 12,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Semire",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Tracto",
+          "piso": false
+        },
+        {
+          "posicion": 9999,
+          "tipo_eje": "Rpto Tracto",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "TOLVA",
+      "configuracion": "2-2-2",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Libre",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Tolva",
+          "piso": false
+        },
+        {
+          "posicion": 999,
+          "tipo_eje": "Rpto Tolva",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "TRACTO",
+      "configuracion": "2-2-2",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "TRACTO",
+      "configuracion": "2-2-4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 9,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 10,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 11,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 12,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 99,
+          "tipo_eje": "Rpto Tracto",
+          "piso": false
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "TRACTO",
+      "configuracion": "2-4",
+      "mvp": false,
+      "tiene_duplicados_dual": true,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        }
+      ]
+    },
+    {
+      "tipo_vehiculo": "TRACTO",
+      "configuracion": "2-4-4",
+      "mvp": false,
+      "tiene_duplicados_dual": false,
+      "posiciones": [
+        {
+          "posicion": 1,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 2,
+          "tipo_eje": "Direccional",
+          "piso": true
+        },
+        {
+          "posicion": 3,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 4,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 5,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 6,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 7,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 8,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 9,
+          "tipo_eje": "Tracción",
+          "piso": true
+        },
+        {
+          "posicion": 10,
+          "tipo_eje": "Tracción",
+          "piso": true
+        }
+      ]
+    }
+  ],
+  "condicion": [
+    {
+      "codigo": "N",
+      "nombre": "Nuevo"
+    },
+    {
+      "codigo": "R1",
+      "nombre": "Primer reencauche"
+    },
+    {
+      "codigo": "R2",
+      "nombre": "Segundo reencauche"
+    }
+  ],
+  "_meta": {
+    "fuente": "REPORTES Y PATRON.xlsx",
+    "mvp_scope": "BUS",
+    "nota": "configs no-bus incluidas con mvp=false para post-MVP; estados RTD: Para Reencauche/Próximo/Normal + desecho flag"
+  }
+}
