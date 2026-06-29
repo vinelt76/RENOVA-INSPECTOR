@@ -1,21 +1,15 @@
-import React from 'react';
-import { MONO, NAVY, ORANGE, INK, BORDER, FIELD_BG, MUTED } from '../theme';
+import React, { useState } from 'react';
+import { MONO, ORANGE, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatCondicion } from '../db/schema';
 import AutocompleteField from '../components/AutocompleteField';
 
-// Bloques clave (Código, Remanente, Presión): título prominente
 const LABEL_PRIMARY: React.CSSProperties = {
-  fontSize: 13, fontWeight: 800, color: NAVY, letterSpacing: '0.06em',
-  display: 'block', marginBottom: 12, fontFamily: MONO,
-};
-// Campos secundarios (Marca, Modelo, etc.): label más pequeño
-const LABEL: React.CSSProperties = {
-  fontSize: 11, fontWeight: 800, color: NAVY, letterSpacing: '0.1em',
+  fontSize: 12, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.1em',
   display: 'block', marginBottom: 10, fontFamily: MONO,
 };
-
-const card: React.CSSProperties = {
-  background: '#fff', borderRadius: 8, padding: '16px 18px',
+const LABEL: React.CSSProperties = {
+  fontSize: 11, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.1em',
+  display: 'block', marginBottom: 8, fontFamily: MONO,
 };
 
 const VALVULA_OK = new Set(['plástica', 'plastica', 'metalica', 'metálica']);
@@ -82,39 +76,49 @@ export default function FormBody({
   const anomaliaAlert = data.anomalia !== '';
   const valvulaAlert = data.tapaValvula !== '' && !VALVULA_OK.has(data.tapaValvula.toLowerCase());
 
+  const [focusedRem, setFocusedRem] = useState<string | null>(null);
+
   const remCell = (key: string, label: string) => {
-    const filled = data[key] !== '';
+    const active = focusedRem === key;
+    const hasValue = data[key] !== '';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 10, fontWeight: 800, color: MUTED, letterSpacing: '0.1em', fontFamily: MONO }}>{label}</span>
+        <span style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.1em', fontFamily: MONO }}>{label}</span>
         <div style={{
           height: 72,
-          border: `2px solid ${filled ? NAVY : BORDER}`,
+          border: `2px solid ${active ? ORANGE : BORDER_DARK}`,
           borderRadius: 8,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: '#fff',
+          background: FIELD_DARK,
+          transition: 'border-color 0.15s',
         }}>
           <input
+            className="dark-input"
             ref={remRefs[key as keyof typeof remRefs] as React.RefObject<HTMLInputElement>}
             type="number" inputMode="numeric" value={data[key]}
-            onChange={handleRemChange(key)} onFocus={e => e.target.select()} onKeyDown={handleRemKey(key)}
+            onChange={handleRemChange(key)}
+            onFocus={e => { e.target.select(); setFocusedRem(key); }}
+            onBlur={() => setFocusedRem(null)}
+            onKeyDown={handleRemKey(key)}
             placeholder="—"
             style={{
               width: '100%', border: 'none', outline: 'none', textAlign: 'center',
-              fontSize: 24, fontWeight: 800, color: INK, padding: '4px 4px 0',
+              fontSize: 24, fontWeight: 800,
+              color: hasValue ? VALUE_COLOR : BORDER_DARK,
+              padding: '4px 4px 0',
               background: 'transparent', fontVariantNumeric: 'tabular-nums' as const, fontFamily: MONO,
             }}
           />
-          <span style={{ fontSize: 10, color: MUTED, fontWeight: 700, paddingBottom: 4, letterSpacing: '0.06em' }}>mm</span>
+          <span style={{ fontSize: 10, color: LABEL_BLUE, fontWeight: 700, paddingBottom: 4, letterSpacing: '0.06em' }}>mm</span>
         </div>
       </div>
     );
   };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'clip', padding: '16px 16px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'clip', padding: '16px 16px 8px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* ── CÓDIGO DE NEUMÁTICO — flota sobre el fondo del screen ── */}
+      {/* ── CÓDIGO DE NEUMÁTICO ── */}
       <div style={{ padding: '0 2px' }}>
         <span style={LABEL_PRIMARY}>CÓDIGO DE NEUMÁTICO</span>
         <AutocompleteField
@@ -123,13 +127,86 @@ export default function FormBody({
           onChange={v => commit({ ...data, codigo: v })}
           options={CODIGO_ESPECIALES}
           allowNew
-          placeholder="Escanear o escribir código"
+          placeholder="1234"
           showAllOnFocus
           inputStyle={{ fontSize: 22, fontWeight: 800, padding: '8px 12px', letterSpacing: '0.03em' }}
         />
       </div>
 
-      {/* ── REMANENTE — flota sobre el fondo del screen ── */}
+      {/* ── DATOS DEL NEUMÁTICO ── */}
+      <div style={{ padding: '0 2px' }}>
+        <AutocompleteField
+          label="MARCA"
+          value={data.marca}
+          onChange={marca => commit({ ...data, marca, modelo: '' })}
+          options={marcas.map(m => m.nombre)}
+          placeholder="Buscar marca…"
+          allowNew
+          onNew={onNewMarca}
+        />
+      </div>
+
+      <div style={{ padding: '0 2px' }}>
+        <AutocompleteField
+          label="MODELO"
+          value={data.modelo}
+          onChange={modelo => commit({ ...data, modelo })}
+          options={modelos.map(m => m.nombre)}
+          placeholder={data.marca ? 'Buscar modelo…' : 'Primero elige una marca'}
+          disabled={!data.marca}
+          allowNew={!!data.marca}
+          onNew={onNewModelo}
+        />
+      </div>
+
+      {/* ── MEDIDA + CONDICIÓN en una fila ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 2px' }}>
+        <div style={{ minWidth: 0 }}>
+          <AutocompleteField
+            label="MEDIDA"
+            value={data.medida}
+            onChange={medida => commit({ ...data, medida })}
+            options={medidas.map(m => m.nombre)}
+            placeholder="295/80 R22.5"
+            allowNew
+            onNew={onNewMedida}
+            filterMode="includes"
+          />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <AutocompleteField
+            label="CONDICIÓN"
+            value={data.condicion}
+            onChange={condicion => commit({ ...data, condicion })}
+            options={condiciones.map(c => c.codigo)}
+            placeholder="—"
+            showAllOnFocus
+            filterMode="startsWith"
+          />
+        </div>
+      </div>
+
+      {/* ── DISEÑO DE REENCAUCHE — sub-campo de Condición ── */}
+      {showReencauche && (
+        <div style={{ padding: '0 2px', paddingLeft: 14, borderLeft: `2px solid ${BORDER_DARK}`, marginLeft: 2 }}>
+          <AutocompleteField
+            label="DISEÑO DE REENCAUCHE"
+            value={data.reencauche}
+            onChange={reencauche => commit({ ...data, reencauche })}
+            options={reencauches.map(r => r.nombre)}
+            placeholder="Buscar diseño…"
+            allowNew
+            onNew={onNewReencauche}
+          />
+        </div>
+      )}
+
+      {/* ── Separador ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '2px 0' }}>
+        <div style={{ flex: 1, height: 1, background: BORDER_DARK }} />
+      </div>
+
+      {/* ── REMANENTE ── */}
       <div style={{ padding: '0 2px' }}>
         <span style={LABEL_PRIMARY}>REMANENTE (mm)</span>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -137,28 +214,29 @@ export default function FormBody({
         </div>
       </div>
 
-      {/* ── PRESIÓN — flota sobre el fondo del screen ── */}
+      {/* ── PRESIÓN ── */}
       <div style={{ padding: '0 2px' }}>
         <span style={LABEL_PRIMARY}>PRESIÓN</span>
         <div style={{
-          height: 68, border: `2px solid ${data.presion ? NAVY : BORDER}`, borderRadius: 8,
-          display: 'flex', alignItems: 'center', padding: '0 16px', background: '#fff',
+          height: 68, border: `2px solid ${BORDER_DARK}`, borderRadius: 8,
+          display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK,
         }}>
           <input
+            className="dark-input"
             type="number" inputMode="numeric" value={data.presion}
             onChange={set('presion')} onFocus={e => e.target.select()} placeholder="—"
             style={{
               flex: 1, border: 'none', outline: 'none', fontSize: 32, fontWeight: 800,
-              color: INK, padding: 0, background: 'transparent',
+              color: data.presion ? VALUE_COLOR : BORDER_DARK, padding: 0, background: 'transparent',
               fontVariantNumeric: 'tabular-nums' as const, fontFamily: MONO,
             }}
           />
-          <span style={{ fontSize: 13, color: MUTED, fontWeight: 700, marginLeft: 8, letterSpacing: '0.04em' }}>psi</span>
+          <span style={{ fontSize: 13, color: LABEL_BLUE, fontWeight: 700, marginLeft: 8, letterSpacing: '0.04em' }}>psi</span>
         </div>
       </div>
 
       {/* ── VÁLVULA ── */}
-      <div style={card}>
+      <div style={{ padding: '0 2px' }}>
         <AutocompleteField
           label="VÁLVULA"
           value={data.tapaValvula}
@@ -172,15 +250,11 @@ export default function FormBody({
       </div>
 
       {/* ── ANOMALÍA ── */}
-      <div style={{
-        ...card,
-        border: anomaliaAlert ? `2px solid ${ORANGE}` : '2px solid transparent',
-        background: anomaliaAlert ? '#fff9f6' : '#fff',
-      }}>
+      <div style={{ padding: '0 2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <span style={LABEL}>ANOMALÍA</span>
           {anomaliaAlert && (
-            <span style={{ fontSize: 9, fontWeight: 800, color: ORANGE, background: '#fdece4', padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>⚠ ACTIVA</span>
+            <span style={{ fontSize: 9, fontWeight: 800, color: ORANGE, background: 'rgba(240,104,34,0.15)', padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>⚠ ACTIVA</span>
           )}
         </div>
         <AutocompleteField
@@ -189,94 +263,6 @@ export default function FormBody({
           onChange={v => commit({ ...data, anomalia: v })}
           options={anomalias.map(a => a.nombre)}
           placeholder="Buscar anomalía…"
-          filterMode="includes"
-        />
-      </div>
-
-      {/* ── Separador datos del neumático ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0' }}>
-        <div style={{ flex: 1, height: 1, background: BORDER }} />
-        <span style={{ fontSize: 9, fontWeight: 800, color: MUTED, letterSpacing: '0.16em' }}>DATOS DEL NEUMÁTICO</span>
-        <div style={{ flex: 1, height: 1, background: BORDER }} />
-      </div>
-
-      {/* ── MARCA ── */}
-      <div style={card}>
-        <AutocompleteField
-          label="MARCA"
-          value={data.marca}
-          onChange={marca => commit({ ...data, marca, modelo: '' })}
-          options={marcas.map(m => m.nombre)}
-          placeholder="Buscar marca…"
-          allowNew
-          onNew={onNewMarca}
-        />
-      </div>
-
-      {/* ── MODELO ── */}
-      <div style={card}>
-        <AutocompleteField
-          label="MODELO"
-          value={data.modelo}
-          onChange={modelo => commit({ ...data, modelo })}
-          options={modelos.map(m => m.nombre)}
-          placeholder={data.marca ? 'Buscar modelo…' : 'Primero elige una marca'}
-          disabled={!data.marca}
-          allowNew={!!data.marca}
-          onNew={onNewModelo}
-        />
-      </div>
-
-      {/* ── CONDICIÓN ── */}
-      <div style={card}>
-        <span style={LABEL}>CONDICIÓN</span>
-        <div style={{ position: 'relative' }}>
-          <select
-            value={data.condicion}
-            onChange={set('condicion')}
-            style={{
-              width: '100%', border: `2px solid ${BORDER}`, borderRadius: 6,
-              padding: '11px 36px 11px 12px', fontSize: 14, fontWeight: 700, color: INK, outline: 'none',
-              background: FIELD_BG, appearance: 'none' as const, WebkitAppearance: 'none' as const,
-              fontFamily: MONO, boxSizing: 'border-box' as const,
-            }}
-          >
-            <option value="" disabled>Seleccionar…</option>
-            {condiciones.map(c => (
-              <option key={c.codigo} value={c.codigo}>{c.nombre}</option>
-            ))}
-          </select>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-            <path d="M2 5l5 5 5-5" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
-      </div>
-
-      {/* ── DISEÑO DE REENCAUCHE (condicional) ── */}
-      {showReencauche && (
-        <div style={card}>
-          <AutocompleteField
-            label="DISEÑO DE REENCAUCHE"
-            value={data.reencauche}
-            onChange={reencauche => commit({ ...data, reencauche })}
-            options={reencauches.map(r => r.nombre)}
-            placeholder="Buscar diseño…"
-            allowNew
-            onNew={onNewReencauche}
-          />
-        </div>
-      )}
-
-      {/* ── MEDIDA ── */}
-      <div style={card}>
-        <AutocompleteField
-          label="MEDIDA"
-          value={data.medida}
-          onChange={medida => commit({ ...data, medida })}
-          options={medidas.map(m => m.nombre)}
-          placeholder="Ej: 295/80 R22.5"
-          allowNew
-          onNew={onNewMedida}
           filterMode="includes"
         />
       </div>

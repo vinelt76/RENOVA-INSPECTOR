@@ -4,7 +4,7 @@ import { useApp } from '../state/AppContext';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
-import { MONO, NAVY, ORANGE, YELLOW, BORDER, MUTED, GREEN } from '../theme';
+import { MONO, NAVY, ORANGE, YELLOW, GREEN, SCREEN_DARK, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../db/schema';
 import FormBody from './FormBody';
 
@@ -24,6 +24,8 @@ export default function InspeccionScreen() {
   const [data, setData] = useState<Record<string, string>>(empty());
   const [store, setStore] = useState<Record<number, Record<string, string>>>({});
   const [flash, setFlash] = useState(false);
+  const [slideDir, setSlideDir] = useState<'up' | 'down' | null>(null);
+  const [showSheet, setShowSheet] = useState(false);
 
   const [marcas, setMarcas] = useState<CatMarca[]>([]);
   const [modelos, setModelos] = useState<CatModelo[]>([]);
@@ -53,8 +55,7 @@ export default function InspeccionScreen() {
       let tipoV = unidadTipoVehiculo;
       let configV = unidadConfig;
 
-      // Fallback para cold-start: si el contexto se perdió al cerrar la app,
-      // reconstruir tipo/config desde la DB usando el cabeceraId de la URL.
+      // Fallback cold-start: reconstruir tipo/config desde DB si el contexto se perdió
       if ((!tipoV || !configV) && activeCabId) {
         const cab = await inspeccionRepo.getCabecera(activeCabId);
         if (cab) {
@@ -70,7 +71,6 @@ export default function InspeccionScreen() {
     })();
   }, [unidadConfig, unidadTipoVehiculo, activeCabId]);
 
-  // Cargar modelos cuando cambia la marca seleccionada
   useEffect(() => {
     if (!data.marca) { setModelos([]); return; }
     if (marcas.length === 0) return;
@@ -105,28 +105,6 @@ export default function InspeccionScreen() {
     setReencauches(await catalogoRepo.reencauches());
   };
 
-  const loadNeumatico = useCallback(async (position: number) => {
-    if (!activeCabId) return;
-    const existing = await inspeccionRepo.getNeumaticoByPosicion(activeCabId, position);
-    if (existing) {
-      const d: Record<string, string> = {
-        codigo: existing.codigo ?? '', r1: existing.r1?.toString() ?? '',
-        r2: existing.r2?.toString() ?? '', r3: existing.r3?.toString() ?? '',
-        r4: existing.r4?.toString() ?? '', presion: existing.presion?.toString() ?? '',
-        tapaValvula: existing.tapa_valvula ?? '', anomalia: existing.anomalia ?? '',
-        marca: existing.marca ?? '', modelo: existing.modelo ?? '',
-        condicion: existing.condicion ?? '',
-        reencauche: existing.reencauche ?? '',
-        medida: existing.medida ?? '',
-      };
-      setData(d);
-      setStore(s => ({ ...s, [position]: d }));
-    } else {
-      setData(empty());
-      setStore(s => ({ ...s, [position]: empty() }));
-    }
-  }, [activeCabId]);
-
   const loadAll = useCallback(async () => {
     if (!activeCabId) return;
     const neumaticos = await inspeccionRepo.listNeumaticos(activeCabId);
@@ -141,7 +119,6 @@ export default function InspeccionScreen() {
       };
     }
     setStore(newStore);
-    // Marcar como visitadas las posiciones que ya tienen algún dato guardado
     setVisited(prev => {
       const nv = new Set(prev);
       for (const [p, d] of Object.entries(newStore)) {
@@ -153,16 +130,9 @@ export default function InspeccionScreen() {
   }, [activeCabId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
-  useEffect(() => { loadNeumatico(pos); }, [pos, loadNeumatico]);
 
   const FILAS = configPos.map(c => c.posicion);
   const TOTAL = FILAS.length;
-
-  const inspeccionada = (n: number) => {
-    const d = n === pos ? data : store[n];
-    return !!(d && (d.r1 || d.r2 || d.r3 || d.r4 || d.presion));
-  };
-  const hechas = FILAS.filter(inspeccionada).length;
   const todasVistas = TOTAL > 0 && FILAS.every(f => visited.has(f));
 
   const flashSave = () => { setFlash(true); setTimeout(() => setFlash(false), 1400); };
@@ -185,37 +155,57 @@ export default function InspeccionScreen() {
   };
 
   const switchPos = (n: number) => {
-    setStore(s => ({ ...s, [pos]: data }));
+    setSlideDir(n > pos ? 'up' : 'down');
+    const nextStore = { ...store, [pos]: data };
+    setStore(nextStore);
     setVisited(v => { const nv = new Set(v); nv.add(n); return nv; });
     setPos(n);
+    setData(nextStore[n] || empty());
   };
 
   const posIdx = FILAS.indexOf(pos);
   const prevPos = () => { if (posIdx > 0) switchPos(FILAS[posIdx - 1]); };
   const nextPos = () => { if (posIdx < FILAS.length - 1) switchPos(FILAS[posIdx + 1]); };
 
-  const finalizar = () => navigate('/unidad');
+  const handleExit = () => navigate('/unidad');
+
+  // Estado de cada posición para el grid del sheet
+  const posStatus = (p: number): 'completa' | 'parcial' | 'vacia' => {
+    const d = p === pos ? data : (store[p] || empty());
+    const cfg = configPos.find(c => c.posicion === p);
+    const needsR4 = cfg?.tipo_eje === 'Libre';
+    const rtdOk = !!(d.r1 && d.r2 && d.r3 && (!needsR4 || d.r4));
+    if (rtdOk && d.presion) return 'completa';
+    if (d.r1 || d.r2 || d.r3 || d.r4 || d.presion) return 'parcial';
+    return 'vacia';
+  };
+
+  const posLabel = (p: number): string => {
+    const cfg = configPos.find(c => c.posicion === p);
+    if (!cfg) return `${p}`;
+    const eje = cfg.tipo_eje === 'Direccional' ? 'DIR' : cfg.tipo_eje === 'Libre' ? 'LIB' : 'TRC';
+    return `${eje}·${cfg.lado ?? ''}`;
+  };
+
+  const statusColor = (s: 'completa' | 'parcial' | 'vacia') =>
+    s === 'completa' ? GREEN : s === 'parcial' ? YELLOW : BORDER_DARK;
 
   const navBtn = (label: React.ReactNode, onClick: () => void, disabled: boolean) => (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        background: 'none', border: 'none', color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)',
-        cursor: disabled ? 'default' : 'pointer',
-        minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
-      }}
-    >{label}</button>
+    <button onClick={onClick} disabled={disabled} style={{
+      background: 'none', border: 'none', color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)',
+      cursor: disabled ? 'default' : 'pointer',
+      minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+    }}>{label}</button>
   );
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#eef1f6', fontFamily: MONO, overflow: 'clip' }}>
+    <div className="screen-enter" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: SCREEN_DARK, fontFamily: MONO, overflow: 'clip' }}>
 
       {/* Header */}
       <div style={{ background: NAVY, padding: 'calc(10px + env(safe-area-inset-top, 0px)) 14px 10px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <button
           aria-label="Volver"
-          onClick={() => navigate('/unidad')}
+          onClick={handleExit}
           style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -231,74 +221,112 @@ export default function InspeccionScreen() {
           </div>
         </div>
 
-        {/* Navegación de posición */}
-        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '0 2px', flexShrink: 0 }}>
-          {navBtn(<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>, prevPos, posIdx <= 0)}
-          <div style={{ textAlign: 'center', minWidth: 44, padding: '4px 0' }}>
+        {/* Pill de navegación — flechas +/-1, centro tappable abre el sheet */}
+        <div style={{ display: 'flex', alignItems: 'center', background: ORANGE, borderRadius: 10, padding: '0 2px', flexShrink: 0 }}>
+          {navBtn(
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+            prevPos, posIdx <= 0,
+          )}
+          <button
+            onClick={() => setShowSheet(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', minWidth: 44, padding: '4px 0', fontFamily: MONO }}
+          >
             <div style={{ color: '#fff', fontWeight: 900, fontSize: 20, lineHeight: 1 }}>{TOTAL > 0 ? pos : '—'}</div>
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 700, letterSpacing: '0.04em' }}>de {TOTAL}</div>
-          </div>
-          {navBtn(<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>, nextPos, posIdx >= FILAS.length - 1)}
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 700, letterSpacing: '0.04em' }}>de {TOTAL}</div>
+          </button>
+          {navBtn(
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+            nextPos, posIdx >= FILAS.length - 1,
+          )}
         </div>
       </div>
 
-      {/* Indicador de posición (eje/lado) */}
-      {configPos.length > 0 && (() => {
-        const cur = configPos.find(c => c.posicion === pos);
-        if (!cur) return null;
-        const tag = cur.tipo_eje === 'Direccional' ? 'DIR' : cur.tipo_eje === 'Libre' ? 'LIB' : 'TRC';
-        const estado = inspeccionada(pos);
-        return (
-          <div style={{ background: estado ? NAVY : ORANGE, padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.12em' }}>{tag}</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>·</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>{cur.lado ?? ''}</span>
-            <div style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.06em' }}>
-              {hechas}/{TOTAL} con datos
-            </span>
-          </div>
-        );
-      })()}
-
-      {/* Formulario scrollable */}
-      <FormBody
-        data={data}
-        commit={commit}
-        marcas={marcas}
-        modelos={modelos}
-        medidas={medidas}
-        reencauches={reencauches}
-        anomalias={anomalias}
-        valvulas={valvulas}
-        condiciones={condiciones}
-        r1Ref={r1Ref}
-        r2Ref={r2Ref}
-        r3Ref={r3Ref}
-        r4Ref={r4Ref}
-        onNewMarca={handleNewMarca}
-        onNewModelo={handleNewModelo}
-        onNewMedida={handleNewMedida}
-        onNewReencauche={handleNewReencauche}
-      />
-
-      {/* Footer */}
-      <div style={{ padding: `10px 14px calc(10px + env(safe-area-inset-bottom, 0px))`, background: '#eef1f6', borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
-        {todasVistas ? (
-          <button
-            onClick={finalizar}
-            style={{ width: '100%', background: GREEN, color: '#fff', border: 'none', borderRadius: 14, padding: 14, fontWeight: 800, fontSize: 15, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO }}
-          >
-            FINALIZAR INSPECCIÓN ✓
-          </button>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 4px' }}>
-            <span style={{ fontSize: 12, color: MUTED, fontWeight: 700 }}>
-              {visited.size} de {TOTAL} posiciones revisadas
-            </span>
-          </div>
-        )}
+      {/* Formulario — key={pos} dispara remount + animación de slide */}
+      <div
+        key={pos}
+        className={slideDir ? `form-slide-${slideDir}` : ''}
+        style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+      >
+        <FormBody
+          data={data}
+          commit={commit}
+          marcas={marcas}
+          modelos={modelos}
+          medidas={medidas}
+          reencauches={reencauches}
+          anomalias={anomalias}
+          valvulas={valvulas}
+          condiciones={condiciones}
+          r1Ref={r1Ref}
+          r2Ref={r2Ref}
+          r3Ref={r3Ref}
+          r4Ref={r4Ref}
+          onNewMarca={handleNewMarca}
+          onNewModelo={handleNewModelo}
+          onNewMedida={handleNewMedida}
+          onNewReencauche={handleNewReencauche}
+        />
       </div>
+
+      {/* Footer — solo cuando todas las posiciones han sido visitadas */}
+      {todasVistas && (
+        <div style={{ padding: `10px 14px calc(10px + env(safe-area-inset-bottom, 0px))`, background: SCREEN_DARK, borderTop: `1px solid ${BORDER_DARK}`, flexShrink: 0 }}>
+          <button
+            onClick={handleExit}
+            style={{ width: '100%', background: YELLOW, color: NAVY, border: 'none', borderRadius: 14, padding: 14, fontWeight: 800, fontSize: 15, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO }}
+          >
+            BUSCAR OTRA UNIDAD →
+          </button>
+        </div>
+      )}
+
+      {/* Bottom sheet — grid de posiciones */}
+      {showSheet && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,18,0.72)', zIndex: 50, display: 'flex', alignItems: 'flex-end' }}
+          onClick={() => setShowSheet(false)}
+        >
+          <div
+            className="sheet-enter"
+            style={{ background: FIELD_DARK, borderRadius: '16px 16px 0 0', width: '100%', padding: `16px 16px calc(24px + env(safe-area-inset-bottom, 0px))`, boxSizing: 'border-box' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER_DARK, margin: '0 auto 14px' }} />
+            <div style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', textAlign: 'center', marginBottom: 14 }}>
+              POSICIONES — {FILAS.filter(p => posStatus(p) === 'completa').length}/{TOTAL} completas
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+              {FILAS.map(p => {
+                const status = posStatus(p);
+                const isCurrent = p === pos;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => { setShowSheet(false); if (p !== pos) switchPos(p); }}
+                    style={{
+                      background: isCurrent ? 'rgba(240,104,34,0.18)' : SCREEN_DARK,
+                      border: `2px solid ${isCurrent ? ORANGE : BORDER_DARK}`,
+                      borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: MONO,
+                      textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      minHeight: 52,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, color: isCurrent ? ORANGE : LABEL_BLUE, letterSpacing: '0.1em', marginBottom: 2 }}>
+                        {posLabel(p)}
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: isCurrent ? ORANGE : VALUE_COLOR, lineHeight: 1 }}>
+                        {p}
+                      </div>
+                    </div>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor(status), flexShrink: 0 }} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -47,6 +47,17 @@ export const unidadRepo = {
     return { cabecera, neumaticos: neumaticosResult.values as InspeccionNeumatico[] };
   },
 
+  async hoy(empresaId: string): Promise<Unidad[]> {
+    const db = await getDb();
+    const hoy = new Date().toISOString().slice(0, 10);
+    const result = await db.query(
+      `SELECT * FROM unidad WHERE empresa_id = ? AND ultima_fecha = ?
+       ORDER BY numero`,
+      [empresaId, hoy]
+    );
+    return result.values as Unidad[];
+  },
+
   async upsert(unidad: Unidad): Promise<void> {
     const db = await getDb();
     await db.run(

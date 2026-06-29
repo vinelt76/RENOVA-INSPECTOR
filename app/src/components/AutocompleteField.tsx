@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { MONO, NAVY, BORDER, MUTED, INK, FIELD_BG, ORANGE } from '../theme';
+import { MONO, NAVY, LABEL_BLUE, BORDER_DARK, FIELD_DARK, VALUE_COLOR, ORANGE } from '../theme';
 
 const labelStyle = {
-  fontSize: 11, fontWeight: 800, color: NAVY, letterSpacing: '0.1em',
+  fontSize: 11, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.1em',
   display: 'block' as const, marginBottom: 8, fontFamily: MONO,
 };
 
@@ -81,7 +81,8 @@ export default function AutocompleteField({
   };
 
   const filled = !!value;
-  const borderColor = disabled ? BORDER : open ? ORANGE : BORDER;
+  const borderColor = disabled ? BORDER_DARK : open ? ORANGE : BORDER_DARK;
+  void filled; // usado solo para el botón ×
   const showDropdown = open && !disabled && (filtered.length > 0 || showAddNew);
 
   return (
@@ -91,10 +92,11 @@ export default function AutocompleteField({
         <div style={{
           display: 'flex', alignItems: 'center',
           border: `2px solid ${borderColor}`, borderRadius: 6,
-          background: disabled ? '#f4f6f9' : FIELD_BG,
+          background: disabled ? 'rgba(28,46,80,0.4)' : FIELD_DARK,
           transition: 'border-color 0.15s',
         }}>
           <input
+            className="dark-input"
             value={query}
             onChange={e => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
@@ -104,7 +106,7 @@ export default function AutocompleteField({
             style={{
               flex: 1, border: 'none', outline: 'none', background: 'transparent',
               padding: '11px 12px', fontSize: 13, fontWeight: 700,
-              color: disabled ? MUTED : INK, fontFamily: MONO,
+              color: disabled ? BORDER_DARK : VALUE_COLOR, fontFamily: MONO,
               cursor: disabled ? 'not-allowed' : 'text',
               ...inputStyle,
             }}
@@ -112,7 +114,7 @@ export default function AutocompleteField({
           {filled && !disabled && (
             <button
               onMouseDown={e => { e.preventDefault(); setQuery(''); onChange(''); setOpen(false); }}
-              style={{ background: 'none', border: 'none', padding: '0 10px', color: MUTED, fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', padding: '0 10px', color: LABEL_BLUE, fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
             >×</button>
           )}
         </div>

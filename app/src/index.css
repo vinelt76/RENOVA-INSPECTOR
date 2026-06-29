@@ -6,6 +6,7 @@
 
 body {
   margin: 0;
+  background: #07111C; /* evita flash blanco entre rutas */
   font-family: "JetBrains Mono", "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -28,3 +29,34 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* Placeholder en campos oscuros — casi invisible, no compite */
+.dark-input::placeholder {
+  color: #1B2D42;
+}
+
+/* Slide entre posiciones (mismo vehículo — cuaderno de notas) */
+@keyframes slideInUp {
+  from { transform: translateY(28px); opacity: 0.55; }
+  to   { transform: translateY(0);    opacity: 1;    }
+}
+@keyframes slideInDown {
+  from { transform: translateY(-28px); opacity: 0.55; }
+  to   { transform: translateY(0);     opacity: 1;    }
+}
+.form-slide-up   { animation: slideInUp   0.21s cubic-bezier(0.22,1,0.36,1) both; }
+.form-slide-down { animation: slideInDown 0.21s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Transición de pantalla (cambio de unidad) */
+@keyframes screenFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.screen-enter { animation: screenFadeIn 0.28s ease-out both; }
+
+/* Bottom sheet de posiciones */
+@keyframes sheetIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+.sheet-enter { animation: sheetIn 0.25s cubic-bezier(0.22,1,0.36,1) both; }
