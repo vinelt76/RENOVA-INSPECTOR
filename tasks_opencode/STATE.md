@@ -655,3 +655,113 @@ Cambios mínimos en 2 archivos:
 
 `npm run build` verde. Semánticamente correcto: cada inspección es una foto completa del estado
 de los neumáticos en esa fecha; la cabecera anterior queda intacta para el historial futuro.
+
+---
+
+# 🆕 SESIÓN 2026-06-28 — Fixes APK + Rediseño UI (Opus directo con Facundo)
+
+> Esta sesión trabajó directamente sobre `app/` sin task specs formales.
+> Todos los cambios compilaron en verde (`✓ built in ~200ms`).
+> **Smoke test en navegador pendiente** — no se corrió `npm run dev` en esta sesión.
+> Prioridad al retomar: verificar el flujo completo en el navegador antes de generar el APK.
+
+## A. Fixes críticos para el APK
+
+**Fuentes offline — `main.tsx` + `index.css`**
+- Instalado `@fontsource/jetbrains-mono` (pesos 400/500/700/800), importados en `main.tsx`
+- Eliminado `@import url('https://fonts.googleapis.com/...')` de `index.css`
+- La app ya no necesita red para cargar la fuente → layout estable en APK sin conexión
+
+**`height: 100dvh` → `height: '100%'`** en `EmpresaScreen`, `UnidadScreen`, `InspeccionScreen`
+- `dvh` no soportado en WebView Android 9-10; fallback al `height: 100%` con `html,body,#root { height: 100% }` en `index.css`
+
+**Safe-area-insets** en los 3 screens
+- Headers: `padding: calc(Xpx + env(safe-area-inset-top, 0px)) ...`
+- Footers: `padding: ... calc(Xpx + env(safe-area-inset-bottom, 0px))`
+- Requiere `viewport-fit=cover` en `index.html` (ya estaba)
+
+**`<select>` con `appearance: none` + chevron SVG** en `FormBody` (CONDICIÓN) y `GrillaBody` (3 selects en el sheet)
+- `appearance: auto` en Android WebView ignora CSS personalizado; `appearance: none` + wrapper relativo + SVG absoluto
+
+**Modal GrillaBody**: `position: 'absolute'` → `position: 'fixed'` (overlay no cubría toda la pantalla)
+
+**Dropdown UnidadScreen**: reemplazado `top: 90` hardcoded por posicionamiento dentro del contenedor `position: relative` → `top: calc(100% + 4px)`
+
+**Emojis → SVG**: `📷`, `⌄`, `←`, `‹`, `›` reemplazados con SVG inline en `EmpresaScreen`, `UnidadScreen`, `InspeccionScreen`
+
+**Spin buttons ocultos** en `index.css`:
+```css
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+input[type="number"] { -moz-appearance: textfield; }
+```
+
+**Capacitor Camera API** en `UnidadScreen`:
+- Nativo: `Camera.getPhoto({ quality: 80, resultType: DataUrl, source: Camera })` vía `@capacitor/camera`
+- Web (fallback): `fileInputRef.current?.click()` (mismo comportamiento que antes)
+
+## B. UX para inspectores en campo (aprobadas por Facundo)
+
+**Auto-avance RTD** (`FormBody.tsx`):
+- `handleRemChange(key)`: al llegar a 2 dígitos → `advanceRem(key)` con `setTimeout(0)` para respetar el ciclo de estado
+- `handleRemKey(key)`: Enter → `advanceRem(key)`
+- Secuencia: R1→R2→R3→R4→blur
+- Reduce ~24 toques de teclado por bus (3 Enter × 8 neumáticos)
+
+**Labels legibles al sol**: `fontSize: 11→12`, `color: MUTED → #4a5568` (contraste 7.5:1) en `FormBody` y `GrillaBody`
+
+## C. Bug fixes de funcionalidad
+
+**AutocompleteField — filtro `includes`**: `filterMode` default cambiado de `'startsWith'` a `'includes'` → Marca, Modelo, Válvula, Medida filtran por coincidencia en cualquier posición
+
+**Campo MEDIDA con autocomplete** (`FormBody.tsx` + `InspeccionScreen.tsx`):
+- MEDIDA reemplazado: `<input type="text">` → `AutocompleteField` con opciones de `cat_medida`
+- Nuevos props en `FormBody`: `medidas: CatMedida[]`, `onNewMedida: (nombre) => void`
+- `InspeccionScreen`: carga `catalogoRepo.medidas()` en el `useEffect` inicial; handler `handleNewMedida`
+
+**Auto-selección de unidad en match exacto** (`UnidadScreen.tsx`):
+- `handleSearch`: si los resultados de DB contienen un `numero === clean` exacto → llama `selectUnidad(exacto)` sin esperar click
+- Carga `ultimaInsp`, configuración de ejes y la última inspección automáticamente al terminar de escribir el número
+
+## D. Rediseño visual FormBody (iterativo con Facundo)
+
+**Sistema de labels unificado** — un solo color (navy), dos tamaños:
+- `LABEL_PRIMARY` (13px, navy): `CÓDIGO DE NEUMÁTICO`, `REMANENTE (mm)`, `PRESIÓN`
+- `LABEL` (11px, navy): todos los demás campos (Válvula, Anomalía, Marca, Modelo, Condición, Medida)
+- AutocompleteField interno: `labelStyle` actualizado a 11px navy (coincide con `LABEL`)
+
+**Jerarquía espacial** — secciones de medición vs. datos:
+- `CÓDIGO`, `REMANENTE`, `PRESIÓN`: sin card wrapper → flotan sobre el fondo `#eef1f6` del screen (datos importantes expuestos)
+- Campos secundarios (Válvula, Anomalía, Marca, Modelo, etc.): en cards blancas
+
+**Bordes reducidos**: cards 8px (era 14px); inputs/selects 6px (era 10px); sheet GrillaBody 12px (era 20px)
+
+**Sin borde "lleno"** en `AutocompleteField` ni select CONDICIÓN:
+- `borderColor`: siempre `BORDER` excepto cuando abierto → `ORANGE`; el `×` y el texto del valor indican que hay dato
+- Eliminado el `filled ? NAVY : BORDER` que creaba un "delineado de pastillas" que no gustó
+
+**Dropdown autocomplete**: fondo `NAVY` + texto `#fff` + separadores `rgba(255,255,255,0.1)`; ítem activo `rgba(255,255,255,0.15)` overlay; botón "＋ Agregar" en `ORANGE`
+
+**`inputStyle?: React.CSSProperties`** prop añadido a `AutocompleteField`: permite al campo CÓDIGO usar `fontSize: 22px` como hero
+
+## Estado al cerrar la sesión
+
+```
+npm run build → ✓ (54 módulos, sin errores TS)
+npm test      → no corrido en esta sesión (23 tests verdes en sesión anterior)
+npm run lint  → no corrido en esta sesión
+Smoke test    → PENDIENTE
+APK           → PENDIENTE (sigue sin `app/android/`)
+```
+
+## Próximos pasos al retomar
+
+1. **Smoke test obligatorio**: `npm run dev` → recorrer flujo empresa→unidad→inspección en el navegador; verificar:
+   - Autocomplete con fondo navy funciona
+   - Auto-avance RTD con teclado numérico
+   - Auto-selección de unidad al escribir número exacto
+   - Campo MEDIDA muestra opciones del catálogo
+   - Cero errores de consola
+2. Si el smoke test pasa → **generar APK** (`npx cap add android && npx cap sync && npx cap build android`) y probar en dispositivo Android real
+3. Verificar en Android: fuentes offline, safe-area-insets, selects con chevron SVG, cámara nativa
+4. Pendiente de diseño: Facundo quiere seguir iterando la UI del formulario antes o después del APK
