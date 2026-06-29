@@ -1,0 +1,62 @@
+name: Build APK
+
+on:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:        # permite lanzar manualmente desde GitHub o celular
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 35
+          build-tools-version: '35.0.0'
+
+      - name: Install npm dependencies
+        run: cd app && npm ci
+
+      - name: Build web assets
+        run: cd app && npm run build
+
+      - name: Sync Capacitor → Android
+        run: cd app && npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x app/android/gradlew
+
+      - name: Build debug APK
+        run: cd app/android && ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: renova-inspector-debug-${{ github.run_number }}
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Build summary
+        run: |
+          echo "## APK generado ✓" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "Descargá el APK desde la pestaña **Artifacts** de este run." >> $GITHUB_STEP_SUMMARY

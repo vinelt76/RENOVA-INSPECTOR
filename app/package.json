@@ -25,13 +25,16 @@
     "react-router-dom": "^7.18.0",
     "uuid": "^14.0.1"
   },
+  "overrides": {
+    "uuid": "^14.0.1"
+  },
   "devDependencies": {
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.2",
-    "exceljs": "^3.4.0",
+    "exceljs": "^3.10.0",
     "oxlint": "^1.69.0",
     "playwright": "^1.61.1",
     "tsx": "^4.19.2",
