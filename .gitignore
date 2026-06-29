@@ -6,10 +6,10 @@ app/coverage/
 app/.env
 app/.env.local
 
-# Capacitor / Android (proyecto nativo generado)
-app/android/
+# Capacitor / iOS (proyecto nativo generado)
 app/ios/
 app/.capacitor/
+# app/android/ se commitea al repo para que CI/CD pueda hacer cap sync + gradlew
 *.apk
 *.aab
 *.keystore
