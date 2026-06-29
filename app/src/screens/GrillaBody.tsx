@@ -1,14 +1,25 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { MONO, NAVY, ORANGE, YELLOW, INK, BORDER, FIELD_BG, MUTED } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatCondicion } from '../db/schema';
 import AutocompleteField from '../components/AutocompleteField';
 
 const CELDAS = ['r1', 'r2', 'r3', 'r4', 'presion'] as const;
-const labelStyle = { fontSize: 11, fontWeight: 800, color: MUTED, letterSpacing: '0.12em', display: 'block' as const, marginBottom: 6, fontFamily: MONO };
-const selectBase = { width: '100%', border: '', borderRadius: 10, padding: '11px 12px', fontSize: 13, fontWeight: 700, color: INK, outline: 'none', background: FIELD_BG, appearance: 'auto' as const, fontFamily: MONO, boxSizing: 'border-box' as const };
+const labelStyle = { fontSize: 12, fontWeight: 800, color: '#4a5568', letterSpacing: '0.12em', display: 'block' as const, marginBottom: 6, fontFamily: MONO };
+const selectBase = { width: '100%', border: '', borderRadius: 6, padding: '11px 36px 11px 12px', fontSize: 13, fontWeight: 700, color: INK, outline: 'none', background: FIELD_BG, appearance: 'none' as const, WebkitAppearance: 'none' as const, fontFamily: MONO, boxSizing: 'border-box' as const };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div style={{ width: '100%' }}><label style={labelStyle}>{label}</label>{children}</div>;
+}
+
+function SelectWrap({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ position: 'relative' }}>
+      {children}
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+        <path d="M2 5l5 5 5-5" stroke={MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  );
 }
 
 interface Props {
@@ -132,8 +143,8 @@ export default function GrillaBody({ cabeceraId, store, setStore, flashSave, POS
 
       {/* ── Sheet: Detalle ── */}
       {detalle != null && (
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,16,30,0.5)', display: 'flex', alignItems: 'flex-end', zIndex: 50 }} onClick={() => setDetalle(null)}>
-          <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', width: '100%', padding: '18px 18px 26px', maxHeight: '92%', overflowY: 'auto', boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,16,30,0.5)', display: 'flex', alignItems: 'flex-end', zIndex: 50 }} onClick={() => setDetalle(null)}>
+          <div style={{ background: '#fff', borderRadius: '12px 12px 0 0', width: '100%', padding: '18px 18px 26px', maxHeight: '92%', overflowY: 'auto', boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER, margin: '0 auto 16px' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
               <span style={{ background: NAVY, color: '#fff', fontWeight: 900, fontSize: 18, width: 38, height: 38, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{detalle}</span>
@@ -165,24 +176,30 @@ export default function GrillaBody({ cabeceraId, store, setStore, flashSave, POS
                 disabled={!dd.marca}
               />
               <Field label="CONDICIÓN">
-                <select value={dd.condicion} onChange={setField(detalle, 'condicion')} style={{ ...selectBase, border: `2px solid ${dd.condicion ? NAVY : BORDER}` }}>
-                  <option value="">Seleccionar…</option>
-                  {condiciones.map(c => <option key={c.codigo} value={c.codigo}>{c.nombre}</option>)}
-                </select>
+                <SelectWrap>
+                  <select value={dd.condicion} onChange={setField(detalle, 'condicion')} style={{ ...selectBase, border: `2px solid ${dd.condicion ? NAVY : BORDER}` }}>
+                    <option value="">Seleccionar…</option>
+                    {condiciones.map(c => <option key={c.codigo} value={c.codigo}>{c.nombre}</option>)}
+                  </select>
+                </SelectWrap>
               </Field>
               {showReencaucheDet && (
                 <Field label="DISEÑO DE REENCAUCHE">
-                  <select value={dd.reencauche} onChange={setField(detalle, 'reencauche')} style={{ ...selectBase, border: `2px solid ${dd.reencauche ? NAVY : BORDER}` }}>
-                    <option value="">Seleccionar diseño…</option>
-                    {reencauches.map(r => <option key={r.id} value={r.nombre}>{r.nombre}</option>)}
-                  </select>
+                  <SelectWrap>
+                    <select value={dd.reencauche} onChange={setField(detalle, 'reencauche')} style={{ ...selectBase, border: `2px solid ${dd.reencauche ? NAVY : BORDER}` }}>
+                      <option value="">Seleccionar diseño…</option>
+                      {reencauches.map(r => <option key={r.id} value={r.nombre}>{r.nombre}</option>)}
+                    </select>
+                  </SelectWrap>
                 </Field>
               )}
               <Field label="MEDIDA">
-                <select value={dd.medida} onChange={setField(detalle, 'medida')} style={{ ...selectBase, border: `2px solid ${dd.medida ? NAVY : BORDER}` }}>
-                  <option value="">Seleccionar medida…</option>
-                  {medidas.map(m => <option key={m.id} value={m.nombre}>{m.nombre}</option>)}
-                </select>
+                <SelectWrap>
+                  <select value={dd.medida} onChange={setField(detalle, 'medida')} style={{ ...selectBase, border: `2px solid ${dd.medida ? NAVY : BORDER}` }}>
+                    <option value="">Seleccionar medida…</option>
+                    {medidas.map(m => <option key={m.id} value={m.nombre}>{m.nombre}</option>)}
+                  </select>
+                </SelectWrap>
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <AutocompleteField

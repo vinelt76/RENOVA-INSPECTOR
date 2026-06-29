@@ -17,10 +17,8 @@ const POS_LADO_MAP: Record<number, 'Izq' | 'Der'> = {
   7: 'Izq', 8: 'Der',
 };
 
-// Lista completa de condiciones (el patrón solo tiene N/R1/R2; los datos reales tienen R/R3/R4)
 const ALL_CONDICIONES = [
   { codigo: 'N',  nombre: 'Nuevo' },
-  { codigo: 'R',  nombre: 'Reencauchado' },
   { codigo: 'R1', nombre: 'Primer reencauche' },
   { codigo: 'R2', nombre: 'Segundo reencauche' },
   { codigo: 'R3', nombre: 'Tercer reencauche' },

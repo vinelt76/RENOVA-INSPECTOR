@@ -3,7 +3,7 @@ import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { buildSeedRows } from './seed_rows';
 
 // Incrementar para forzar re-siembra (cuando cambian los datos del seed).
-const SEED_VERSION = 2;
+const SEED_VERSION = 4;
 
 async function getSeedVersion(db: SQLiteDBConnection): Promise<number> {
   const res = await db.query(`SELECT value FROM app_meta WHERE key = 'seed_version'`);
@@ -31,6 +31,8 @@ export async function runSeed(): Promise<void> {
   for (const c of rows.catConfiguraciones) {
     batch.push({ statement: `INSERT OR IGNORE INTO cat_configuracion (tipo_vehiculo, notacion, posicion, tipo_eje, lado, piso, mvp) VALUES (?, ?, ?, ?, ?, ?, ?)`, values: [c.tipo_vehiculo, c.notacion, c.posicion, c.tipo_eje, c.lado, c.piso, c.mvp] });
   }
+  // Limpiar condiciones eliminadas del catálogo
+  batch.push({ statement: `DELETE FROM cat_condicion WHERE codigo = 'R'`, values: [] });
   for (const c of rows.catCondiciones) {
     batch.push({ statement: `INSERT OR IGNORE INTO cat_condicion (codigo, nombre) VALUES (?, ?)`, values: [c.codigo, c.nombre] });
   }

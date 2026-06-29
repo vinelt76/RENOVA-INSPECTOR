@@ -6,6 +6,8 @@ import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { MONO, NAVY, ORANGE, YELLOW, INK, BORDER, MUTED } from '../theme';
 import type { Unidad, CatConfiguracion } from '../db/schema';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
 
 function StepDots({ current, total = 4 }: { current: number; total?: number }) {
   return (
@@ -71,14 +73,21 @@ export default function UnidadScreen() {
   const canCreate = !!noExiste && odometro.length > 0 && !!config;
 
   const handleSearch = async (val: string) => {
-    setQuery(val.replace(/[^0-9]/g, ''));
+    const clean = val.replace(/[^0-9]/g, '');
+    setQuery(clean);
     setOdometro('');
     setConfig('');
     setUltimaInsp(null);
-    if (val.trim().length >= 1 && empresaId) {
-      const results = await unidadRepo.search(empresaId, val.trim());
+    if (clean.length >= 1 && empresaId) {
+      const results = await unidadRepo.search(empresaId, clean);
       setSugerencias(results);
-      setShowSugerencias(true);
+      const exacto = results.find(u => u.numero === clean);
+      if (exacto) {
+        setShowSugerencias(false);
+        await selectUnidad(exacto);
+      } else {
+        setShowSugerencias(true);
+      }
     } else {
       setSugerencias([]);
       setShowSugerencias(false);
@@ -143,8 +152,22 @@ export default function UnidadScreen() {
     navigate(`/inspeccion/${cab.id}`);
   };
 
-  const handleFoto = () => {
-    fileInputRef.current?.click();
+  const handleFoto = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const photo = await Camera.getPhoto({
+          quality: 80,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+        });
+        if (photo.dataUrl) setFotoUnidad(photo.dataUrl);
+      } catch {
+        // usuario canceló
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
   };
 
   const onFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,11 +200,12 @@ export default function UnidadScreen() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: MONO }}>
-      <div style={{ width: 390, height: 760, background: '#fff', borderRadius: 28, overflow: 'hidden', boxShadow: '0 24px 64px rgba(21,35,63,0.30)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', fontFamily: MONO, overflow: 'clip' }}>
 
-        <div style={{ background: NAVY, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <button onClick={handleBack} aria-label="Volver" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', fontSize: 22, cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>←</button>
+        <div style={{ background: NAVY, padding: 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <button onClick={handleBack} aria-label="Volver" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
             <div style={{ width: 30, height: 30, borderRadius: 7, background: ORANGE, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 15 }}>R</div>
             <div>
@@ -192,7 +216,7 @@ export default function UnidadScreen() {
           <StepDots current={2} />
         </div>
 
-        <div style={{ flex: 1, padding: '24px 24px 20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ flex: 1, padding: '24px 24px calc(20px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
           <div style={{ fontSize: 11, fontWeight: 800, color: NAVY, letterSpacing: '0.14em', marginBottom: 10, flexShrink: 0 }}>UNIDAD</div>
           <div style={{ border: `2px solid ${q ? (match ? ORANGE : (noExiste ? BORDER : NAVY)) : BORDER}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: '#fff', transition: 'border-color 0.15s', flexShrink: 0, position: 'relative' }}>
@@ -210,22 +234,21 @@ export default function UnidadScreen() {
             {query && (
               <button onClick={reset} aria-label="Borrar" style={{ background: 'none', border: 'none', color: MUTED, fontSize: 16, cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             )}
+            {showSugerencias && sugerencias.length > 0 && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: -2, right: -2, background: '#fff', border: `2px solid ${NAVY}`, borderRadius: 12, overflow: 'hidden', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+                {sugerencias.map(u => (
+                  <button
+                    key={u.numero}
+                    onMouseDown={e => { e.preventDefault(); selectUnidad(u); setShowSugerencias(false); }}
+                    style={{ width: '100%', background: '#fff', border: 'none', borderBottom: '1px solid #f0f3f8', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: MONO, textAlign: 'left', minHeight: 52 }}
+                  >
+                    <span style={{ fontWeight: 800, fontSize: 16, color: NAVY }}>{u.numero}</span>
+                    <span style={{ fontSize: 12, color: MUTED }}>{u.configuracion}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-
-          {showSugerencias && sugerencias.length > 0 && (
-            <div style={{ position: 'absolute', top: 90, left: 24, right: 24, background: '#fff', border: `2px solid ${NAVY}`, borderRadius: 12, overflow: 'hidden', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-              {sugerencias.map(u => (
-                <button
-                  key={u.numero}
-                  onMouseDown={e => { e.preventDefault(); selectUnidad(u); setShowSugerencias(false); }}
-                  style={{ width: '100%', background: '#fff', border: 'none', borderBottom: '1px solid #f0f3f8', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: MONO, textAlign: 'left', minHeight: 52 }}
-                >
-                  <span style={{ fontWeight: 800, fontSize: 16, color: NAVY }}>{u.numero}</span>
-                  <span style={{ fontSize: 12, color: MUTED }}>{u.configuracion}</span>
-                </button>
-              ))}
-            </div>
-          )}
 
           {!showResult && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -274,7 +297,7 @@ export default function UnidadScreen() {
                 {fotoUnidad ? (
                   <img src={fotoUnidad} alt="Foto unidad" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
                 ) : (
-                  <span style={{ color: MUTED, fontSize: 20 }}>📷</span>
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M8 4l1.5-2h3L14 4h4a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h4z" stroke={MUTED} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="11" cy="11" r="3" stroke={MUTED} strokeWidth="1.8"/></svg>
                 )}
                 <span style={{ fontSize: 12, fontWeight: 700, color: fotoUnidad ? NAVY : MUTED }}>{fotoUnidad ? 'Cambiar foto' : 'Tomar foto'}</span>
               </button>
@@ -309,7 +332,7 @@ export default function UnidadScreen() {
                 {fotoUnidad ? (
                   <img src={fotoUnidad} alt="Foto unidad" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
                 ) : (
-                  <span style={{ color: MUTED, fontSize: 20 }}>📷</span>
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M8 4l1.5-2h3L14 4h4a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h4z" stroke={MUTED} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="11" cy="11" r="3" stroke={MUTED} strokeWidth="1.8"/></svg>
                 )}
                 <span style={{ fontSize: 12, fontWeight: 700, color: fotoUnidad ? NAVY : MUTED }}>{fotoUnidad ? 'Cambiar foto' : 'Tomar foto'}</span>
               </button>
@@ -374,6 +397,5 @@ export default function UnidadScreen() {
         </div>
         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={onFotoChange} style={{ display: 'none' }} />
       </div>
-    </div>
   );
 }

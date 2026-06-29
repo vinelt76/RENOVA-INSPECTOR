@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { MONO, NAVY, BORDER, MUTED, INK, FIELD_BG, ORANGE } from '../theme';
 
 const labelStyle = {
-  fontSize: 11, fontWeight: 800, color: MUTED, letterSpacing: '0.12em',
-  display: 'block' as const, marginBottom: 6, fontFamily: MONO,
+  fontSize: 11, fontWeight: 800, color: NAVY, letterSpacing: '0.1em',
+  display: 'block' as const, marginBottom: 8, fontFamily: MONO,
 };
 
 interface Props {
@@ -15,11 +15,17 @@ interface Props {
   disabled?: boolean;
   allowNew?: boolean;
   onNew?: (val: string) => void;
+  filterMode?: 'startsWith' | 'includes';
+  showAllOnFocus?: boolean;
+  inputStyle?: React.CSSProperties;
 }
+
+import React from 'react';
 
 export default function AutocompleteField({
   label, value, onChange, options, placeholder = 'Buscar…',
-  disabled = false, allowNew = false, onNew,
+  disabled = false, allowNew = false, onNew, filterMode = 'includes',
+  showAllOnFocus = false, inputStyle,
 }: Props) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
@@ -29,10 +35,13 @@ export default function AutocompleteField({
 
   const q = query.trim();
 
-  // starts-with filter (case-insensitive); campo vacío → sin sugerencias
   const filtered = q === ''
-    ? []
-    : options.filter(o => o.toLowerCase().startsWith(q.toLowerCase())).slice(0, 30);
+    ? (open && showAllOnFocus ? options.slice(0, 30) : [])
+    : options.filter(o =>
+        filterMode === 'includes'
+          ? o.toLowerCase().includes(q.toLowerCase())
+          : o.toLowerCase().startsWith(q.toLowerCase())
+      ).slice(0, 30);
 
   const exactMatch = options.some(o => o.toLowerCase() === q.toLowerCase());
   const showAddNew = allowNew && q.length > 0 && !exactMatch;
@@ -72,7 +81,7 @@ export default function AutocompleteField({
   };
 
   const filled = !!value;
-  const borderColor = disabled ? BORDER : filled ? NAVY : open ? ORANGE : BORDER;
+  const borderColor = disabled ? BORDER : open ? ORANGE : BORDER;
   const showDropdown = open && !disabled && (filtered.length > 0 || showAddNew);
 
   return (
@@ -81,7 +90,7 @@ export default function AutocompleteField({
       <div style={{ position: 'relative' }}>
         <div style={{
           display: 'flex', alignItems: 'center',
-          border: `2px solid ${borderColor}`, borderRadius: 10,
+          border: `2px solid ${borderColor}`, borderRadius: 6,
           background: disabled ? '#f4f6f9' : FIELD_BG,
           transition: 'border-color 0.15s',
         }}>
@@ -97,6 +106,7 @@ export default function AutocompleteField({
               padding: '11px 12px', fontSize: 13, fontWeight: 700,
               color: disabled ? MUTED : INK, fontFamily: MONO,
               cursor: disabled ? 'not-allowed' : 'text',
+              ...inputStyle,
             }}
           />
           {filled && !disabled && (
@@ -110,9 +120,9 @@ export default function AutocompleteField({
         {showDropdown && (
           <div style={{
             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-            background: '#fff', border: `2px solid ${BORDER}`, borderRadius: 10,
+            background: NAVY, borderRadius: 6,
             marginTop: 4, maxHeight: 220, overflowY: 'auto',
-            boxShadow: '0 8px 24px rgba(21,35,63,0.13)',
+            boxShadow: '0 8px 24px rgba(21,35,63,0.28)',
           }}>
             {filtered.map(opt => (
               <button
@@ -121,10 +131,10 @@ export default function AutocompleteField({
                 onTouchEnd={e => { e.preventDefault(); select(opt); }}
                 style={{
                   width: '100%', textAlign: 'left',
-                  background: opt === value ? NAVY : 'transparent',
+                  background: opt === value ? 'rgba(255,255,255,0.15)' : 'transparent',
                   border: 'none', padding: '10px 14px', fontSize: 13, fontWeight: 700,
-                  color: opt === value ? '#fff' : INK, cursor: 'pointer', fontFamily: MONO,
-                  borderBottom: `1px solid ${BORDER}`,
+                  color: '#fff', cursor: 'pointer', fontFamily: MONO,
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
                 }}
               >{opt}</button>
             ))}
@@ -136,7 +146,7 @@ export default function AutocompleteField({
                   width: '100%', textAlign: 'left', background: 'transparent',
                   border: 'none', padding: '10px 14px', fontSize: 13, fontWeight: 700,
                   color: ORANGE, cursor: 'pointer', fontFamily: MONO,
-                  borderTop: filtered.length > 0 ? `1px solid ${BORDER}` : 'none',
+                  borderTop: filtered.length > 0 ? '1px solid rgba(255,255,255,0.1)' : 'none',
                 }}
               >＋ Agregar "{query.trim()}"</button>
             )}

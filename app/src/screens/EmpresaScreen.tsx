@@ -52,10 +52,9 @@ export default function EmpresaScreen() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: MONO }}>
-      <div style={{ width: 390, height: 760, background: '#fff', borderRadius: 28, overflow: 'hidden', boxShadow: '0 24px 64px rgba(21,35,63,0.30)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ height: '100%', background: '#fff', display: 'flex', flexDirection: 'column', fontFamily: MONO, overflow: 'clip' }}>
 
-        <div style={{ background: NAVY, padding: '22px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ background: NAVY, padding: 'calc(22px + env(safe-area-inset-top, 0px)) 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 34, height: 34, borderRadius: 8, background: ORANGE, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: 18 }}>R</div>
             <span style={{ color: '#fff', fontWeight: 800, fontSize: 20, letterSpacing: '0.14em' }}>RENOVA</span>
@@ -63,7 +62,7 @@ export default function EmpresaScreen() {
           <StepDots current={1} />
         </div>
 
-        <div style={{ flex: 1, padding: '28px 24px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, padding: '28px 24px calc(28px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
           <div style={{ background: YELLOW, borderRadius: 18, padding: '20px 22px', marginBottom: 28 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: NAVY, letterSpacing: '0.12em', opacity: 0.6, marginBottom: 4 }}>HOY</div>
             <div style={{ fontSize: 17, fontWeight: 800, color: NAVY, marginBottom: 12 }}>{fechaHoy()}</div>
@@ -94,7 +93,9 @@ export default function EmpresaScreen() {
                 <span style={{ fontSize: 15, color: '#7b879c', fontWeight: 600 }}>Seleccionar empresa</span>
               )}
               <div style={{ minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <span style={{ color: ORANGE, fontSize: 20, fontWeight: 800, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', display: 'inline-block' }}>⌄</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', display: 'block', flexShrink: 0 }}>
+                  <path d="M3 6l5 5 5-5" stroke={ORANGE} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
             </button>
 
@@ -134,6 +135,5 @@ export default function EmpresaScreen() {
           </button>
         </div>
       </div>
-    </div>
   );
 }

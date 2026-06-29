@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
+import { unidadRepo } from '../db/repos/unidadRepo';
 import { MONO, NAVY, ORANGE, YELLOW, BORDER, MUTED, GREEN } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../db/schema';
 import FormBody from './FormBody';
-import GrillaBody from './GrillaBody';
 
 const empty = (): Record<string, string> => ({
   codigo: '', r1: '', r2: '', r3: '', r4: '',
@@ -14,36 +14,16 @@ const empty = (): Record<string, string> => ({
   marca: '', modelo: '', condicion: '', reencauche: '', medida: '',
 });
 
-function WheelBtn({ n, tag, state, onClick }: { n: number; tag: string; state: string; onClick: () => void }) {
-  const isCur = state === 'current';
-  const isDone = state === 'done';
-  const bg = isCur ? ORANGE : isDone ? NAVY : '#fff';
-  const fg = isCur || isDone ? '#fff' : MUTED;
-  const bd = isCur ? ORANGE : isDone ? NAVY : BORDER;
-  return (
-    <button onClick={onClick} style={{ width: 46, height: 54, borderRadius: 9, background: bg, border: `2px solid ${bd}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', fontFamily: MONO, flexShrink: 0, transition: 'background 0.12s' }}>
-      <span style={{ fontSize: 17, fontWeight: 900, color: fg, lineHeight: 1 }}>{n}</span>
-      <span style={{ fontSize: 7.5, fontWeight: 800, color: isCur || isDone ? 'rgba(255,255,255,0.7)' : MUTED, letterSpacing: '0.04em' }}>{tag}</span>
-    </button>
-  );
-}
-
-const MODO_KEY = 'renova_modo_inspeccion';
-
 export default function InspeccionScreen() {
   const { cabeceraId } = useParams<{ cabeceraId: string }>();
   const { empresa, unidadNumero, unidadConfig, unidadTipoVehiculo, cabeceraId: ctxCabId } = useApp();
   const navigate = useNavigate();
   const activeCabId = cabeceraId ?? ctxCabId;
 
-  const [modo, setModo] = useState<'form' | 'grilla'>(() => (localStorage.getItem(MODO_KEY) as 'form' | 'grilla') || 'form');
   const [pos, setPos] = useState(1);
   const [data, setData] = useState<Record<string, string>>(empty());
   const [store, setStore] = useState<Record<number, Record<string, string>>>({});
   const [flash, setFlash] = useState(false);
-  const [showSheet, setShowSheet] = useState(false);
-  const [showPos, setShowPos] = useState(false);
-  const [codigoEditing, setCodigoEditing] = useState(false);
 
   const [marcas, setMarcas] = useState<CatMarca[]>([]);
   const [modelos, setModelos] = useState<CatModelo[]>([]);
@@ -53,29 +33,55 @@ export default function InspeccionScreen() {
   const [valvulas, setValvulas] = useState<CatValvula[]>([]);
   const [condiciones, setCondiciones] = useState<CatCondicion[]>([]);
   const [configPos, setConfigPos] = useState<CatConfiguracion[]>([]);
+  const [visited, setVisited] = useState<Set<number>>(new Set([1]));
 
-  const codigoRef = useRef<HTMLInputElement>(null);
   const r1Ref = useRef<HTMLInputElement>(null);
   const r2Ref = useRef<HTMLInputElement>(null);
   const r3Ref = useRef<HTMLInputElement>(null);
   const r4Ref = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { localStorage.setItem(MODO_KEY, modo); }, [modo]);
-
   useEffect(() => {
     (async () => {
-      const [m, md, a, v, r, c] = await Promise.all([
-        catalogoRepo.marcas(), catalogoRepo.medidas(), catalogoRepo.anomalias(),
+      const [m, a, v, r, c, med] = await Promise.all([
+        catalogoRepo.marcas(), catalogoRepo.anomalias(),
         catalogoRepo.valvulas(), catalogoRepo.reencauches(), catalogoRepo.condiciones(),
+        catalogoRepo.medidas(),
       ]);
-      setMarcas(m); setMedidas(md); setAnomalias(a); setValvulas(v);
-      setReencauches(r); setCondiciones(c);
-      if (unidadConfig && unidadTipoVehiculo) {
-        const cfg = await catalogoRepo.configuracion(unidadTipoVehiculo, unidadConfig);
+      setMarcas(m); setAnomalias(a); setValvulas(v);
+      setReencauches(r); setCondiciones(c); setMedidas(med);
+
+      let tipoV = unidadTipoVehiculo;
+      let configV = unidadConfig;
+
+      // Fallback para cold-start: si el contexto se perdió al cerrar la app,
+      // reconstruir tipo/config desde la DB usando el cabeceraId de la URL.
+      if ((!tipoV || !configV) && activeCabId) {
+        const cab = await inspeccionRepo.getCabecera(activeCabId);
+        if (cab) {
+          const unidad = await unidadRepo.getByNumero(cab.empresa_id, cab.numero_unidad);
+          if (unidad) { tipoV = unidad.tipo_vehiculo; configV = unidad.configuracion; }
+        }
+      }
+
+      if (tipoV && configV) {
+        const cfg = await catalogoRepo.configuracion(tipoV, configV);
         setConfigPos(cfg);
       }
     })();
-  }, [unidadConfig, empresa, unidadTipoVehiculo]);
+  }, [unidadConfig, unidadTipoVehiculo, activeCabId]);
+
+  // Cargar modelos cuando cambia la marca seleccionada
+  useEffect(() => {
+    if (!data.marca) { setModelos([]); return; }
+    if (marcas.length === 0) return;
+    const marcaObj = marcas.find(m => m.nombre.toLowerCase() === data.marca.toLowerCase());
+    if (marcaObj) {
+      setModelos([]);
+      catalogoRepo.modelos(marcaObj.id).then(setModelos);
+    } else {
+      setModelos([]);
+    }
+  }, [data.marca, marcas]);
 
   const handleNewMarca = async (nombre: string) => {
     await catalogoRepo.addMarca(nombre);
@@ -98,13 +104,6 @@ export default function InspeccionScreen() {
     await catalogoRepo.addReencauche(nombre);
     setReencauches(await catalogoRepo.reencauches());
   };
-
-  useEffect(() => {
-    if (marcas.length > 0 && data.marca) {
-      const marcaObj = marcas.find(m => m.nombre === data.marca);
-      if (marcaObj) catalogoRepo.modelos(marcaObj.id).then(setModelos);
-    }
-  }, [data.marca, marcas]);
 
   const loadNeumatico = useCallback(async (position: number) => {
     if (!activeCabId) return;
@@ -142,28 +141,29 @@ export default function InspeccionScreen() {
       };
     }
     setStore(newStore);
+    // Marcar como visitadas las posiciones que ya tienen algún dato guardado
+    setVisited(prev => {
+      const nv = new Set(prev);
+      for (const [p, d] of Object.entries(newStore)) {
+        if (d.r1 || d.r2 || d.r3 || d.r4 || d.presion || d.codigo) nv.add(Number(p));
+      }
+      return nv;
+    });
     if (newStore[pos]) setData(newStore[pos]);
   }, [activeCabId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
   useEffect(() => { loadNeumatico(pos); }, [pos, loadNeumatico]);
 
-  const POS: Record<number, { tag: string; etq: string }> = {};
   const FILAS = configPos.map(c => c.posicion);
-  for (const c of configPos) {
-    const tag = c.tipo_eje === 'Direccional' ? 'DIR' : c.tipo_eje === 'Libre' ? 'LIB' : 'TRC';
-    const etq = c.tipo_eje === 'Direccional' ? `Dir ${c.lado?.toLowerCase() ?? ''}` : c.tipo_eje === 'Libre' ? `Libre ${c.lado?.toLowerCase() ?? ''}` : `Trac ${c.lado?.toLowerCase() ?? ''}`;
-    POS[c.posicion] = { tag, etq };
-  }
   const TOTAL = FILAS.length;
 
   const inspeccionada = (n: number) => {
     const d = n === pos ? data : store[n];
     return !!(d && (d.r1 || d.r2 || d.r3 || d.r4 || d.presion));
   };
-  const completa = (p: number) => { const d = store[p] || empty(); return !!(d.r1 && d.r2 && d.r3 && d.r4 && d.presion); };
-  const listas = FILAS.filter(completa).length;
   const hechas = FILAS.filter(inspeccionada).length;
+  const todasVistas = TOTAL > 0 && FILAS.every(f => visited.has(f));
 
   const flashSave = () => { setFlash(true); setTimeout(() => setFlash(false), 1400); };
 
@@ -186,124 +186,116 @@ export default function InspeccionScreen() {
 
   const switchPos = (n: number) => {
     setStore(s => ({ ...s, [pos]: data }));
+    setVisited(v => { const nv = new Set(v); nv.add(n); return nv; });
     setPos(n);
-    setCodigoEditing(false);
-    setShowPos(false);
   };
 
-  const wheelState = (n: number) => (n === pos ? 'current' : inspeccionada(n) ? 'done' : 'pending');
+  const posIdx = FILAS.indexOf(pos);
+  const prevPos = () => { if (posIdx > 0) switchPos(FILAS[posIdx - 1]); };
+  const nextPos = () => { if (posIdx < FILAS.length - 1) switchPos(FILAS[posIdx + 1]); };
+
   const finalizar = () => navigate('/unidad');
 
-  const toggleBtn = (m: 'form' | 'grilla', label: string) => (
-    <button onClick={() => setModo(m)} style={{ padding: '6px 14px', fontSize: 11, fontWeight: 800, fontFamily: MONO, letterSpacing: '0.06em', border: 'none', borderRadius: 7, cursor: 'pointer', transition: 'background 0.15s', background: modo === m ? ORANGE : 'rgba(255,255,255,0.15)', color: modo === m ? '#fff' : 'rgba(255,255,255,0.6)', minHeight: 32 }}>{label}</button>
+  const navBtn = (label: React.ReactNode, onClick: () => void, disabled: boolean) => (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: 'none', border: 'none', color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)',
+        cursor: disabled ? 'default' : 'pointer',
+        minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+      }}
+    >{label}</button>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: MONO }}>
-      <div style={{ width: 'min(410px, 100%)', height: 'min(820px, 96vh)', background: '#eef1f6', borderRadius: 26, overflow: 'hidden', boxShadow: '0 24px 64px rgba(21,35,63,0.30)', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#eef1f6', fontFamily: MONO, overflow: 'clip' }}>
 
-        <div style={{ background: NAVY, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <button aria-label="Volver" onClick={() => navigate('/unidad')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', fontSize: 22, cursor: 'pointer', minWidth: 40, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>←</button>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em' }}>Inspección</div>
-            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 1, display: 'flex', gap: 6, alignItems: 'center' }}>
-              <span>{empresa?.nombre} · Unidad {unidadNumero}</span>
-              {flash && <span style={{ color: YELLOW, fontWeight: 700, fontSize: 10 }}>✓ Guardado</span>}
-            </div>
+      {/* Header */}
+      <div style={{ background: NAVY, padding: 'calc(10px + env(safe-area-inset-top, 0px)) 14px 10px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <button
+          aria-label="Volver"
+          onClick={() => navigate('/unidad')}
+          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </button>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>Inspección</div>
+          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, display: 'flex', gap: 6, alignItems: 'center', marginTop: 1 }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {empresa?.nombre} · Unidad {unidadNumero}
+            </span>
+            {flash && <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, flexShrink: 0 }}>✓</span>}
           </div>
-          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: 3 }}>
-            {toggleBtn('form', 'FORM')}{toggleBtn('grilla', 'GRILLA')}
-          </div>
-          {modo === 'form' ? (
-            <button onClick={() => setShowPos(true)} style={{ background: ORANGE, border: 'none', borderRadius: 9, padding: '4px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flexShrink: 0, fontFamily: MONO, minHeight: 40, justifyContent: 'center' }}>
-              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 8, fontWeight: 800, letterSpacing: '0.08em' }}>POS.</span>
-              <span style={{ color: '#fff', fontSize: 16, fontWeight: 900, lineHeight: 1.1 }}>{pos}</span>
-            </button>
-          ) : (
-            <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 9, padding: '5px 10px', textAlign: 'center', flexShrink: 0 }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 8, fontWeight: 800, letterSpacing: '0.08em' }}>LISTAS</div>
-              <div style={{ color: '#fff', fontSize: 14, fontWeight: 900, lineHeight: 1.1 }}>{listas}<span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11 }}>/{TOTAL}</span></div>
-            </div>
-          )}
         </div>
 
-        {modo === 'form' ? (
-          <FormBody data={data} commit={commit} marcas={marcas} modelos={modelos} medidas={medidas} reencauches={reencauches} anomalias={anomalias} valvulas={valvulas} condiciones={condiciones} showSheet={showSheet} setShowSheet={setShowSheet} codigoEditing={codigoEditing} setCodigoEditing={setCodigoEditing} codigoRef={codigoRef} r1Ref={r1Ref} r2Ref={r2Ref} r3Ref={r3Ref} r4Ref={r4Ref} onNewMarca={handleNewMarca} onNewModelo={handleNewModelo} onNewMedida={handleNewMedida} onNewReencauche={handleNewReencauche} />
+        {/* Navegación de posición */}
+        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '0 2px', flexShrink: 0 }}>
+          {navBtn(<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>, prevPos, posIdx <= 0)}
+          <div style={{ textAlign: 'center', minWidth: 44, padding: '4px 0' }}>
+            <div style={{ color: '#fff', fontWeight: 900, fontSize: 20, lineHeight: 1 }}>{TOTAL > 0 ? pos : '—'}</div>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 700, letterSpacing: '0.04em' }}>de {TOTAL}</div>
+          </div>
+          {navBtn(<svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>, nextPos, posIdx >= FILAS.length - 1)}
+        </div>
+      </div>
+
+      {/* Indicador de posición (eje/lado) */}
+      {configPos.length > 0 && (() => {
+        const cur = configPos.find(c => c.posicion === pos);
+        if (!cur) return null;
+        const tag = cur.tipo_eje === 'Direccional' ? 'DIR' : cur.tipo_eje === 'Libre' ? 'LIB' : 'TRC';
+        const estado = inspeccionada(pos);
+        return (
+          <div style={{ background: estado ? NAVY : ORANGE, padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.12em' }}>{tag}</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>·</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>{cur.lado ?? ''}</span>
+            <div style={{ flex: 1 }} />
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.06em' }}>
+              {hechas}/{TOTAL} con datos
+            </span>
+          </div>
+        );
+      })()}
+
+      {/* Formulario scrollable */}
+      <FormBody
+        data={data}
+        commit={commit}
+        marcas={marcas}
+        modelos={modelos}
+        medidas={medidas}
+        reencauches={reencauches}
+        anomalias={anomalias}
+        valvulas={valvulas}
+        condiciones={condiciones}
+        r1Ref={r1Ref}
+        r2Ref={r2Ref}
+        r3Ref={r3Ref}
+        r4Ref={r4Ref}
+        onNewMarca={handleNewMarca}
+        onNewModelo={handleNewModelo}
+        onNewMedida={handleNewMedida}
+        onNewReencauche={handleNewReencauche}
+      />
+
+      {/* Footer */}
+      <div style={{ padding: `10px 14px calc(10px + env(safe-area-inset-bottom, 0px))`, background: '#eef1f6', borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
+        {todasVistas ? (
+          <button
+            onClick={finalizar}
+            style={{ width: '100%', background: GREEN, color: '#fff', border: 'none', borderRadius: 14, padding: 14, fontWeight: 800, fontSize: 15, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO }}
+          >
+            FINALIZAR INSPECCIÓN ✓
+          </button>
         ) : (
-          <GrillaBody cabeceraId={activeCabId} store={store} setStore={setStore} flashSave={flashSave} POS={POS} FILAS={FILAS} marcas={marcas} modelos={modelos} medidas={medidas} reencauches={reencauches} anomalias={anomalias} valvulas={valvulas} condiciones={condiciones} upsertNeumatico={inspeccionRepo.upsertNeumatico} />
-        )}
-
-        {modo === 'form' && (
-          <div style={{ flexShrink: 0, padding: '10px 14px', background: '#eef1f6', borderTop: `1px solid ${BORDER}` }}>
-            <button onClick={() => setShowPos(true)} style={{ width: '100%', background: NAVY, color: '#fff', border: 'none', borderRadius: 14, padding: '14px', fontWeight: 800, fontSize: 14, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO }}>
-              MAPA DE LA UNIDAD →
-            </button>
-          </div>
-        )}
-
-        {modo === 'grilla' && (
-          <div style={{ flexShrink: 0, padding: 12, background: '#eef1f6', borderTop: `1px solid ${BORDER}` }}>
-            <button onClick={finalizar} style={{ width: '100%', background: listas === TOTAL ? GREEN : NAVY, color: '#fff', border: 'none', borderRadius: 14, padding: '15px', fontWeight: 800, fontSize: 15, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO }}>
-              {listas === TOTAL ? 'FINALIZAR INSPECCIÓN ✓' : `FINALIZAR · faltan ${TOTAL - listas}`}
-            </button>
-          </div>
-        )}
-
-        {showPos && (
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,16,30,0.55)', display: 'flex', alignItems: 'flex-end', zIndex: 60 }} onClick={() => setShowPos(false)}>
-            <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', width: '100%', padding: '18px 18px 26px', boxSizing: 'border-box' }} onClick={e => e.stopPropagation()}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER, margin: '0 auto 16px' }} />
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 2 }}>
-                <div style={{ fontWeight: 900, fontSize: 15, color: NAVY }}>Mapa de la unidad</div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: ORANGE }}>{hechas} / {TOTAL} listas</div>
-              </div>
-              <div style={{ fontSize: 12, color: MUTED, marginBottom: 14 }}>Unidad {unidadNumero} · {unidadConfig} · toca una llanta para ir</div>
-
-              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '6px 0 2px' }}>
-                <div style={{ position: 'absolute', top: 30, bottom: 12, width: 50, background: NAVY, borderRadius: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 0, opacity: 0.92 }} />
-                <div style={{ fontSize: 9, fontWeight: 800, color: MUTED, letterSpacing: '0.22em', zIndex: 1 }}>▲ FRENTE</div>
-                {(() => {
-                  const ejeGroups = new Map<string, CatConfiguracion[]>();
-                  for (const c of configPos) {
-                    const arr = ejeGroups.get(c.tipo_eje) || [];
-                    arr.push(c);
-                    ejeGroups.set(c.tipo_eje, arr);
-                  }
-                  return ['Direccional', 'Tracción', 'Libre'].filter(e => ejeGroups.has(e)).map(eje => {
-                    const posiciones = ejeGroups.get(eje)!;
-                    const izq = posiciones.filter(p => p.lado === 'Izq').sort((a, b) => a.posicion - b.posicion);
-                    const der = posiciones.filter(p => p.lado === 'Der').sort((a, b) => a.posicion - b.posicion);
-                    return (
-                      <div key={eje} style={{ display: 'flex', alignItems: 'center', width: '100%', zIndex: 1 }}>
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
-                          {izq.map(p => <WheelBtn key={p.posicion} n={p.posicion} tag={POS[p.posicion]?.tag ?? ''} state={wheelState(p.posicion)} onClick={() => switchPos(p.posicion)} />)}
-                        </div>
-                        <div style={{ width: 54, flexShrink: 0 }} />
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start', gap: 6 }}>
-                          {der.map(p => <WheelBtn key={p.posicion} n={p.posicion} tag={POS[p.posicion]?.tag ?? ''} state={wheelState(p.posicion)} onClick={() => switchPos(p.posicion)} />)}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-
-              <div style={{ marginTop: 18, display: 'flex', gap: 16, justifyContent: 'center' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: MUTED }}>
-                  <span style={{ width: 12, height: 12, borderRadius: 3, background: ORANGE }} /> Actual
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: MUTED }}>
-                  <span style={{ width: 12, height: 12, borderRadius: 3, background: NAVY }} /> Inspeccionada
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: MUTED }}>
-                  <span style={{ width: 12, height: 12, borderRadius: 3, background: '#fff', border: `2px solid ${BORDER}` }} /> Pendiente
-                </span>
-              </div>
-
-              <button onClick={finalizar} style={{ width: '100%', background: listas === TOTAL ? GREEN : NAVY, color: '#fff', border: 'none', borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: MONO, marginTop: 16, minHeight: 48 }}>
-                {listas === TOTAL ? 'FINALIZAR INSPECCIÓN ✓' : `FINALIZAR · faltan ${TOTAL - listas}`}
-              </button>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 4px' }}>
+            <span style={{ fontSize: 12, color: MUTED, fontWeight: 700 }}>
+              {visited.size} de {TOTAL} posiciones revisadas
+            </span>
           </div>
         )}
       </div>

@@ -185,16 +185,7 @@
       "posible_causa": "Mantenimiento Alineación",
       "desecho": false
     },
-    {
-      "nombre": "Desgaste excesivo en hombro interno",
-      "posible_causa": "Mantenimiento Alineación",
-      "desecho": false
-    },
-    {
-      "nombre": "Desgaste excesivo en hombro(s)",
-      "posible_causa": "Mantenimiento Alineación",
-      "desecho": false
-    },
+       
     {
       "nombre": "Desgaste excesivo por pegada de zapata",
       "posible_causa": "Chofer-Mantenimiento",
@@ -205,26 +196,7 @@
       "posible_causa": "Mantenimiento Alineación",
       "desecho": false
     },
-    {
-      "nombre": "Desgaste irregular excesivo en banda de rodado",
-      "posible_causa": "Mantenimiento Alineación",
-      "desecho": false
-    },
-    {
-      "nombre": "Desgaste leve en hombro externo",
-      "posible_causa": "Mantenimiento Alineación",
-      "desecho": false
-    },
-    {
-      "nombre": "Desgaste leve en hombro interno",
-      "posible_causa": "Mantenimiento Alineación",
-      "desecho": false
-    },
-    {
-      "nombre": "Desgaste leve en hombro(s)",
-      "posible_causa": "Mantenimiento Alineación",
-      "desecho": false
-    },
+
     {
       "nombre": "Desgaste puntual en banda de rodamiento",
       "posible_causa": "Conducción-Mantenimiento",

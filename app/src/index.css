@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+/* Fuente bundleada localmente via @fontsource/jetbrains-mono (sin red requerida) */
 
 * {
   box-sizing: border-box;
@@ -11,6 +11,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body {
+  height: 100%;
+}
+
 #root {
-  min-height: 100vh;
+  height: 100%;
+}
+
+/* Ocultar flechas nativas de inputs numéricos en Android WebView */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
