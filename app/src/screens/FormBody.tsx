@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MONO, ORANGE, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatCondicion } from '../db/schema';
 import AutocompleteField from '../components/AutocompleteField';
@@ -33,12 +33,13 @@ interface Props {
   onNewModelo: (nombre: string) => void;
   onNewMedida: (nombre: string) => void;
   onNewReencauche: (nombre: string) => void;
+  onAccordionChange?: (expanded: boolean) => void;
 }
 
 export default function FormBody({
   data, commit, marcas, modelos, medidas, reencauches, anomalias, valvulas, condiciones,
   r1Ref, r2Ref, r3Ref, r4Ref,
-  onNewMarca, onNewModelo, onNewMedida, onNewReencauche,
+  onNewMarca, onNewModelo, onNewMedida, onNewReencauche, onAccordionChange,
 }: Props) {
   const remRefs = { r1: r1Ref, r2: r2Ref, r3: r3Ref, r4: r4Ref };
   const remNext: Record<string, string | null> = { r1: 'r2', r2: 'r3', r3: 'r4', r4: null };
@@ -76,7 +77,21 @@ export default function FormBody({
   const anomaliaAlert = data.anomalia !== '';
   const valvulaAlert = data.tapaValvula !== '' && !VALVULA_OK.has(data.tapaValvula.toLowerCase());
 
+  const hasPrecarga = !!data.codigo;
+  const [expanded, setExpanded] = useState(!hasPrecarga);
   const [focusedRem, setFocusedRem] = useState<string | null>(null);
+  const [focusedPresion, setFocusedPresion] = useState(false);
+
+  // When data changes externally (position switch), sync expanded state
+  useEffect(() => {
+    setExpanded(!hasPrecarga);
+  }, [hasPrecarga]);
+
+  useEffect(() => {
+    onAccordionChange?.(expanded);
+  }, [expanded, onAccordionChange]);
+
+  const toggleAccordion = () => setExpanded(prev => !prev);
 
   const remCell = (key: string, label: string) => {
     const active = focusedRem === key;
@@ -115,91 +130,134 @@ export default function FormBody({
     );
   };
 
+  // Summary line for collapsed accordion
+  const summaryParts = [data.codigo, data.marca, data.medida].filter(Boolean);
+  const summaryText = summaryParts.join(' · ') || 'Sin datos';
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', overflowX: 'clip', padding: '16px 16px 8px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* ── CÓDIGO DE NEUMÁTICO ── */}
+      {/* ── ACCORDION: DATOS DEL NEUMÁTICO ── */}
       <div style={{ padding: '0 2px' }}>
-        <span style={LABEL_PRIMARY}>CÓDIGO DE NEUMÁTICO</span>
-        <AutocompleteField
-          label=""
-          value={data.codigo}
-          onChange={v => commit({ ...data, codigo: v })}
-          options={CODIGO_ESPECIALES}
-          allowNew
-          placeholder="1234"
-          showAllOnFocus
-          inputStyle={{ fontSize: 22, fontWeight: 800, padding: '8px 12px', letterSpacing: '0.03em' }}
-        />
-      </div>
+        <button
+          onClick={toggleAccordion}
+          style={{
+            width: '100%', background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`,
+            borderRadius: 10, padding: '14px 16px', cursor: 'pointer', fontFamily: MONO,
+            textAlign: 'left', transition: 'border-color 0.15s',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.12em', marginBottom: 4 }}>DATOS DEL NEUMÁTICO</div>
+              {!expanded && (
+                <div style={{ fontSize: 15, fontWeight: 800, color: VALUE_COLOR, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {summaryText}
+                </div>
+              )}
+            </div>
+            <svg
+              width="16" height="16" viewBox="0 0 16 16" fill="none"
+              style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.2s ease-out', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              <path d="M4 6l4 4 4-4" stroke={LABEL_BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </button>
 
-      {/* ── DATOS DEL NEUMÁTICO ── */}
-      <div style={{ padding: '0 2px' }}>
-        <AutocompleteField
-          label="MARCA"
-          value={data.marca}
-          onChange={marca => commit({ ...data, marca, modelo: '' })}
-          options={marcas.map(m => m.nombre)}
-          placeholder="Buscar marca…"
-          allowNew
-          onNew={onNewMarca}
-        />
-      </div>
+        {/* Expanded content */}
+        <div style={{
+          maxHeight: expanded ? 600 : 0,
+          overflow: 'hidden',
+          transition: 'max-height 0.2s ease-out',
+          opacity: expanded ? 1 : 0,
+        }}>
+          <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <AutocompleteField
+              label="CÓDIGO"
+              value={data.codigo}
+              onChange={v => commit({ ...data, codigo: v })}
+              options={CODIGO_ESPECIALES}
+              allowNew
+              placeholder="1234"
+              showAllOnFocus
+              inputStyle={{ fontSize: 22, fontWeight: 800, padding: '8px 12px', letterSpacing: '0.03em' }}
+            />
 
-      <div style={{ padding: '0 2px' }}>
-        <AutocompleteField
-          label="MODELO"
-          value={data.modelo}
-          onChange={modelo => commit({ ...data, modelo })}
-          options={modelos.map(m => m.nombre)}
-          placeholder={data.marca ? 'Buscar modelo…' : 'Primero elige una marca'}
-          disabled={!data.marca}
-          allowNew={!!data.marca}
-          onNew={onNewModelo}
-        />
-      </div>
+            <AutocompleteField
+              label="MARCA"
+              value={data.marca}
+              onChange={marca => commit({ ...data, marca, modelo: '' })}
+              options={marcas.map(m => m.nombre)}
+              placeholder="Buscar marca…"
+              allowNew
+              onNew={onNewMarca}
+            />
 
-      {/* ── MEDIDA + CONDICIÓN en una fila ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 2px' }}>
-        <div style={{ minWidth: 0 }}>
-          <AutocompleteField
-            label="MEDIDA"
-            value={data.medida}
-            onChange={medida => commit({ ...data, medida })}
-            options={medidas.map(m => m.nombre)}
-            placeholder="295/80 R22.5"
-            allowNew
-            onNew={onNewMedida}
-            filterMode="includes"
-          />
+            <AutocompleteField
+              label="MODELO"
+              value={data.modelo}
+              onChange={modelo => commit({ ...data, modelo })}
+              options={modelos.map(m => m.nombre)}
+              placeholder={data.marca ? 'Buscar modelo…' : 'Primero elige una marca'}
+              disabled={!data.marca}
+              allowNew={!!data.marca}
+              onNew={onNewModelo}
+            />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ minWidth: 0 }}>
+                <AutocompleteField
+                  label="MEDIDA"
+                  value={data.medida}
+                  onChange={medida => commit({ ...data, medida })}
+                  options={medidas.map(m => m.nombre)}
+                  placeholder="295/80 R22.5"
+                  allowNew
+                  onNew={onNewMedida}
+                  filterMode="includes"
+                />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <AutocompleteField
+                  label="CONDICIÓN"
+                  value={data.condicion}
+                  onChange={condicion => commit({ ...data, condicion })}
+                  options={condiciones.map(c => c.codigo)}
+                  placeholder="—"
+                  showAllOnFocus
+                  filterMode="startsWith"
+                />
+              </div>
+            </div>
+
+            {showReencauche && (
+              <div style={{ paddingLeft: 14, borderLeft: `2px solid ${BORDER_DARK}`, marginLeft: 2 }}>
+                <AutocompleteField
+                  label="DISEÑO DE REENCAUCHE"
+                  value={data.reencauche}
+                  onChange={reencauche => commit({ ...data, reencauche })}
+                  options={reencauches.map(r => r.nombre)}
+                  placeholder="Buscar diseño…"
+                  allowNew
+                  onNew={onNewReencauche}
+                />
+              </div>
+            )}
+
+            <AutocompleteField
+              label="VÁLVULA"
+              value={data.tapaValvula}
+              onChange={v => commit({ ...data, tapaValvula: v })}
+              options={valvulas.map(v => v.nombre)}
+              placeholder="Tipo de válvula…"
+            />
+            {valvulaAlert && (
+              <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, marginTop: -6, letterSpacing: '0.08em' }}>⚠ REVISAR</div>
+            )}
+          </div>
         </div>
-        <div style={{ minWidth: 0 }}>
-          <AutocompleteField
-            label="CONDICIÓN"
-            value={data.condicion}
-            onChange={condicion => commit({ ...data, condicion })}
-            options={condiciones.map(c => c.codigo)}
-            placeholder="—"
-            showAllOnFocus
-            filterMode="startsWith"
-          />
-        </div>
       </div>
-
-      {/* ── DISEÑO DE REENCAUCHE — sub-campo de Condición ── */}
-      {showReencauche && (
-        <div style={{ padding: '0 2px', paddingLeft: 14, borderLeft: `2px solid ${BORDER_DARK}`, marginLeft: 2 }}>
-          <AutocompleteField
-            label="DISEÑO DE REENCAUCHE"
-            value={data.reencauche}
-            onChange={reencauche => commit({ ...data, reencauche })}
-            options={reencauches.map(r => r.nombre)}
-            placeholder="Buscar diseño…"
-            allowNew
-            onNew={onNewReencauche}
-          />
-        </div>
-      )}
 
       {/* ── Separador ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '2px 0' }}>
@@ -218,13 +276,15 @@ export default function FormBody({
       <div style={{ padding: '0 2px' }}>
         <span style={LABEL_PRIMARY}>PRESIÓN</span>
         <div style={{
-          height: 68, border: `2px solid ${BORDER_DARK}`, borderRadius: 8,
+          height: 68, border: `2px solid ${focusedPresion ? ORANGE : BORDER_DARK}`, borderRadius: 8,
           display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK,
+          transition: 'border-color 0.15s',
         }}>
           <input
             className="dark-input"
             type="number" inputMode="numeric" value={data.presion}
-            onChange={set('presion')} onFocus={e => e.target.select()} placeholder="—"
+            onChange={set('presion')} onFocus={e => { e.target.select(); setFocusedPresion(true); }}
+            onBlur={() => setFocusedPresion(false)} placeholder="—"
             style={{
               flex: 1, border: 'none', outline: 'none', fontSize: 32, fontWeight: 800,
               color: data.presion ? VALUE_COLOR : BORDER_DARK, padding: 0, background: 'transparent',
@@ -233,20 +293,6 @@ export default function FormBody({
           />
           <span style={{ fontSize: 13, color: LABEL_BLUE, fontWeight: 700, marginLeft: 8, letterSpacing: '0.04em' }}>psi</span>
         </div>
-      </div>
-
-      {/* ── VÁLVULA ── */}
-      <div style={{ padding: '0 2px' }}>
-        <AutocompleteField
-          label="VÁLVULA"
-          value={data.tapaValvula}
-          onChange={v => commit({ ...data, tapaValvula: v })}
-          options={valvulas.map(v => v.nombre)}
-          placeholder="Tipo de válvula…"
-        />
-        {valvulaAlert && (
-          <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, marginTop: 8, letterSpacing: '0.08em' }}>⚠ REVISAR</div>
-        )}
       </div>
 
       {/* ── ANOMALÍA ── */}

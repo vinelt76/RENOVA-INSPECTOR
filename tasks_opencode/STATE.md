@@ -765,3 +765,28 @@ APK           → PENDIENTE (sigue sin `app/android/`)
 2. Si el smoke test pasa → **generar APK** (`npx cap add android && npx cap sync && npx cap build android`) y probar en dispositivo Android real
 3. Verificar en Android: fuentes offline, safe-area-insets, selects con chevron SVG, cámara nativa
 4. Pendiente de diseño: Facundo quiere seguir iterando la UI del formulario antes o después del APK
+
+---
+
+# 🆕 LOTE 5 — Bug de búsqueda + design system + flujo de captura + Supabase fase 1 (2026-07-01)
+
+> Specs escritos por Opus/Fable (2026-07-01) a partir del feedback de campo de Facundo
+> (`IDEAS SUELTAS.txt`), `DESIGN.md`/`PRODUCT.md` (sistema de diseño documentado) y la decisión
+> de usar **Supabase** como backend de sync/auth (fase 1).
+> Contexto de retoma: `tasks_opencode/RETOMA_2026-07-01.md`.
+
+Orden de ejecución: 12 → 11 → 13 → 14 (cada uno depende del anterior aprobado).
+
+| Task | Título | Estado | Depende de |
+|---|---|---|---|
+| `task_12_fix_busqueda_unidad.md` | FIX crash al buscar otra unidad / la recién inspeccionada | **APROBADO ✓** | — |
+| `task_11_alineacion_design_system.md` | Auditar y alinear la app a `DESIGN.md` (foco naranja, texto blanco) | **APROBADO ✓** | 12 |
+| `task_13_precarga_acordeon_flujo.md` | Acordeón datos de neumático + precarga al cambiar código + auto-avance | **PENDIENTE** | 11 |
+| `task_14_supabase_sync_fase1.md` | Supabase: proyecto + esquema espejo + auth + push sync + pull catálogo | **PENDIENTE** | 13 |
+
+Notas:
+- El smoke test heredado de la sesión 2026-06-28 sigue pendiente; el task_12 lo cubre de facto
+  (su verificación recorre el flujo completo en navegador).
+- `GrillaBody` quedó archivado en `app/_archivo/` — ningún task del lote lo toca.
+- El APK se regenera recién con 12+11+13 aprobados (14 no lo bloquea: sin `.env` la app es
+  idéntica a la local).

@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 2,
+  "colorMeta": {
+    "ember-orange": {
+      "value": "#F06822",
+      "role": "action/focus/alert accent",
+      "ramp": ["#FDEEE4", "#FAD3B8", "#F5AC7C", "#F08946", "#F06822", "#C6531A", "#9C4014", "#6E2C0D"]
+    },
+    "signal-yellow": {
+      "value": "#f4b821",
+      "role": "highlight/milestone accent",
+      "ramp": ["#FEF8E7", "#FCE9B5", "#F9D67B", "#F6C94E", "#f4b821", "#C7941A", "#997114", "#6B4F0E"]
+    },
+    "verified-green": {
+      "value": "#1f9d6b",
+      "role": "success — exclusive to 'complete' status",
+      "ramp": ["#E6F7F0", "#B8E9D4", "#7DD4AF", "#47BE8D", "#1f9d6b", "#187D55", "#125E40", "#0C3F2B"]
+    },
+    "navy-brand": {
+      "value": "#15233f",
+      "role": "brand/header/secondary-card surface",
+      "ramp": ["#E9EBF0", "#C3C9D6", "#8E9AB8", "#4E5E85", "#15233f", "#101B31", "#0B1424", "#060C17"]
+    },
+    "screen-dark": {
+      "value": "#07111C",
+      "role": "base background — active inspection screens",
+      "ramp": ["#5A6B7D", "#3F4E5F", "#293544", "#182231", "#07111C", "#050D15", "#03080F", "#01040A"]
+    },
+    "field-dark": {
+      "value": "#111E2E",
+      "role": "input / card / list-item resting surface",
+      "ramp": ["#5F7086", "#465669", "#2E3C4E", "#1B2A3B", "#111E2E", "#0C1622", "#080F18", "#04090F"]
+    },
+    "border-dark": {
+      "value": "#1B2D42",
+      "role": "resting border / placeholder / disabled",
+      "ramp": ["#6B7F98", "#526176", "#39485B", "#233145", "#1B2D42", "#152232", "#0F1824", "#090F17"]
+    },
+    "label-blue": {
+      "value": "#7AABCC",
+      "role": "labels, units, secondary text",
+      "ramp": ["#EAF3F8", "#C6DFEC", "#A0C7DE", "#8EB7D2", "#7AABCC", "#5F8CAA", "#476A80", "#2F4756"]
+    },
+    "value-ice": {
+      "value": "#F0F8FF",
+      "role": "primary user-entered data text",
+      "ramp": ["#FFFFFF", "#FBFDFF", "#F6FAFF", "#F3F9FF", "#F0F8FF", "#C9D8E2", "#A2B2BC", "#7B8B95"]
+    }
+  },
+  "typographyMeta": {
+    "families": {
+      "display": "Bebas Neue, sans-serif",
+      "mono": "JetBrains Mono, IBM Plex Mono, SFMono-Regular, Menlo, monospace"
+    },
+    "loading": "self-hosted via @fontsource, bundled offline (no CDN — offline-first requirement)",
+    "numericFeature": "font-variant-numeric: tabular-nums on all measurement values (remanente, presión, odómetro, posición)",
+    "scale": {
+      "display": { "fontSize": "34-42px", "fontWeight": 400, "letterSpacing": "0.06em", "usage": "wordmark only, header" },
+      "display-sub": { "fontSize": "19-24px", "fontWeight": 400, "letterSpacing": "0.1em", "usage": "secondary brand line" },
+      "label": { "fontSize": "9-12px", "fontWeight": 800, "letterSpacing": "0.1-0.16em", "usage": "field labels, units, uppercase" },
+      "body": { "fontSize": "13-16px", "fontWeight": 700, "usage": "options, names, button text" },
+      "hero-value": { "fontSize": "20-32px", "fontWeight": "800-900", "usage": "primary data value: código, remanente, presión, odómetro" }
+    }
+  },
+  "shadows": {
+    "overlay-navy": {
+      "value": "0 8px 24px rgba(21,35,63,0.28)",
+      "usage": "autocomplete dropdown, floating suggestion lists over navy background"
+    },
+    "overlay-dark": {
+      "value": "0 8px 24px rgba(0,0,0,0.4)",
+      "usage": "search suggestions, bottom sheet — floating over screen-dark background"
+    },
+    "rule": "Shadow is reserved exclusively for elements floating above other screen content (dropdown, sheet). Cards and buttons in normal flow never carry box-shadow — elevation there is tonal (layered background colors), not shadow-based."
+  },
+  "motion": {
+    "keyframes": {
+      "slideInUp": { "usage": "form advances to next position — 'cuaderno de notas' page-turn metaphor", "duration": "~0.28s", "easing": "ease-out" },
+      "slideInDown": { "usage": "form returns to previous position", "duration": "~0.28s", "easing": "ease-out" },
+      "screenFadeIn": { "usage": "screen-to-screen transitions (empresa → unidad → inspección)", "duration": "~0.2s", "easing": "ease-out" },
+      "sheetIn": { "usage": "bottom sheet (position status grid) enters from below", "duration": "~0.25s", "easing": "cubic-bezier(0.22,1,0.36,1)" }
+    },
+    "microTransitions": {
+      "borderColor": "0.15s ease-out — input/selector focus state, the system's primary state signal",
+      "note": "No bounce, no elastic, anywhere in the system."
+    },
+    "reducedMotion": "not yet implemented — add `@media (prefers-reduced-motion: reduce)` fallback (crossfade/instant) when motion work is next touched"
+  },
+  "components": {
+    "button-primary": {
+      "html": "<button class=\"ds-btn-primary\">COMENZAR INSPECCIÓN</button>",
+      "css": ".ds-btn-primary{background:#F06822;color:#ffffff;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:14px;letter-spacing:0.02em;border:none;border-radius:14px;padding:17px;width:100%;cursor:pointer;transition:filter .15s ease-out;}.ds-btn-primary:active{filter:brightness(0.92);}.ds-btn-primary:disabled{background:#111E2E;color:#1B2D42;cursor:not-allowed;}"
+    },
+    "input-field": {
+      "html": "<div class=\"ds-input-wrap\"><input class=\"ds-input\" placeholder=\"Buscar unidad...\" /></div>",
+      "css": ".ds-input{width:100%;background:#111E2E;color:#F0F8FF;border:2px solid #1B2D42;border-radius:6px;padding:11px 12px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;transition:border-color .15s ease-out;}.ds-input:focus{outline:none;border-color:#F06822;}.ds-input::placeholder{color:#1B2D42;}"
+    },
+    "card-highlight": {
+      "html": "<div class=\"ds-card-highlight\"><span class=\"ds-label\">FECHA</span><span class=\"ds-hero-value\">01 JUL 2026</span></div>",
+      "css": ".ds-card-highlight{background:#f4b821;color:#15233f;border-radius:18px;padding:20px 22px;}.ds-card-highlight .ds-label{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;opacity:.75;display:block;margin-bottom:4px;}.ds-card-highlight .ds-hero-value{font-family:'JetBrains Mono',monospace;font-weight:900;font-size:20px;}"
+    },
+    "card-info": {
+      "html": "<div class=\"ds-card-info\"><span class=\"ds-label\">ÚLTIMA INSPECCIÓN</span><span class=\"ds-hero-value\">12 JUN 2026 · 84,320 km</span></div>",
+      "css": ".ds-card-info{background:#15233f;color:#ffffff;border-radius:16px;padding:20px 22px;}.ds-card-info .ds-label{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:10px;letter-spacing:0.1em;color:#7AABCC;text-transform:uppercase;display:block;margin-bottom:6px;}"
+    },
+    "list-item-selectable": {
+      "html": "<button class=\"ds-list-item\">Cruz del Sur</button>",
+      "css": ".ds-list-item{width:100%;text-align:left;background:#111E2E;color:#F0F8FF;border:2px solid #1B2D42;border-radius:14px;padding:14px 18px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;cursor:pointer;transition:border-color .15s ease-out;}.ds-list-item:hover,.ds-list-item[aria-selected='true']{border-color:#F06822;}"
+    },
+    "autocomplete-dropdown": {
+      "html": "<div class=\"ds-dropdown\"><div class=\"ds-dropdown-item\">Michelin</div><div class=\"ds-dropdown-item\">Goodyear</div><div class=\"ds-dropdown-item ds-dropdown-add\">＋ Agregar nueva marca</div></div>",
+      "css": ".ds-dropdown{background:#15233f;border-radius:6px;box-shadow:0 8px 24px rgba(21,35,63,0.28);overflow:hidden;}.ds-dropdown-item{padding:12px 14px;color:#ffffff;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.1);cursor:pointer;}.ds-dropdown-item:hover{background:rgba(255,255,255,0.15);}.ds-dropdown-add{color:#F06822;border-bottom:none;}"
+    },
+    "status-badge-alert": {
+      "html": "<span class=\"ds-badge-alert\">⚠ ACTIVA</span>",
+      "css": ".ds-badge-alert{display:inline-block;background:rgba(240,104,34,0.15);color:#F06822;border-radius:4px;padding:3px 8px;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;}"
+    }
+  },
+  "narrative": {
+    "northStar": "El Cuaderno de Bitácora del Taller — the digital logbook of a tire workshop: a field tool read under direct sun, not a consumer app.",
+    "overview": "A dark, monospaced instrument-panel UI for capturing tire measurements in the field. Data is the content; nothing decorative competes with it.",
+    "keyCharacteristics": [
+      "Dark console dedicated to field data capture (screen-dark + field-dark)",
+      "Monospace typography everywhere except the wordmark",
+      "2px borders as the only state language — no shadow for focus/hover",
+      "Orange = action/focus/alert; yellow = milestone/highlight; green = 'complete' only",
+      "Zero decoration — every visible element serves capture or reading of a data point"
+    ],
+    "elevationConfirmed": "Tonal layering (screen-dark → field-dark → navy-brand) is the elevation model. Shadow verified present in only two places codebase-wide (both floating overlays: autocomplete dropdown, search suggestions) — confirms shadow-only-for-overlays as an observed rule, not an assumption.",
+    "componentCharacter": "Directo y sin adornos, sólido y con peso — 2px borders, no gradients, no decoration, but font weights 700-900 and thick borders give it deliberate industrial heft rather than minimalist lightness.",
+    "rules": [
+      "La Regla del Naranja Único — only one focus/action element per screen at a time",
+      "La Regla del Verde Exclusivo — green means 'position complete' and nothing else",
+      "La Regla del Mono Total — no humanist/serif font introduced anywhere",
+      "La Regla de la Sombra Reservada — shadow only on elements floating above screen content"
+    ],
+    "dos": [
+      "2px border state language, never shadow for focus",
+      "Monospace everywhere except the wordmark",
+      "tabular-nums on all numeric values",
+      "verified-green exclusive to 'position complete'",
+      "short easing (0.15-0.28s ease-out / expo, no bounce/elastic)"
+    ],
+    "donts": [
+      "no 'Excel-in-an-app' / legacy ERP density (anti-reference)",
+      "no gradient cards / generic SaaS admin-panel look (anti-reference)",
+      "no box-shadow on cards/buttons/inputs in normal flow",
+      "no serif/humanist font",
+      "no opacity for disabled state — always explicit recolor"
+    ],
+    "uncertainty": "North Star, elevation confirmation, and component character were proposed as recommended defaults after an AskUserQuestion round went unanswered (60s timeout). All three are strongly evidenced by direct code extraction (see elevationConfirmed above) but were not explicitly confirmed by the user — revisit if corrected."
+  }
+}

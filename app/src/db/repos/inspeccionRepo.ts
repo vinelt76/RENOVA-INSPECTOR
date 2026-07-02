@@ -63,6 +63,7 @@ export const inspeccionRepo = {
     return cabecera;
   },
 
+
   async getCabecera(id: string): Promise<InspeccionCabecera | null> {
     const db = await getDb();
     const result = await db.query('SELECT * FROM inspeccion_cabecera WHERE id = ?', [id]);

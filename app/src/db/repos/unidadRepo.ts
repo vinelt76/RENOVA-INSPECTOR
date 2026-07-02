@@ -1,4 +1,4 @@
-import { getDb, persistDb } from '../sqlite';
+import { getDb, persistDb, localDate } from '../sqlite';
 import type { Unidad } from '../schema';
 import type { InspeccionCabecera, InspeccionNeumatico } from '../schema';
 
@@ -49,7 +49,7 @@ export const unidadRepo = {
 
   async hoy(empresaId: string): Promise<Unidad[]> {
     const db = await getDb();
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = localDate();
     const result = await db.query(
       `SELECT * FROM unidad WHERE empresa_id = ? AND ultima_fecha = ?
        ORDER BY numero`,

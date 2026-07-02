@@ -4,6 +4,7 @@ import { useApp } from '../state/AppContext';
 import { unidadRepo } from '../db/repos/unidadRepo';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
+import { localDate } from '../db/sqlite';
 import { BEBAS, MONO, NAVY, ORANGE, YELLOW, SCREEN_DARK, FIELD_DARK, LABEL_BLUE, BORDER_DARK, VALUE_COLOR } from '../theme';
 import type { Unidad, CatConfiguracion } from '../db/schema';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -42,6 +43,7 @@ export default function UnidadScreen() {
   const [configs, setConfigs] = useState<CatConfiguracion[]>([]);
   const [fotoUnidad, setFotoUnidad] = useState<string | null>(null);
   const [recientes, setRecientes] = useState<Unidad[]>([]);
+  const [focusedField, setFocusedField] = useState<'search' | 'odometro' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const latestQuery = useRef('');
@@ -88,6 +90,7 @@ export default function UnidadScreen() {
       const exacto = results.find(u => u.numero === clean);
       if (exacto) {
         await selectUnidad(exacto);
+        if (latestQuery.current !== clean) return; // usuario siguió escribiendo
       } else {
         setShowSugerencias(true);
       }
@@ -101,11 +104,18 @@ export default function UnidadScreen() {
     setQuery(u.numero);
     setSugerencias([u]);
     setShowSugerencias(false);
-    const insp = await unidadRepo.getUltimaInspeccion(u.empresa_id, u.numero);
-    if (insp) {
-      setUltimaInsp({ fecha: insp.cabecera.fecha, odometro: insp.cabecera.km_odometro, cabeceraId: insp.cabecera.id });
+    try {
+      const insp = await unidadRepo.getUltimaInspeccion(u.empresa_id, u.numero);
+      if (insp?.cabecera) {
+        setUltimaInsp({ fecha: insp.cabecera.fecha, odometro: insp.cabecera.km_odometro ?? 0, cabeceraId: insp.cabecera.id });
+      } else {
+        setUltimaInsp(null);
+      }
+      setConfigs(await catalogoRepo.configuracion(u.tipo_vehiculo, u.configuracion));
+    } catch (e) {
+      console.error('selectUnidad error:', e);
+      setUltimaInsp(null);
     }
-    setConfigs(await catalogoRepo.configuracion(u.tipo_vehiculo, u.configuracion));
   }, []);
 
   const reset = () => {
@@ -120,40 +130,50 @@ export default function UnidadScreen() {
 
   const handleContinue = async () => {
     if (!match || !empresaId) return;
-    const origenCabeceraId = ultimaInsp?.cabeceraId ?? null;
-    await unidadRepo.upsert({
-      numero: match.numero,
-      empresa_id: empresaId,
-      tipo_vehiculo: match.tipo_vehiculo,
-      configuracion: match.configuracion,
-      odometro_ultimo: kmActual,
-      ultima_fecha: new Date().toISOString().slice(0, 10),
-    });
-    const cab = await inspeccionRepo.crearCabecera(empresaId, match.numero, new Date().toISOString().slice(0, 10), kmActual, fotoUnidad);
-    if (origenCabeceraId) {
-      await inspeccionRepo.clonarNeumaticos(origenCabeceraId, cab.id);
+    try {
+      const origenCabeceraId = ultimaInsp?.cabeceraId ?? null;
+      await unidadRepo.upsert({
+        numero: match.numero,
+        empresa_id: empresaId,
+        tipo_vehiculo: match.tipo_vehiculo,
+        configuracion: match.configuracion,
+        odometro_ultimo: kmActual,
+        ultima_fecha: localDate(),
+      });
+      const fecha = localDate();
+      const cab = await inspeccionRepo.crearCabecera(empresaId, match.numero, fecha, kmActual, fotoUnidad);
+      if (origenCabeceraId) {
+        await inspeccionRepo.clonarNeumaticos(origenCabeceraId, cab.id);
+      }
+      setUnidad(match.numero, match.configuracion, match.tipo_vehiculo);
+      setCabecera(cab.id);
+      navigate(`/inspeccion/${cab.id}`);
+    } catch (e) {
+      console.error('handleContinue error:', e);
     }
-    setUnidad(match.numero, match.configuracion, match.tipo_vehiculo);
-    setCabecera(cab.id);
-    navigate(`/inspeccion/${cab.id}`);
   };
 
   const handleCreate = async () => {
     if (!noExiste || !empresaId) return;
-    const configObj = configs.find(c => c.notacion === config);
-    const tipoVehiculo = configObj?.tipo_vehiculo ?? 'BUS';
-    await unidadRepo.upsert({
-      numero: q,
-      empresa_id: empresaId,
-      tipo_vehiculo: tipoVehiculo,
-      configuracion: config,
-      odometro_ultimo: kmActual,
-      ultima_fecha: new Date().toISOString().slice(0, 10),
-    });
-    const cab = await inspeccionRepo.crearCabecera(empresaId, q, new Date().toISOString().slice(0, 10), kmActual, fotoUnidad);
-    setUnidad(q, config, tipoVehiculo);
-    setCabecera(cab.id);
-    navigate(`/inspeccion/${cab.id}`);
+    try {
+      const configObj = configs.find(c => c.notacion === config);
+      const tipoVehiculo = configObj?.tipo_vehiculo ?? 'BUS';
+      await unidadRepo.upsert({
+        numero: q,
+        empresa_id: empresaId,
+        tipo_vehiculo: tipoVehiculo,
+        configuracion: config,
+        odometro_ultimo: kmActual,
+        ultima_fecha: localDate(),
+      });
+      const fecha = localDate();
+      const cab = await inspeccionRepo.crearCabecera(empresaId, q, fecha, kmActual, fotoUnidad);
+      setUnidad(q, config, tipoVehiculo);
+      setCabecera(cab.id);
+      navigate(`/inspeccion/${cab.id}`);
+    } catch (e) {
+      console.error('handleCreate error:', e);
+    }
   };
 
   const handleFoto = async () => {
@@ -221,14 +241,14 @@ export default function UnidadScreen() {
 
         <div style={{ fontSize: 11, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 10, flexShrink: 0 }}>UNIDAD</div>
 
-        <div style={{ border: `2px solid ${q ? (match ? ORANGE : (noExiste ? BORDER_DARK : LABEL_BLUE)) : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', flexShrink: 0, position: 'relative' }}>
+        <div style={{ border: `2px solid ${focusedField === 'search' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', flexShrink: 0, position: 'relative' }}>
           <SearchIcon active={!!match} />
           <input
             ref={inputRef}
             value={query}
             onChange={e => handleSearch(e.target.value)}
-            onFocus={() => q.length >= 1 && setShowSugerencias(true)}
-            onBlur={() => setTimeout(() => setShowSugerencias(false), 150)}
+            onFocus={() => { setFocusedField('search'); q.length >= 1 && setShowSugerencias(true); }}
+            onBlur={() => { setFocusedField(null); setTimeout(() => setShowSugerencias(false), 150); }}
             inputMode="numeric"
             placeholder="N.º de unidad"
             className="dark-input"
@@ -301,15 +321,17 @@ export default function UnidadScreen() {
 
             <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 8 }}>ODÓMETRO ACTUAL</div>
-              <div style={{ border: `2px solid ${odometro ? (kmBajo ? ORANGE : LABEL_BLUE) : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s' }}>
+              <div style={{ border: `2px solid ${focusedField === 'odometro' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s' }}>
                 <input
                   value={odometro}
                   onChange={e => setOdometro(e.target.value.replace(/[^0-9]/g, ''))}
+                  onFocus={() => setFocusedField('odometro')}
+                  onBlur={() => setFocusedField(null)}
                   inputMode="numeric"
                   placeholder="0"
                   autoFocus
                   className="dark-input"
-                  style={{ flex: 1, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em' }}
+                  style={{ flex: 1, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' as const }}
                 />
                 <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>km</span>
               </div>
@@ -343,14 +365,16 @@ export default function UnidadScreen() {
 
             <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 8 }}>ODÓMETRO INICIAL</div>
-              <div style={{ border: `2px solid ${odometro ? LABEL_BLUE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s' }}>
+              <div style={{ border: `2px solid ${focusedField === 'odometro' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s' }}>
                 <input
                   value={odometro}
                   onChange={e => setOdometro(e.target.value.replace(/[^0-9]/g, ''))}
+                  onFocus={() => setFocusedField('odometro')}
+                  onBlur={() => setFocusedField(null)}
                   inputMode="numeric"
                   placeholder="0"
                   className="dark-input"
-                  style={{ flex: 1, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em' }}
+                  style={{ flex: 1, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' as const }}
                 />
                 <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>km</span>
               </div>

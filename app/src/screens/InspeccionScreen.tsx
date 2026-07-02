@@ -36,6 +36,7 @@ export default function InspeccionScreen() {
   const [condiciones, setCondiciones] = useState<CatCondicion[]>([]);
   const [configPos, setConfigPos] = useState<CatConfiguracion[]>([]);
   const [visited, setVisited] = useState<Set<number>>(new Set([1]));
+  const [accordionExpanded, setAccordionExpanded] = useState(true);
 
   const r1Ref = useRef<HTMLInputElement>(null);
   const r2Ref = useRef<HTMLInputElement>(null);
@@ -152,6 +153,20 @@ export default function InspeccionScreen() {
         tapa_valvula: next.tapaValvula || null, anomalia: next.anomalia || null,
       });
     }
+
+    // Auto-advance: if position is complete and accordion is collapsed, jump to next incomplete
+    if (!accordionExpanded) {
+      const cfg = configPos.find(c => c.posicion === pos);
+      const needsR4 = cfg?.tipo_eje === 'Libre';
+      const rtdOk = !!(next.r1 && next.r2 && next.r3 && (!needsR4 || next.r4));
+      const isComplete = rtdOk && !!next.presion;
+      if (isComplete) {
+        const nextIncomplete = FILAS.find(f => f !== pos && posStatus(f) !== 'completa');
+        if (nextIncomplete !== undefined) {
+          setTimeout(() => switchPos(nextIncomplete), 200);
+        }
+      }
+    }
   };
 
   const switchPos = (n: number) => {
@@ -265,6 +280,7 @@ export default function InspeccionScreen() {
           onNewModelo={handleNewModelo}
           onNewMedida={handleNewMedida}
           onNewReencauche={handleNewReencauche}
+          onAccordionChange={setAccordionExpanded}
         />
       </div>
 

@@ -11,8 +11,10 @@ calcula salud y (a futuro) genera reportes Excel por empresa.
   Las pantallas nacen de los prototipos React en `UI/`.
 - **Persistencia:** **SQLite local, offline-first** vía `@capacitor-community/sqlite`
   (fallback web `jeep-sqlite`/sql.js para `npm run dev`).
-- **Servidor / sync / auth:** **fase futura.** Por ahora todo es local; se dejan IDs UUID y
-  `updated_at` listos y un `sync_queue` stub para reintegrar sync sin reescribir.
+- **Servidor / sync / auth:** **Supabase** (decidido 2026-07-01; fase 1 en `tasks_opencode/
+  task_14_supabase_sync_fase1.md`). La app sigue siendo offline-first: sin configuración de
+  Supabase funciona 100% local; el sync drena `sync_queue` cuando hay red. IDs UUID y
+  `updated_at` ya estaban listos para esto.
 - **Cálculos:** se replican en `app/src/core/calculations.ts` con **paridad** contra
   `reference/calculations.py`. Los cálculos de servidor (agregaciones, reportes) son fase futura.
 - **Fotos:** Capacitor Camera. En este momento solo foto a nivel unidad (debajo del odómetro).
@@ -108,19 +110,39 @@ cd app && npx cap add android  # generar proyecto Android (APK tras review)
 
 ## Estado actual
 
-**Reset hecho.** Stack viejo borrado; conservado lo fundacional. Pendiente: opencode construye
-`app/` según `tasks_opencode/` (lote 1: scaffold → data layer → pantallas → 4 cambios), deja la
-app **lista para generar el APK**, y Opus revisa antes de generarlo.
+**Lotes 1–4 completos** (app funcional, APK-ready, proyecto Android commiteado, CI/CD activo).
+**En curso: LOTE 5** (`tasks_opencode/STATE.md`, sección Lote 5) — orden 12→11→13→14:
+fix del crash al re-buscar unidad, alineación al design system (`DESIGN.md`), acordeón de
+datos de neumático + auto-avance entre posiciones, y **Supabase fase 1** (auth + push sync +
+pull de catálogo). Contexto de retoma en `tasks_opencode/RETOMA_2026-07-01.md`.
 
 ## Decisiones abiertas que bloquean implementación futura
 
 | Decisión | Estado | Dónde se cierra |
 |---|---|---|
 | Ajuste de presión en CALIENTE | **ABIERTA** — nunca especificada | `specs/reglas_negocio.md` |
-| Estrategia de sync con servidor | **ABIERTA** (fase futura) | `decisions/0003-jwt-offline.md`, `0004-catalog-sync.md` |
-| Versioning del catálogo desde servidor | **ABIERTA** (fase futura) | `decisions/0004-catalog-sync.md` |
+| Estrategia de sync con servidor | **DECIDIDA fase 1** (2026-07-01): Supabase, push por `sync_queue`, LWW por `updated_at`, sesión persistida offline | `tasks_opencode/task_14_supabase_sync_fase1.md`; actualizar `decisions/0003` al implementar |
+| Versioning del catálogo desde servidor | **ABIERTA** (fase 2; en fase 1 el pull solo agrega, nunca borra) | `decisions/0004-catalog-sync.md` |
 
 ## Idioma
 
 Responder en **español**. Términos de dominio en español (medida, presión, desecho, remanente,
 RTD MOVI, eje, posición).
+
+## Design Context
+
+Sistema de diseño documentado para trabajo con `/impeccable` (agente de diseño frontend):
+
+- **`PRODUCT.md`** — register `product`, usuarios (inspectores de campo, ~5 empresas),
+  personalidad (robusto e industrial), anti-referencias (apps de flotas/logística legacy,
+  dashboards SaaS genéricos), principios (cero fricción en campo, el dato manda no la
+  decoración, paridad de cálculo antes que preferencia visual).
+- **`DESIGN.md`** — sistema visual extraído del código real: paleta oscura de instrumento
+  (navy/naranja/amarillo/verde + escala de grises fríos), tipografía JetBrains Mono para
+  todo dato (Bebas Neue solo en el logotipo), estado por borde de 2px (no por sombra —
+  sombra reservada a overlays flotantes), componentes documentados con snippets HTML/CSS.
+- Sidecars: `.impeccable/design.json` (tokens completos, rampas de color) y
+  `.impeccable/live/config.json` (modo live ya configurado sobre `app/index.html`).
+
+Cualquier cambio visual en `app/` debería mantenerse consistente con `DESIGN.md`; si una
+feature nueva necesita un patrón no cubierto ahí, actualizar el documento, no improvisar.
