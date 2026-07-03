@@ -132,6 +132,10 @@ export default function UnidadScreen() {
 
   const handleContinue = async () => {
     if (!match || !empresaId) return;
+    // Cierra el teclado ANTES de navegar: si queda animando mientras
+    // InspeccionScreen monta, el WebView de Android puede resolver el foco
+    // inicial de la pantalla nueva contra el inset de teclado de la vieja.
+    (document.activeElement as HTMLElement | null)?.blur();
     try {
       const fecha = localDate();
       await unidadRepo.upsert({
@@ -168,6 +172,7 @@ export default function UnidadScreen() {
 
   const handleCreate = async () => {
     if (!noExiste || !empresaId) return;
+    (document.activeElement as HTMLElement | null)?.blur();
     try {
       const configObj = configs.find(c => c.notacion === config);
       const tipoVehiculo = configObj?.tipo_vehiculo ?? 'BUS';
