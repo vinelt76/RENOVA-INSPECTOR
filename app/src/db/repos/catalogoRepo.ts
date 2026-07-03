@@ -39,7 +39,7 @@ export const catalogoRepo = {
   async configuracionMvp(): Promise<CatConfiguracion[]> {
     const db = await getDb();
     const result = await db.query(
-      `SELECT * FROM cat_configuracion WHERE mvp = 1 GROUP BY tipo_vehiculo, notacion ORDER BY notacion`
+      `SELECT * FROM cat_configuracion WHERE mvp = 1 ORDER BY notacion, posicion`
     );
     return result.values as CatConfiguracion[];
   },
@@ -49,17 +49,6 @@ export const catalogoRepo = {
     const result = await db.query(
       `SELECT * FROM cat_configuracion 
        WHERE tipo_vehiculo = ? AND notacion = ? AND mvp = 1
-       ORDER BY posicion`,
-      [tipoVehiculo, notacion]
-    );
-    return result.values as CatConfiguracion[];
-  },
-
-  async configuracionAll(tipoVehiculo: string, notacion: string): Promise<CatConfiguracion[]> {
-    const db = await getDb();
-    const result = await db.query(
-      `SELECT * FROM cat_configuracion 
-       WHERE tipo_vehiculo = ? AND notacion = ?
        ORDER BY posicion`,
       [tipoVehiculo, notacion]
     );
