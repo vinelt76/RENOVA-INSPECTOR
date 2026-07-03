@@ -1,8 +1,12 @@
-name: Build APK
+name: Build Artifacts
+
+# Workflow por defecto del repo: en cada push a `main` genera el APK debug de la
+# app y, si existe, el preview HTML del dashboard, y los deja descargables como
+# artifacts del run. No usa GitHub Pages ni crea Releases.
 
 on:
   push:
-    branches: [dev, main]
+    branches: [main]
   workflow_dispatch:        # permite lanzar manualmente desde GitHub o celular
 
 jobs:
@@ -47,16 +51,55 @@ jobs:
       - name: Build debug APK
         run: cd app/android && ./gradlew assembleDebug --no-daemon
 
-      - name: Upload APK
+      - name: Verify APK was generated
+        run: |
+          APK_PATH="app/android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::No se encontró el APK en $APK_PATH — el build falló silenciosamente."
+            exit 1
+          fi
+          echo "APK verificado: $APK_PATH ($(du -h "$APK_PATH" | cut -f1))"
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: renova-inspector-debug-${{ github.run_number }}
+          name: RENOVA-Inspector-Debug-APK
           path: app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Prepare dashboard preview (si existe)
+        id: dashboard
+        run: |
+          shopt -s nullglob
+          mkdir -p dashboard-preview
+          matches=(UI/*[Dd]ashboard*.html UI/*[Pp]anel*[Tt]aller*.html)
+          if [ ${#matches[@]} -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No se encontró un HTML de dashboard en UI/ — se omite este paso sin fallar el workflow."
+          else
+            cp "${matches[@]}" dashboard-preview/
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "Dashboard preview encontrado:"
+            ls -la dashboard-preview/
+          fi
+
+      - name: Upload dashboard preview artifact
+        if: steps.dashboard.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: RENOVA-Dashboard-Preview
+          path: dashboard-preview/
           retention-days: 14
 
       - name: Build summary
         run: |
-          echo "## APK generado ✓" >> $GITHUB_STEP_SUMMARY
+          echo "## Build de artifacts ✓" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "Descargá el APK desde la pestaña **Artifacts** de este run." >> $GITHUB_STEP_SUMMARY
+          echo "- APK debug: **RENOVA-Inspector-Debug-APK**" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.dashboard.outputs.found }}" = "true" ]; then
+            echo "- Dashboard preview: **RENOVA-Dashboard-Preview**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Dashboard preview: omitido (no se encontró HTML de dashboard en UI/)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "Descargá los artifacts desde la pestaña **Artifacts** de este run." >> $GITHUB_STEP_SUMMARY
