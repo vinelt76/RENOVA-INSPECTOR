@@ -1,6 +1,5 @@
 import { getDb, persistDb, localDate } from '../sqlite';
-import type { Unidad } from '../schema';
-import type { InspeccionCabecera, InspeccionNeumatico } from '../schema';
+import type { Unidad, InspeccionCabecera } from '../schema';
 
 export const unidadRepo = {
   async search(empresaId: string, query: string): Promise<Unidad[]> {
@@ -8,9 +7,9 @@ export const unidadRepo = {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const result = await db.query(
-      `SELECT * FROM unidad 
+      `SELECT * FROM unidad
        WHERE empresa_id = ? AND lower(numero) LIKE ?
-       ORDER BY 
+       ORDER BY
          CASE WHEN lower(numero) = ? THEN 0
               WHEN lower(numero) LIKE ? THEN 1
               ELSE 2 END,
@@ -29,22 +28,15 @@ export const unidadRepo = {
     return (result.values?.[0] as Unidad) ?? null;
   },
 
-  async getUltimaInspeccion(empresaId: string, numero: string): Promise<{ cabecera: InspeccionCabecera; neumaticos: InspeccionNeumatico[] } | null> {
+  async getUltimaCabecera(empresaId: string, numero: string): Promise<InspeccionCabecera | null> {
     const db = await getDb();
-    const cabeceraResult = await db.query(
-      `SELECT * FROM inspeccion_cabecera 
-       WHERE empresa_id = ? AND numero_unidad = ? 
+    const result = await db.query(
+      `SELECT * FROM inspeccion_cabecera
+       WHERE empresa_id = ? AND numero_unidad = ?
        ORDER BY fecha DESC, created_at DESC LIMIT 1`,
       [empresaId, numero]
     );
-    const cabecera = (cabeceraResult.values?.[0] as InspeccionCabecera) ?? null;
-    if (!cabecera) return null;
-
-    const neumaticosResult = await db.query(
-      'SELECT * FROM inspeccion_neumatico WHERE cabecera_id = ? ORDER BY posicion',
-      [cabecera.id]
-    );
-    return { cabecera, neumaticos: neumaticosResult.values as InspeccionNeumatico[] };
+    return (result.values?.[0] as InspeccionCabecera) ?? null;
   },
 
   async hoy(empresaId: string): Promise<Unidad[]> {

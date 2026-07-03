@@ -35,6 +35,41 @@ input[type="number"] {
   color: #1B2D42;
 }
 
+/* Scrollbar discreto sobre fondo oscuro */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: #1B2D42; border-radius: 2px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ══ Lenguaje industrial v2 (DESIGN.md §7) ══ */
+
+/* Chaflán industrial — SOLO CTA primario y stat tiles del dashboard */
+.chamfer {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.chamfer-sm {
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+/* Cinta de seguridad — filo del header / sheet. Nunca detrás de texto. */
+.hazard-edge {
+  height: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #F06822 0px, #F06822 6px,
+    transparent 6px, transparent 12px
+  );
+}
+
+/* Press feedback — único feedback táctil del sistema */
+.pressable {
+  transition: transform 0.12s ease-out;
+}
+.pressable:active {
+  transform: scale(0.97);
+}
+
+/* ══ Motion (DESIGN.md §7 — micro-interacciones con propósito) ══ */
+
 /* Slide entre posiciones (mismo vehículo — cuaderno de notas) */
 @keyframes slideInUp {
   from { transform: translateY(28px); opacity: 0.55; }
@@ -54,9 +89,59 @@ input[type="number"] {
 }
 .screen-enter { animation: screenFadeIn 0.28s ease-out both; }
 
-/* Bottom sheet de posiciones */
+/* Bottom sheet de posiciones + scrim */
 @keyframes sheetIn {
   from { transform: translateY(100%); }
   to   { transform: translateY(0);    }
 }
 .sheet-enter { animation: sheetIn 0.25s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes scrimIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.scrim-enter { animation: scrimIn 0.2s ease-out both; }
+
+/* Serpentina — acordeón de datos del neumático (grid-rows, sin saltos) */
+.accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s cubic-bezier(0.22,1,0.36,1);
+}
+.accordion-body.open {
+  grid-template-rows: 1fr;
+}
+.accordion-inner {
+  overflow: hidden;
+  min-height: 0;
+  /* invisible + no enfocable al terminar de colapsar (los campos ocultos
+     no deben recibir foco); al abrir se muestra de inmediato */
+  visibility: hidden;
+  transition: visibility 0s 0.24s;
+}
+.accordion-body.open .accordion-inner {
+  visibility: visible;
+  transition: visibility 0s 0s;
+}
+
+/* Tick de guardado */
+@keyframes tickIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.tick-in { animation: tickIn 0.18s ease-out both; }
+
+/* Entrada de filas del dashboard (stagger sutil) */
+@keyframes rowIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.row-in { animation: rowIn 0.24s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Accesibilidad: sin motion para quien lo pide (obligatorio, DESIGN.md §7) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

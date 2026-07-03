@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useApp } from '../state/AppContext';
+import { useApp } from '../state/useApp';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
@@ -22,6 +22,10 @@ export default function InspeccionScreen() {
 
   const [pos, setPos] = useState(1);
   const [data, setData] = useState<Record<string, string>>(empty());
+  // Último estado REAL de la posición actual: los commits llegan como parches
+  // desde callbacks diferidos (blur del autocomplete) y no pueden fiarse del
+  // snapshot de `data` de su render (lost update).
+  const dataRef = useRef<Record<string, string>>(empty());
   const [store, setStore] = useState<Record<number, Record<string, string>>>({});
   const [flash, setFlash] = useState(false);
   const [slideDir, setSlideDir] = useState<'up' | 'down' | null>(null);
@@ -35,13 +39,13 @@ export default function InspeccionScreen() {
   const [valvulas, setValvulas] = useState<CatValvula[]>([]);
   const [condiciones, setCondiciones] = useState<CatCondicion[]>([]);
   const [configPos, setConfigPos] = useState<CatConfiguracion[]>([]);
-  const [visited, setVisited] = useState<Set<number>>(new Set([1]));
-  const [accordionExpanded, setAccordionExpanded] = useState(true);
+  const [accordionExpanded, setAccordionExpanded] = useState(false);
 
   const r1Ref = useRef<HTMLInputElement>(null);
   const r2Ref = useRef<HTMLInputElement>(null);
   const r3Ref = useRef<HTMLInputElement>(null);
   const r4Ref = useRef<HTMLInputElement>(null);
+  const presionRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -120,25 +124,28 @@ export default function InspeccionScreen() {
       };
     }
     setStore(newStore);
-    setVisited(prev => {
-      const nv = new Set(prev);
-      for (const [p, d] of Object.entries(newStore)) {
-        if (d.r1 || d.r2 || d.r3 || d.r4 || d.presion || d.codigo) nv.add(Number(p));
-      }
-      return nv;
-    });
-    if (newStore[pos]) setData(newStore[pos]);
+    if (newStore[pos]) { setData(newStore[pos]); dataRef.current = newStore[pos]; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCabId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
   const FILAS = configPos.map(c => c.posicion);
   const TOTAL = FILAS.length;
-  const todasVistas = TOTAL > 0 && FILAS.every(f => visited.has(f));
 
   const flashSave = () => { setFlash(true); setTimeout(() => setFlash(false), 1400); };
 
-  const commit = async (next: Record<string, string>) => {
+  // ¿La posición requiere 4 canales? (Libre/Dual — reglas_negocio §1)
+  const requiresR4 = (p: number) => {
+    const cfg = configPos.find(c => c.posicion === p);
+    return cfg?.tipo_eje === 'Libre' || cfg?.tipo_eje === 'Dual';
+  };
+
+  // commit por PARCHE: merge contra dataRef (estado real), nunca contra el
+  // snapshot del render del caller — evita que un blur diferido pise teclas.
+  const commit = async (patch: Record<string, string>) => {
+    const next = { ...dataRef.current, ...patch };
+    dataRef.current = next;
     setData(next);
     setStore(s => ({ ...s, [pos]: next }));
     flashSave();
@@ -153,30 +160,41 @@ export default function InspeccionScreen() {
         tapa_valvula: next.tapaValvula || null, anomalia: next.anomalia || null,
       });
     }
-
-    // Auto-advance: if position is complete and accordion is collapsed, jump to next incomplete
-    if (!accordionExpanded) {
-      const cfg = configPos.find(c => c.posicion === pos);
-      const needsR4 = cfg?.tipo_eje === 'Libre';
-      const rtdOk = !!(next.r1 && next.r2 && next.r3 && (!needsR4 || next.r4));
-      const isComplete = rtdOk && !!next.presion;
-      if (isComplete) {
-        const nextIncomplete = FILAS.find(f => f !== pos && posStatus(f) !== 'completa');
-        if (nextIncomplete !== undefined) {
-          setTimeout(() => switchPos(nextIncomplete), 200);
-        }
-      }
-    }
   };
 
-  const switchPos = (n: number) => {
+  const switchPos = useCallback((n: number, focusR1 = false) => {
     setSlideDir(n > pos ? 'up' : 'down');
-    const nextStore = { ...store, [pos]: data };
+    const nextStore = { ...store, [pos]: dataRef.current };
     setStore(nextStore);
-    setVisited(v => { const nv = new Set(v); nv.add(n); return nv; });
     setPos(n);
-    setData(nextStore[n] || empty());
-  };
+    const nextData = nextStore[n] || empty();
+    dataRef.current = nextData;
+    setData(nextData);
+    if (focusR1) {
+      // El form remonta (key={pos}); esperar al remount para enfocar R1
+      setTimeout(() => { r1Ref.current?.focus(); r1Ref.current?.select(); }, 260);
+    }
+  }, [pos, store]);
+
+  // Auto-avance: el inspector cerró la medición (Enter/blur en presión con valor).
+  // Solo si la posición quedó completa y el acordeón no está en edición.
+  // Las flechas ‹ › siempre ganan (avance manual disponible en todo momento).
+  const handleMeasureDone = useCallback(() => {
+    if (accordionExpanded) return;
+    const d = dataRef.current;
+    const rtdOk = !!(d.r1 && d.r2 && d.r3 && (!requiresR4(pos) || d.r4));
+    if (!rtdOk || !d.presion) return;
+    const isComplete = (p: number) => {
+      const dd = p === pos ? dataRef.current : (store[p] || empty());
+      const ok = !!(dd.r1 && dd.r2 && dd.r3 && (!requiresR4(p) || dd.r4));
+      return ok && !!dd.presion;
+    };
+    const nextIncomplete = FILAS.find(f => f !== pos && !isComplete(f));
+    if (nextIncomplete !== undefined) {
+      setTimeout(() => switchPos(nextIncomplete, true), 180);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accordionExpanded, data, store, pos, configPos, switchPos]);
 
   const posIdx = FILAS.indexOf(pos);
   const prevPos = () => { if (posIdx > 0) switchPos(FILAS[posIdx - 1]); };
@@ -187,9 +205,7 @@ export default function InspeccionScreen() {
   // Estado de cada posición para el grid del sheet
   const posStatus = (p: number): 'completa' | 'parcial' | 'vacia' => {
     const d = p === pos ? data : (store[p] || empty());
-    const cfg = configPos.find(c => c.posicion === p);
-    const needsR4 = cfg?.tipo_eje === 'Libre';
-    const rtdOk = !!(d.r1 && d.r2 && d.r3 && (!needsR4 || d.r4));
+    const rtdOk = !!(d.r1 && d.r2 && d.r3 && (!requiresR4(p) || d.r4));
     if (rtdOk && d.presion) return 'completa';
     if (d.r1 || d.r2 || d.r3 || d.r4 || d.presion) return 'parcial';
     return 'vacia';
@@ -205,55 +221,49 @@ export default function InspeccionScreen() {
   const statusColor = (s: 'completa' | 'parcial' | 'vacia') =>
     s === 'completa' ? GREEN : s === 'parcial' ? YELLOW : BORDER_DARK;
 
+  const completas = FILAS.filter(p => posStatus(p) === 'completa').length;
+
   const navBtn = (label: React.ReactNode, onClick: () => void, disabled: boolean) => (
-    <button onClick={onClick} disabled={disabled} style={{
-      background: 'none', border: 'none', color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.85)',
+    <button onClick={onClick} disabled={disabled} className="pressable" style={{
+      background: 'none', border: 'none', color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)',
       cursor: disabled ? 'default' : 'pointer',
-      minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+      minWidth: 48, minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
     }}>{label}</button>
   );
 
   return (
     <div className="screen-enter" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: SCREEN_DARK, fontFamily: MONO, overflow: 'clip' }}>
 
-      {/* Header */}
-      <div style={{ background: NAVY, padding: 'calc(10px + env(safe-area-inset-top, 0px)) 14px 10px', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-        <button
-          aria-label="Volver"
-          onClick={handleExit}
-          style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>Inspección</div>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, display: 'flex', gap: 6, alignItems: 'center', marginTop: 1 }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {empresa?.nombre} · Unidad {unidadNumero}
-            </span>
-            {flash && <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, flexShrink: 0 }}>✓</span>}
-          </div>
-        </div>
-
-        {/* Pill de navegación — flechas +/-1, centro tappable abre el sheet */}
-        <div style={{ display: 'flex', alignItems: 'center', background: ORANGE, borderRadius: 10, padding: '0 2px', flexShrink: 0 }}>
-          {navBtn(
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M9 2l-5 5 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-            prevPos, posIdx <= 0,
-          )}
+      {/* Header — solo identidad + salida (la navegación vive abajo, zona del pulgar) */}
+      <div style={{ flexShrink: 0 }}>
+        <div style={{ background: NAVY, padding: 'calc(10px + env(safe-area-inset-top, 0px)) 14px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
-            onClick={() => setShowSheet(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', minWidth: 44, padding: '4px 0', fontFamily: MONO }}
+            aria-label="Volver"
+            onClick={handleExit}
+            className="pressable"
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 40, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
           >
-            <div style={{ color: '#fff', fontWeight: 900, fontSize: 20, lineHeight: 1 }}>{TOTAL > 0 ? pos : '—'}</div>
-            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 700, letterSpacing: '0.04em' }}>de {TOTAL}</div>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
-          {navBtn(
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-            nextPos, posIdx >= FILAS.length - 1,
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>Inspección</div>
+            <div style={{ color: LABEL_BLUE, fontSize: 11, display: 'flex', gap: 6, alignItems: 'center', marginTop: 1 }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {empresa?.nombre} · Unidad {unidadNumero}
+              </span>
+            </div>
+          </div>
+
+          {/* Tick de guardado — feedback de autosave */}
+          {flash && (
+            <div className="tick-in" aria-label="Guardado" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: 'rgba(244,184,33,0.14)', borderRadius: 6, padding: '4px 8px' }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5L4.5 9L10 3" stroke={YELLOW} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, letterSpacing: '0.06em' }}>GUARDADO</span>
+            </div>
           )}
         </div>
+        <div className="hazard-edge" />
       </div>
 
       {/* Formulario — key={pos} dispara remount + animación de slide */}
@@ -272,73 +282,105 @@ export default function InspeccionScreen() {
           anomalias={anomalias}
           valvulas={valvulas}
           condiciones={condiciones}
+          needsR4={requiresR4(pos)}
           r1Ref={r1Ref}
           r2Ref={r2Ref}
           r3Ref={r3Ref}
           r4Ref={r4Ref}
+          presionRef={presionRef}
           onNewMarca={handleNewMarca}
           onNewModelo={handleNewModelo}
           onNewMedida={handleNewMedida}
           onNewReencauche={handleNewReencauche}
           onAccordionChange={setAccordionExpanded}
+          onMeasureDone={handleMeasureDone}
         />
       </div>
 
-      {/* Footer — solo cuando todas las posiciones han sido visitadas */}
-      {todasVistas && (
-        <div style={{ padding: `10px 14px calc(10px + env(safe-area-inset-bottom, 0px))`, background: SCREEN_DARK, borderTop: `1px solid ${BORDER_DARK}`, flexShrink: 0 }}>
+      {/* Barra de acción inferior — navegación de posición en zona del pulgar (DESIGN.md §7) */}
+      <div style={{ flexShrink: 0, background: NAVY, padding: `8px 14px calc(8px + env(safe-area-inset-bottom, 0px))` }}>
+        {TOTAL > 0 && completas === TOTAL && (
           <button
             onClick={handleExit}
-            style={{ width: '100%', background: YELLOW, color: NAVY, border: 'none', borderRadius: 14, padding: 14, fontWeight: 800, fontSize: 15, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO }}
+            className="pressable chamfer"
+            style={{ width: '100%', background: YELLOW, color: NAVY, border: 'none', padding: 13, fontWeight: 800, fontSize: 14, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO, marginBottom: 8 }}
           >
             BUSCAR OTRA UNIDAD →
           </button>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {navBtn(
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11.5 3l-6 6 6 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+            prevPos, posIdx <= 0,
+          )}
+          <button
+            onClick={() => setShowSheet(true)}
+            className="pressable chamfer"
+            style={{ flex: 1, background: ORANGE, border: 'none', cursor: 'pointer', textAlign: 'center', padding: '7px 0 6px', fontFamily: MONO }}
+          >
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8 }}>
+              <span style={{ color: '#fff', fontWeight: 900, fontSize: 24, lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>{TOTAL > 0 ? pos : '—'}</span>
+              <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em' }}>/ {TOTAL} · {posLabel(pos)}</span>
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', marginTop: 2 }}>
+              {completas}/{TOTAL} COMPLETAS — TOCA PARA ELEGIR
+            </div>
+          </button>
+          {navBtn(
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M6.5 3l6 6-6 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+            nextPos, posIdx >= FILAS.length - 1,
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Bottom sheet — grid de posiciones */}
+      {/* Selector de posiciones — grid en zona media de la pantalla (alcance de pulgar) */}
       {showSheet && (
         <div
+          className="scrim-enter"
           style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,18,0.72)', zIndex: 50, display: 'flex', alignItems: 'flex-end' }}
           onClick={() => setShowSheet(false)}
         >
           <div
             className="sheet-enter"
-            style={{ background: FIELD_DARK, borderRadius: '16px 16px 0 0', width: '100%', padding: `16px 16px calc(24px + env(safe-area-inset-bottom, 0px))`, boxSizing: 'border-box' }}
+            style={{ background: FIELD_DARK, borderRadius: '16px 16px 0 0', width: '100%', minHeight: '62%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}
           >
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER_DARK, margin: '0 auto 14px' }} />
-            <div style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', textAlign: 'center', marginBottom: 14 }}>
-              POSICIONES — {FILAS.filter(p => posStatus(p) === 'completa').length}/{TOTAL} completas
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-              {FILAS.map(p => {
-                const status = posStatus(p);
-                const isCurrent = p === pos;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => { setShowSheet(false); if (p !== pos) switchPos(p); }}
-                    style={{
-                      background: isCurrent ? 'rgba(240,104,34,0.18)' : SCREEN_DARK,
-                      border: `2px solid ${isCurrent ? ORANGE : BORDER_DARK}`,
-                      borderRadius: 10, padding: '10px 12px', cursor: 'pointer', fontFamily: MONO,
-                      textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      minHeight: 52,
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 800, color: isCurrent ? ORANGE : LABEL_BLUE, letterSpacing: '0.1em', marginBottom: 2 }}>
-                        {posLabel(p)}
+            <div className="hazard-edge" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `12px 16px calc(20px + env(safe-area-inset-bottom, 0px))` }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER_DARK, margin: '0 auto 16px' }} />
+              <div style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', textAlign: 'center', marginBottom: 16 }}>
+                POSICIONES — {completas}/{TOTAL} completas
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                {FILAS.map(p => {
+                  const status = posStatus(p);
+                  const isCurrent = p === pos;
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => { setShowSheet(false); if (p !== pos) switchPos(p); }}
+                      className="pressable"
+                      style={{
+                        background: isCurrent ? 'rgba(240,104,34,0.18)' : SCREEN_DARK,
+                        border: `2px solid ${isCurrent ? ORANGE : BORDER_DARK}`,
+                        borderRadius: 10, padding: '12px 14px', cursor: 'pointer', fontFamily: MONO,
+                        textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        minHeight: 58,
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: isCurrent ? ORANGE : LABEL_BLUE, letterSpacing: '0.1em', marginBottom: 2 }}>
+                          {posLabel(p)}
+                        </div>
+                        <div style={{ fontSize: 24, fontWeight: 900, color: isCurrent ? ORANGE : VALUE_COLOR, lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>
+                          {p}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 22, fontWeight: 900, color: isCurrent ? ORANGE : VALUE_COLOR, lineHeight: 1 }}>
-                        {p}
-                      </div>
-                    </div>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor(status), flexShrink: 0 }} />
-                  </button>
-                );
-              })}
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: statusColor(status), flexShrink: 0 }} />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppProvider, useApp } from './state/AppContext';
+import { AppProvider } from './state/AppContext';
+import { useApp } from './state/useApp';
 import EmpresaScreen from './screens/EmpresaScreen';
 import UnidadScreen from './screens/UnidadScreen';
 import InspeccionScreen from './screens/InspeccionScreen';
@@ -7,8 +8,13 @@ import './index.css';
 
 function LoadingScreen() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#cbd5e1', fontFamily: '"JetBrains Mono", monospace' }}>
-      <div style={{ color: '#7b879c', fontSize: 14 }}>Cargando…</div>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, background: '#07111C', fontFamily: '"JetBrains Mono", monospace' }}>
+      <div style={{ lineHeight: 1, textAlign: 'center' }}>
+        <div style={{ fontFamily: '"Bebas Neue", sans-serif', fontSize: 42, color: '#fff', letterSpacing: '0.06em' }}>RENOVA</div>
+        <div style={{ fontFamily: '"Bebas Neue", sans-serif', fontSize: 24, color: '#7AABCC', letterSpacing: '0.1em', marginTop: -6 }}>INSPECTOR</div>
+      </div>
+      <div className="hazard-edge" style={{ width: 96 }} />
+      <div style={{ color: '#7AABCC', fontSize: 12, fontWeight: 700, letterSpacing: '0.1em' }}>CARGANDO…</div>
     </div>
   );
 }

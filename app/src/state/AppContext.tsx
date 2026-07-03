@@ -1,26 +1,7 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { empresaRepo } from '../db/repos/empresaRepo';
 import { initApp } from '../db/sqlite';
-import type { Empresa } from '../db/schema';
-
-interface AppState {
-  initialized: boolean;
-  empresaId: string | null;
-  empresa: Empresa | null;
-  unidadNumero: string | null;
-  unidadConfig: string | null;
-  unidadTipoVehiculo: string | null;
-  cabeceraId: string | null;
-}
-
-interface AppCtx extends AppState {
-  setEmpresa: (id: string) => Promise<void>;
-  setUnidad: (numero: string, config: string, tipoVehiculo: string) => void;
-  setCabecera: (id: string) => void;
-  clearUnidad: () => void;
-}
-
-const AppContext = createContext<AppCtx | null>(null);
+import { AppContext, type AppState } from './context';
 
 const EMPRESA_KEY = 'renova_empresa_id';
 
@@ -75,10 +56,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
       {children}
     </AppContext.Provider>
   );
-}
-
-export function useApp() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
-  return ctx;
 }

@@ -70,10 +70,27 @@ export const inspeccionRepo = {
     return (result.values?.[0] as InspeccionCabecera) ?? null;
   },
 
-  async upsertNeumatico(input: NeumaticoInput, existingId?: string): Promise<InspeccionNeumatico> {
+  // Reabrir la inspección del día: se actualiza la MISMA cabecera (odómetro/foto),
+  // nunca se duplica. Una inspección por unidad por día (decisión task_12 §4).
+  async actualizarCabecera(id: string, km_odometro: number, foto_unidad?: string | null): Promise<void> {
     const db = await getDb();
     const now = nowIso();
-    const id = existingId ?? generateId();
+    await db.run(
+      `UPDATE inspeccion_cabecera
+       SET km_odometro = ?, foto_unidad = COALESCE(?, foto_unidad), updated_at = ?
+       WHERE id = ?`,
+      [km_odometro, foto_unidad ?? null, now, id]
+    );
+    await persistDb();
+  },
+
+  async upsertNeumatico(input: NeumaticoInput): Promise<InspeccionNeumatico> {
+    const db = await getDb();
+    const now = nowIso();
+    // Reusar el id de la fila existente en (cabecera, posición): el autosave llama
+    // esto en cada edición y un UUID nuevo por llamada duplicaría filas (bug v1).
+    const existing = (await this.getNeumaticoByPosicion(input.cabecera_id, input.posicion))?.id;
+    const id = existing ?? generateId();
 
     // RTD MOVI e IDI usando calcularRtdMovi/calcularIdi de calculations.ts
     // Nunca sustituir un canal faltante por 0 (regla MOVI = MIN de los medidos)
@@ -123,9 +140,7 @@ export const inspeccionRepo = {
     await db.run(
       `INSERT INTO inspeccion_neumatico (id, cabecera_id, posicion, codigo, marca, modelo, condicion, reencauche, medida, r1, r2, r3, r4, presion, tapa_valvula, anomalia, rtd_movi, idi, estado_rtd, desecho, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         cabecera_id = excluded.cabecera_id,
-         posicion = excluded.posicion,
+       ON CONFLICT(cabecera_id, posicion) DO UPDATE SET
          codigo = excluded.codigo,
          marca = excluded.marca,
          modelo = excluded.modelo,
