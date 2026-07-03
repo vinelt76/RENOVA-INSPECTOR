@@ -14,30 +14,6 @@ const empty = (): Record<string, string> => ({
   marca: '', modelo: '', condicion: '', reencauche: '', medida: '',
 });
 
-// Foco seguro para Android: espera a que el remount (key={pos}) termine de
-// pintarse (doble rAF) y a que el teclado virtual termine de animar
-// (visualViewport 'resize', con fallback a timeout si no dispara). Sin esto,
-// .focus() se ejecuta mientras el WebView aún está resolviendo el blur()
-// anterior y el foco "rebota" al campo previo — no reproduce en web porque
-// ahí el blur/focus es instantáneo y no hay animación de teclado real.
-function focusWhenReady(getEl: () => HTMLInputElement | null | undefined) {
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const vv = window.visualViewport;
-      let done = false;
-      const run = () => {
-        if (done) return;
-        done = true;
-        const el = getEl();
-        el?.focus();
-        el?.select();
-      };
-      if (vv) vv.addEventListener('resize', run, { once: true });
-      setTimeout(run, 350);
-    });
-  });
-}
-
 export default function InspeccionScreen() {
   const { cabeceraId } = useParams<{ cabeceraId: string }>();
   const { empresa, unidadNumero, unidadConfig, unidadTipoVehiculo, cabeceraId: ctxCabId } = useApp();
@@ -70,20 +46,6 @@ export default function InspeccionScreen() {
   const r3Ref = useRef<HTMLInputElement>(null);
   const r4Ref = useRef<HTMLInputElement>(null);
   const presionRef = useRef<HTMLInputElement>(null);
-
-  // Invalida avances de foco en vuelo cuando hay una navegación más reciente
-  // (manual o automática) o cuando la pantalla se desmonta — evita que un
-  // auto-avance encolado le pise el foco a una navegación manual posterior.
-  const navGenRef = useRef(0);
-  const pendingTimersRef = useRef<number[]>([]);
-
-  useEffect(() => {
-    return () => {
-      pendingTimersRef.current.forEach(clearTimeout);
-      pendingTimersRef.current = [];
-      navGenRef.current++;
-    };
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -201,10 +163,6 @@ export default function InspeccionScreen() {
   };
 
   const switchPos = useCallback((n: number, focusR1 = false) => {
-    // Toda navegación (manual o auto-avance) obtiene una nueva "generación":
-    // cualquier avance de foco encolado de una navegación anterior queda
-    // invalidado en cuanto se lee navGenRef y ya no coincide.
-    const myGen = ++navGenRef.current;
     setSlideDir(n > pos ? 'up' : 'down');
     const nextStore = { ...store, [pos]: dataRef.current };
     setStore(nextStore);
@@ -213,9 +171,8 @@ export default function InspeccionScreen() {
     dataRef.current = nextData;
     setData(nextData);
     if (focusR1) {
-      // El form remonta (key={pos}); focusWhenReady espera el repintado real
-      // y a que el teclado de Android termine de animar antes de enfocar R1.
-      focusWhenReady(() => (navGenRef.current === myGen ? r1Ref.current : null));
+      // El form remonta (key={pos}); esperar al remount para enfocar R1
+      setTimeout(() => { r1Ref.current?.focus(); r1Ref.current?.select(); }, 260);
     }
   }, [pos, store]);
 
@@ -234,15 +191,7 @@ export default function InspeccionScreen() {
     };
     const nextIncomplete = FILAS.find(f => f !== pos && !isComplete(f));
     if (nextIncomplete !== undefined) {
-      // Se toma la generación actual ANTES de encolar: si el inspector navega
-      // a mano dentro de esta ventana, switchPos ya habrá incrementado
-      // navGenRef y este avance automático se descarta al llegar su turno.
-      const myGen = navGenRef.current;
-      const t = window.setTimeout(() => {
-        if (navGenRef.current !== myGen) return;
-        switchPos(nextIncomplete, true);
-      }, 180);
-      pendingTimersRef.current.push(t);
+      setTimeout(() => switchPos(nextIncomplete, true), 180);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accordionExpanded, data, store, pos, configPos, switchPos]);
