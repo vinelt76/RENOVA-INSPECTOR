@@ -114,7 +114,6 @@ export default function UnidadScreen() {
       } else {
         setUltimaInsp(null);
       }
-      setConfigs(await catalogoRepo.configuracion(u.tipo_vehiculo, u.configuracion));
     } catch (e) {
       console.error('selectUnidad error:', e);
       setUltimaInsp(null);
