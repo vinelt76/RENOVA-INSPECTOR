@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { empresaRepo } from '../db/repos/empresaRepo';
-import { useApp } from '../state/AppContext';
+import { useApp } from '../state/useApp';
 import { BEBAS, MONO, NAVY, ORANGE, YELLOW, SCREEN_DARK, FIELD_DARK, LABEL_BLUE, BORDER_DARK, VALUE_COLOR } from '../theme';
 import type { Empresa } from '../db/schema';
 
@@ -39,11 +39,14 @@ export default function EmpresaScreen() {
     <div className="screen-enter" style={{ height: '100%', background: SCREEN_DARK, display: 'flex', flexDirection: 'column', fontFamily: MONO, overflow: 'clip' }}>
 
       {/* Header */}
-      <div style={{ background: NAVY, padding: 'calc(20px + env(safe-area-inset-top, 0px)) 24px 20px' }}>
-        <div style={{ lineHeight: 1 }}>
-          <div style={{ fontFamily: BEBAS, fontSize: 42, color: '#fff', letterSpacing: '0.06em' }}>RENOVA</div>
-          <div style={{ fontFamily: BEBAS, fontSize: 24, color: LABEL_BLUE, letterSpacing: '0.1em', marginTop: -6 }}>INSPECTOR</div>
+      <div style={{ flexShrink: 0 }}>
+        <div style={{ background: NAVY, padding: 'calc(20px + env(safe-area-inset-top, 0px)) 24px 20px' }}>
+          <div style={{ lineHeight: 1 }}>
+            <div style={{ fontFamily: BEBAS, fontSize: 42, color: '#fff', letterSpacing: '0.06em' }}>RENOVA</div>
+            <div style={{ fontFamily: BEBAS, fontSize: 24, color: LABEL_BLUE, letterSpacing: '0.1em', marginTop: -6 }}>INSPECTOR</div>
+          </div>
         </div>
+        <div className="hazard-edge" />
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '24px 24px calc(24px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -66,6 +69,7 @@ export default function EmpresaScreen() {
               <button
                 key={e.id}
                 onClick={() => setSel(activa ? null : e.id)}
+                className="pressable"
                 style={{
                   width: '100%',
                   background: activa ? 'rgba(240,104,34,0.12)' : FIELD_DARK,
@@ -102,10 +106,11 @@ export default function EmpresaScreen() {
         <button
           disabled={!sel}
           onClick={handleComenzar}
+          className="pressable chamfer"
           style={{
             background: sel ? ORANGE : FIELD_DARK,
             color: sel ? '#fff' : BORDER_DARK,
-            border: 'none', borderRadius: 14, padding: '17px',
+            border: 'none', padding: '17px',
             fontWeight: 800, fontSize: 15, letterSpacing: '0.04em',
             cursor: sel ? 'pointer' : 'default', fontFamily: MONO,
             transition: 'background 0.2s, color 0.2s', flexShrink: 0,

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../state/AppContext';
+import { useApp } from '../state/useApp';
 import { unidadRepo } from '../db/repos/unidadRepo';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
@@ -77,7 +77,8 @@ export default function UnidadScreen() {
   const canCreate = !!noExiste && odometro.length > 0 && !!config;
 
   const handleSearch = async (val: string) => {
-    const clean = val.replace(/[^0-9]/g, '');
+    // Alfanumérico: CTA identifica sus buses por placa (p.ej. "AAV-803") — decisión Lote 3
+    const clean = val.replace(/[^0-9a-zA-Z-]/g, '').toUpperCase();
     latestQuery.current = clean;
     setQuery(clean);
     setOdometro('');
@@ -105,9 +106,11 @@ export default function UnidadScreen() {
     setSugerencias([u]);
     setShowSugerencias(false);
     try {
-      const insp = await unidadRepo.getUltimaInspeccion(u.empresa_id, u.numero);
-      if (insp?.cabecera) {
-        setUltimaInsp({ fecha: insp.cabecera.fecha, odometro: insp.cabecera.km_odometro ?? 0, cabeceraId: insp.cabecera.id });
+      const cabecera = await unidadRepo.getUltimaCabecera(u.empresa_id, u.numero);
+      if (cabecera) {
+        setUltimaInsp({ fecha: cabecera.fecha, odometro: cabecera.km_odometro ?? 0, cabeceraId: cabecera.id });
+        // Inspección de HOY → se reabre la misma: prellenar el odómetro registrado
+        if (cabecera.fecha === localDate()) setOdometro(String(cabecera.km_odometro ?? ''));
       } else {
         setUltimaInsp(null);
       }
@@ -131,23 +134,34 @@ export default function UnidadScreen() {
   const handleContinue = async () => {
     if (!match || !empresaId) return;
     try {
-      const origenCabeceraId = ultimaInsp?.cabeceraId ?? null;
+      const fecha = localDate();
       await unidadRepo.upsert({
         numero: match.numero,
         empresa_id: empresaId,
         tipo_vehiculo: match.tipo_vehiculo,
         configuracion: match.configuracion,
         odometro_ultimo: kmActual,
-        ultima_fecha: localDate(),
+        ultima_fecha: fecha,
       });
-      const fecha = localDate();
-      const cab = await inspeccionRepo.crearCabecera(empresaId, match.numero, fecha, kmActual, fotoUnidad);
-      if (origenCabeceraId) {
-        await inspeccionRepo.clonarNeumaticos(origenCabeceraId, cab.id);
+
+      let cabeceraId: string;
+      if (ultimaInsp && ultimaInsp.fecha === fecha) {
+        // Misma fecha ⇒ REABRIR la inspección del día (una por unidad/día):
+        // se edita la misma cabecera, sin duplicar ni clonar.
+        await inspeccionRepo.actualizarCabecera(ultimaInsp.cabeceraId, kmActual, fotoUnidad);
+        cabeceraId = ultimaInsp.cabeceraId;
+      } else {
+        // Fecha nueva ⇒ inspección nueva precargada desde la anterior.
+        const cab = await inspeccionRepo.crearCabecera(empresaId, match.numero, fecha, kmActual, fotoUnidad);
+        if (ultimaInsp) {
+          await inspeccionRepo.clonarNeumaticos(ultimaInsp.cabeceraId, cab.id);
+        }
+        cabeceraId = cab.id;
       }
+
       setUnidad(match.numero, match.configuracion, match.tipo_vehiculo);
-      setCabecera(cab.id);
-      navigate(`/inspeccion/${cab.id}`);
+      setCabecera(cabeceraId);
+      navigate(`/inspeccion/${cabeceraId}`);
     } catch (e) {
       console.error('handleContinue error:', e);
     }
@@ -226,15 +240,18 @@ export default function UnidadScreen() {
   return (
     <div className="screen-enter" style={{ height: '100%', background: SCREEN_DARK, display: 'flex', flexDirection: 'column', fontFamily: MONO, overflow: 'clip' }}>
 
-      <div style={{ background: NAVY, padding: 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <button onClick={handleBack} aria-label="Volver" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-        </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: BEBAS, fontSize: 34, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>RENOVA</div>
-          <div style={{ fontFamily: BEBAS, fontSize: 19, color: LABEL_BLUE, letterSpacing: '0.1em', lineHeight: 1, marginTop: -4 }}>INSPECTOR</div>
+      <div style={{ flexShrink: 0 }}>
+        <div style={{ background: NAVY, padding: 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={handleBack} aria-label="Volver" className="pressable" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: BEBAS, fontSize: 34, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>RENOVA</div>
+            <div style={{ fontFamily: BEBAS, fontSize: 19, color: LABEL_BLUE, letterSpacing: '0.1em', lineHeight: 1, marginTop: -4 }}>INSPECTOR</div>
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>{empresa?.nombre ?? ''}</div>
         </div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 600 }}>{empresa?.nombre ?? ''}</div>
+        <div className="hazard-edge" />
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '24px 24px calc(20px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column' }}>
@@ -247,9 +264,10 @@ export default function UnidadScreen() {
             ref={inputRef}
             value={query}
             onChange={e => handleSearch(e.target.value)}
-            onFocus={() => { setFocusedField('search'); q.length >= 1 && setShowSugerencias(true); }}
+            onFocus={() => { setFocusedField('search'); if (q.length >= 1) setShowSugerencias(true); }}
             onBlur={() => { setFocusedField(null); setTimeout(() => setShowSugerencias(false), 150); }}
-            inputMode="numeric"
+            autoCapitalize="characters"
+            autoCorrect="off"
             placeholder="N.º de unidad"
             className="dark-input"
             style={{ flex: 1, border: 'none', outline: 'none', padding: '16px 0', fontSize: 20, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em' }}
@@ -281,6 +299,7 @@ export default function UnidadScreen() {
                 <button
                   key={u.numero}
                   onClick={() => selectUnidad(u)}
+                  className="pressable"
                   style={{ width: '100%', background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`, borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: MONO, textAlign: 'left' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -427,11 +446,11 @@ export default function UnidadScreen() {
           <button
             disabled={!canContinue && !canCreate}
             onClick={canContinue ? handleContinue : handleCreate}
+            className="pressable chamfer"
             style={{
               background: canContinue ? ORANGE : canCreate ? NAVY : FIELD_DARK,
               color: (canContinue || canCreate) ? '#fff' : BORDER_DARK,
               border: 'none',
-              borderRadius: 14,
               padding: '17px',
               fontWeight: 800,
               fontSize: 15,
@@ -443,7 +462,7 @@ export default function UnidadScreen() {
               transition: 'background 0.15s',
             }}
           >
-            {noExiste ? 'CREAR UNIDAD' : 'CONTINUAR INSPECCIÓN'}
+            {noExiste ? 'CREAR UNIDAD' : ultimaInsp?.fecha === localDate() ? 'REABRIR INSPECCIÓN DE HOY' : 'CONTINUAR INSPECCIÓN'}
           </button>
         )}
       </div>

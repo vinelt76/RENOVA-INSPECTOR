@@ -285,3 +285,60 @@ repetitivas y numerosas en pantalla.
 - **Don't** usar opacity para representar estado deshabilitado; siempre recolorear
   explícitamente a `field-dark`/`border-dark` para que el contraste bajo sol se mantenga
   predecible.
+
+## 7. Lenguaje industrial v2 (evolución 2026-07 — "Maquinaria, no dashboard")
+
+Evolución del sistema hacia un carácter de maquinaria pesada moderna (referencia: consolas
+de cabina CAT de nueva generación), sin cambiar la paleta ni la tipografía. Dos formas
+nuevas, con presupuesto estricto de uso:
+
+### Chaflán industrial (signature shape)
+Corte diagonal de esquina (chamfer, `clip-path`), como las placas metálicas de maquinaria.
+- **Dónde:** SOLO en el CTA primario de cada pantalla (esquina sup-derecha + inf-izquierda,
+  corte 10px) y en el hero de datos del dashboard (stat tiles, corte 8px).
+- **Dónde NO:** inputs, cards de lista, celdas de medición — esos mantienen radios 6-14px.
+- CSS: `clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))`.
+
+### Cinta de seguridad (brand mark)
+Franja diagonal naranja/transparente de 4-6px (repeating-linear-gradient 45°), la marca
+visual del sistema — evoca la cinta de peligro de taller.
+- **Dónde:** SOLO como filo inferior del header navy (4px) y como filo superior del bottom
+  sheet. Máximo 2 apariciones por pantalla.
+- Nunca como fondo de área, nunca detrás de texto.
+
+### Barra de acción inferior (ergonomía de pulgar)
+En pantallas de captura, la navegación de posición vive ABAJO (zona natural del pulgar
+según investigación de thumb-zone), no en el header: barra fija inferior con flechas ‹ ›
+(44×44px mínimo), la posición actual como hero tappable (abre el selector) y el estado de
+completitud. El header queda solo para identidad + salida.
+
+### Motion (micro-interacciones con propósito)
+Presupuesto de motion: cada animación comunica un cambio de estado; nada decorativo.
+- **Press feedback:** todo elemento tappable escala a `0.97` con `transform 0.12s ease-out`
+  (clase `.pressable`). Único feedback táctil del sistema.
+- **Serpentina (acordeón):** expandir/colapsar con `grid-template-rows 0fr→1fr` en
+  `0.24s cubic-bezier(0.22,1,0.36,1)` — sin rebote.
+- **Slide de posición:** cambio de posición desliza el formulario 28px (ya existente).
+- **Sheet:** entra desde abajo `0.25s cubic-bezier(0.22,1,0.36,1)`; el scrim hace fade.
+- **Tick de guardado:** aparece con `scale 0.6→1 + fade 0.18s`, se va con fade.
+- **`prefers-reduced-motion: reduce`** desactiva TODAS las animaciones (obligatorio).
+
+## 8. Dashboard de mantenimiento (superficie de oficina)
+
+El dashboard del jefe de mantenimiento comparte paleta, tipografía y fondo oscuro, pero es
+una superficie de LECTURA (no captura). Reglas propias:
+
+- **Semántica de datos (amplía la Regla del Verde Exclusivo, que aplica a pantallas de
+  captura):** en el dashboard los estados RTD usan el semáforo del negocio —
+  `verified-green` = Normal, `signal-yellow` = Próximo a Reencauche,
+  `ember-orange` = Para Reencauche / desecho / alerta. No se introduce rojo: el naranja ES
+  el color de máxima severidad del sistema.
+- **Stat tile:** card `field-dark`, chaflán 8px, label 10px `label-blue` uppercase, valor
+  hero 28-32px `tabular-nums` en `value-ice` (o color semántico si el valor ES un estado).
+- **Barra de distribución segmentada:** una sola barra horizontal apilada
+  (verde/amarillo/naranja) con porcentajes `tabular-nums` — nunca torta, nunca 3D.
+- **Lista crítica:** unidades con llantas "Para Reencauche" o desecho, ordenadas por
+  severidad; cada fila = unidad + posición + RTD MOVI + estado como badge.
+- **Fórmulas visibles:** ISA, VUR y tasa de desgaste se muestran con su unidad y con "—"
+  cuando no hay datos suficientes (nunca 0 fingido, ver reglas_negocio §8).
+- El dashboard NO edita datos: cero inputs, cero estados de foco naranja.

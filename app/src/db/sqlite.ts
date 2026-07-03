@@ -198,8 +198,21 @@ export async function runMigrations(db: SQLiteDBConnection): Promise<void> {
     `);
     await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (1);`);
   }
+  if (currentVersion < 2) {
+    // v2: el autosave insertaba una fila nueva por cada edición (UUID nuevo →
+    // ON CONFLICT(id) jamás disparaba) → neumáticos duplicados por posición.
+    // Dedupe (gana la última inserción) + UNIQUE para que no vuelva a pasar.
+    await db.execute(`
+      DELETE FROM inspeccion_neumatico WHERE rowid NOT IN (
+        SELECT MAX(rowid) FROM inspeccion_neumatico GROUP BY cabecera_id, posicion
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_neumatico_cab_pos
+        ON inspeccion_neumatico (cabecera_id, posicion);
+    `);
+    await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (2);`);
+  }
   // Plantilla para migraciones futuras:
-  // if (currentVersion < 2) { /* ALTER TABLE / CREATE TABLE incremental */ ; await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (2);`); }
+  // if (currentVersion < 3) { /* ALTER TABLE / CREATE TABLE incremental */ ; await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (3);`); }
 }
 
 export function generateId(): string {

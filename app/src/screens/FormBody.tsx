@@ -25,27 +25,37 @@ interface Props {
   anomalias: CatAnomalia[];
   valvulas: CatValvula[];
   condiciones: CatCondicion[];
+  /** true si la posición es de eje Libre/Dual → se miden 4 canales (reglas_negocio §1) */
+  needsR4: boolean;
   r1Ref: React.RefObject<HTMLInputElement | null>;
   r2Ref: React.RefObject<HTMLInputElement | null>;
   r3Ref: React.RefObject<HTMLInputElement | null>;
   r4Ref: React.RefObject<HTMLInputElement | null>;
+  presionRef: React.RefObject<HTMLInputElement | null>;
   onNewMarca: (nombre: string) => void;
   onNewModelo: (nombre: string) => void;
   onNewMedida: (nombre: string) => void;
   onNewReencauche: (nombre: string) => void;
   onAccordionChange?: (expanded: boolean) => void;
+  /** El inspector terminó de medir presión (Enter o blur con valor) — dispara auto-avance */
+  onMeasureDone?: () => void;
 }
 
 export default function FormBody({
   data, commit, marcas, modelos, medidas, reencauches, anomalias, valvulas, condiciones,
-  r1Ref, r2Ref, r3Ref, r4Ref,
-  onNewMarca, onNewModelo, onNewMedida, onNewReencauche, onAccordionChange,
+  needsR4, r1Ref, r2Ref, r3Ref, r4Ref, presionRef,
+  onNewMarca, onNewModelo, onNewMedida, onNewReencauche, onAccordionChange, onMeasureDone,
 }: Props) {
   const remRefs = { r1: r1Ref, r2: r2Ref, r3: r3Ref, r4: r4Ref };
-  const remNext: Record<string, string | null> = { r1: 'r2', r2: 'r3', r3: 'r4', r4: null };
+  // Los 4 canales se muestran SIEMPRE (grid estable entre posiciones).
+  // La cadena de captura salta R4 en ejes de 3 canales (Dir/Tracción):
+  // R1→R2→R3→(R4 si Libre/Dual)→PRESIÓN. R4 sigue tocable a mano.
+  const remNext: Record<string, string | null> = needsR4
+    ? { r1: 'r2', r2: 'r3', r3: 'r4', r4: null }
+    : { r1: 'r2', r2: 'r3', r3: null, r4: null };
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    commit({ ...data, [field]: e.target.value });
+    commit({ [field]: e.target.value });
 
   const advanceRem = (key: string) => {
     const nk = remNext[key];
@@ -55,14 +65,15 @@ export default function FormBody({
         el?.focus();
         el?.select();
       } else {
-        remRefs[key as keyof typeof remRefs]?.current?.blur();
+        presionRef.current?.focus();
+        presionRef.current?.select();
       }
     }, 0);
   };
 
   const handleRemChange = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    commit({ ...data, [key]: val });
+    commit({ [key]: val });
     if (val.length >= 2) advanceRem(key);
   };
 
@@ -77,15 +88,11 @@ export default function FormBody({
   const anomaliaAlert = data.anomalia !== '';
   const valvulaAlert = data.tapaValvula !== '' && !VALVULA_OK.has(data.tapaValvula.toLowerCase());
 
-  const hasPrecarga = !!data.codigo;
-  const [expanded, setExpanded] = useState(!hasPrecarga);
+  // El acordeón arranca SIEMPRE colapsado (en toda posición, con o sin datos);
+  // solo se expande cuando el inspector lo toca — pedido explícito de campo.
+  const [expanded, setExpanded] = useState(false);
   const [focusedRem, setFocusedRem] = useState<string | null>(null);
   const [focusedPresion, setFocusedPresion] = useState(false);
-
-  // When data changes externally (position switch), sync expanded state
-  useEffect(() => {
-    setExpanded(!hasPrecarga);
-  }, [hasPrecarga]);
 
   useEffect(() => {
     onAccordionChange?.(expanded);
@@ -93,11 +100,16 @@ export default function FormBody({
 
   const toggleAccordion = () => setExpanded(prev => !prev);
 
+  const presionDone = () => {
+    setFocusedPresion(false);
+    if (data.presion) onMeasureDone?.();
+  };
+
   const remCell = (key: string, label: string) => {
     const active = focusedRem === key;
     const hasValue = data[key] !== '';
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <span style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.1em', fontFamily: MONO }}>{label}</span>
         <div style={{
           height: 72,
@@ -130,19 +142,20 @@ export default function FormBody({
     );
   };
 
-  // Summary line for collapsed accordion
+  // Resumen del acordeón colapsado
   const summaryParts = [data.codigo, data.marca, data.medida].filter(Boolean);
-  const summaryText = summaryParts.join(' · ') || 'Sin datos';
+  const summaryText = summaryParts.join(' · ') || 'Sin datos — toca para completar';
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', overflowX: 'clip', padding: '16px 16px 8px', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-      {/* ── ACCORDION: DATOS DEL NEUMÁTICO ── */}
+      {/* ── ACORDEÓN: DATOS DEL NEUMÁTICO ── */}
       <div style={{ padding: '0 2px' }}>
         <button
           onClick={toggleAccordion}
+          className="pressable"
           style={{
-            width: '100%', background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`,
+            width: '100%', background: FIELD_DARK, border: `2px solid ${expanded ? ORANGE : BORDER_DARK}`,
             borderRadius: 10, padding: '14px 16px', cursor: 'pointer', fontFamily: MONO,
             textAlign: 'left', transition: 'border-color 0.15s',
           }}
@@ -151,110 +164,96 @@ export default function FormBody({
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.12em', marginBottom: 4 }}>DATOS DEL NEUMÁTICO</div>
               {!expanded && (
-                <div style={{ fontSize: 15, fontWeight: 800, color: VALUE_COLOR, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: VALUE_COLOR, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' as const }}>
                   {summaryText}
                 </div>
               )}
             </div>
             <svg
               width="16" height="16" viewBox="0 0 16 16" fill="none"
-              style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.2s ease-out', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.24s cubic-bezier(0.22,1,0.36,1)', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
             >
-              <path d="M4 6l4 4 4-4" stroke={LABEL_BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M4 6l4 4 4-4" stroke={expanded ? ORANGE : LABEL_BLUE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         </button>
 
-        {/* Expanded content */}
-        <div style={{
-          maxHeight: expanded ? 600 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.2s ease-out',
-          opacity: expanded ? 1 : 0,
-        }}>
-          <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <AutocompleteField
-              label="CÓDIGO"
-              value={data.codigo}
-              onChange={v => commit({ ...data, codigo: v })}
-              options={CODIGO_ESPECIALES}
-              allowNew
-              placeholder="1234"
-              showAllOnFocus
-              inputStyle={{ fontSize: 22, fontWeight: 800, padding: '8px 12px', letterSpacing: '0.03em' }}
-            />
+        {/* Serpentina — grid-template-rows 0fr→1fr (DESIGN.md §7) */}
+        <div className={`accordion-body${expanded ? ' open' : ''}`}>
+          <div className="accordion-inner">
+            <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <AutocompleteField
+                label="CÓDIGO"
+                value={data.codigo}
+                onChange={v => commit({ codigo: v })}
+                options={CODIGO_ESPECIALES}
+                allowNew
+                placeholder="1234"
+                showAllOnFocus
+                inputStyle={{ fontSize: 22, fontWeight: 800, padding: '8px 12px', letterSpacing: '0.03em', fontVariantNumeric: 'tabular-nums' }}
+              />
 
-            <AutocompleteField
-              label="MARCA"
-              value={data.marca}
-              onChange={marca => commit({ ...data, marca, modelo: '' })}
-              options={marcas.map(m => m.nombre)}
-              placeholder="Buscar marca…"
-              allowNew
-              onNew={onNewMarca}
-            />
+              <AutocompleteField
+                label="MARCA"
+                value={data.marca}
+                onChange={marca => commit({ marca, modelo: '' })}
+                options={marcas.map(m => m.nombre)}
+                placeholder="Buscar marca…"
+                allowNew
+                onNew={onNewMarca}
+              />
 
-            <AutocompleteField
-              label="MODELO"
-              value={data.modelo}
-              onChange={modelo => commit({ ...data, modelo })}
-              options={modelos.map(m => m.nombre)}
-              placeholder={data.marca ? 'Buscar modelo…' : 'Primero elige una marca'}
-              disabled={!data.marca}
-              allowNew={!!data.marca}
-              onNew={onNewModelo}
-            />
+              <AutocompleteField
+                label="MODELO"
+                value={data.modelo}
+                onChange={modelo => commit({ modelo })}
+                options={modelos.map(m => m.nombre)}
+                placeholder={data.marca ? 'Buscar modelo…' : 'Primero elige una marca'}
+                disabled={!data.marca}
+                allowNew={!!data.marca}
+                onNew={onNewModelo}
+              />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div style={{ minWidth: 0 }}>
-                <AutocompleteField
-                  label="MEDIDA"
-                  value={data.medida}
-                  onChange={medida => commit({ ...data, medida })}
-                  options={medidas.map(m => m.nombre)}
-                  placeholder="295/80 R22.5"
-                  allowNew
-                  onNew={onNewMedida}
-                  filterMode="includes"
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <AutocompleteField
+                    label="MEDIDA"
+                    value={data.medida}
+                    onChange={medida => commit({ medida })}
+                    options={medidas.map(m => m.nombre)}
+                    placeholder="295/80 R22.5"
+                    allowNew
+                    onNew={onNewMedida}
+                    filterMode="includes"
+                  />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <AutocompleteField
+                    label="CONDICIÓN"
+                    value={data.condicion}
+                    onChange={condicion => commit({ condicion })}
+                    options={condiciones.map(c => c.codigo)}
+                    placeholder="—"
+                    showAllOnFocus
+                    filterMode="startsWith"
+                  />
+                </div>
               </div>
-              <div style={{ minWidth: 0 }}>
-                <AutocompleteField
-                  label="CONDICIÓN"
-                  value={data.condicion}
-                  onChange={condicion => commit({ ...data, condicion })}
-                  options={condiciones.map(c => c.codigo)}
-                  placeholder="—"
-                  showAllOnFocus
-                  filterMode="startsWith"
-                />
-              </div>
+
+              {showReencauche && (
+                <div style={{ paddingLeft: 14, borderLeft: `2px solid ${BORDER_DARK}`, marginLeft: 2 }}>
+                  <AutocompleteField
+                    label="DISEÑO DE REENCAUCHE"
+                    value={data.reencauche}
+                    onChange={reencauche => commit({ reencauche })}
+                    options={reencauches.map(r => r.nombre)}
+                    placeholder="Buscar diseño…"
+                    allowNew
+                    onNew={onNewReencauche}
+                  />
+                </div>
+              )}
             </div>
-
-            {showReencauche && (
-              <div style={{ paddingLeft: 14, borderLeft: `2px solid ${BORDER_DARK}`, marginLeft: 2 }}>
-                <AutocompleteField
-                  label="DISEÑO DE REENCAUCHE"
-                  value={data.reencauche}
-                  onChange={reencauche => commit({ ...data, reencauche })}
-                  options={reencauches.map(r => r.nombre)}
-                  placeholder="Buscar diseño…"
-                  allowNew
-                  onNew={onNewReencauche}
-                />
-              </div>
-            )}
-
-            <AutocompleteField
-              label="VÁLVULA"
-              value={data.tapaValvula}
-              onChange={v => commit({ ...data, tapaValvula: v })}
-              options={valvulas.map(v => v.nombre)}
-              placeholder="Tipo de válvula…"
-            />
-            {valvulaAlert && (
-              <div style={{ fontSize: 10, fontWeight: 800, color: ORANGE, marginTop: -6, letterSpacing: '0.08em' }}>⚠ REVISAR</div>
-            )}
           </div>
         </div>
       </div>
@@ -264,7 +263,7 @@ export default function FormBody({
         <div style={{ flex: 1, height: 1, background: BORDER_DARK }} />
       </div>
 
-      {/* ── REMANENTE ── */}
+      {/* ── REMANENTE — grid 2x2 estable en todas las posiciones ── */}
       <div style={{ padding: '0 2px' }}>
         <span style={LABEL_PRIMARY}>REMANENTE (mm)</span>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -282,9 +281,12 @@ export default function FormBody({
         }}>
           <input
             className="dark-input"
+            ref={presionRef as React.RefObject<HTMLInputElement>}
             type="number" inputMode="numeric" value={data.presion}
             onChange={set('presion')} onFocus={e => { e.target.select(); setFocusedPresion(true); }}
-            onBlur={() => setFocusedPresion(false)} placeholder="—"
+            onBlur={presionDone}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+            placeholder="—"
             style={{
               flex: 1, border: 'none', outline: 'none', fontSize: 32, fontWeight: 800,
               color: data.presion ? VALUE_COLOR : BORDER_DARK, padding: 0, background: 'transparent',
@@ -295,18 +297,35 @@ export default function FormBody({
         </div>
       </div>
 
+      {/* ── VÁLVULA — dato de inspección (no identidad), va antes de anomalía ── */}
+      <div style={{ padding: '0 2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{ ...LABEL, marginBottom: 0 }}>TAPA DE VÁLVULA</span>
+          {valvulaAlert && (
+            <span className="tick-in" style={{ fontSize: 9, fontWeight: 800, color: ORANGE, background: 'rgba(240,104,34,0.15)', padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>⚠ REVISAR</span>
+          )}
+        </div>
+        <AutocompleteField
+          label=""
+          value={data.tapaValvula}
+          onChange={v => commit({ tapaValvula: v })}
+          options={valvulas.map(v => v.nombre)}
+          placeholder="Tipo de válvula…"
+        />
+      </div>
+
       {/* ── ANOMALÍA ── */}
       <div style={{ padding: '0 2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <span style={LABEL}>ANOMALÍA</span>
+          <span style={{ ...LABEL, marginBottom: 0 }}>ANOMALÍA</span>
           {anomaliaAlert && (
-            <span style={{ fontSize: 9, fontWeight: 800, color: ORANGE, background: 'rgba(240,104,34,0.15)', padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>⚠ ACTIVA</span>
+            <span className="tick-in" style={{ fontSize: 9, fontWeight: 800, color: ORANGE, background: 'rgba(240,104,34,0.15)', padding: '2px 7px', borderRadius: 4, letterSpacing: '0.06em' }}>⚠ ACTIVA</span>
           )}
         </div>
         <AutocompleteField
           label=""
           value={data.anomalia}
-          onChange={v => commit({ ...data, anomalia: v })}
+          onChange={v => commit({ anomalia: v })}
           options={anomalias.map(a => a.nombre)}
           placeholder="Buscar anomalía…"
           filterMode="includes"
