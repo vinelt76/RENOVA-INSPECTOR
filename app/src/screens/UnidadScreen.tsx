@@ -226,6 +226,17 @@ export default function UnidadScreen() {
     navigate('/empresa');
   };
 
+  const fotoButton = (
+    <button onClick={handleFoto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: `2px dashed ${BORDER_DARK}`, borderRadius: 12, padding: '12px', background: FIELD_DARK, cursor: 'pointer', fontFamily: MONO, flexShrink: 0, transition: 'border-color 0.15s' }}>
+      {fotoUnidad ? (
+        <img src={fotoUnidad} alt="Foto unidad" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+      ) : (
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M8 4l1.5-2h3L14 4h4a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h4z" stroke={LABEL_BLUE} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="11" cy="11" r="3" stroke={LABEL_BLUE} strokeWidth="1.8"/></svg>
+      )}
+      <span style={{ fontSize: 12, fontWeight: 700, color: fotoUnidad ? VALUE_COLOR : LABEL_BLUE }}>{fotoUnidad ? 'Cambiar foto' : 'Tomar foto'}</span>
+    </button>
+  );
+
   const selectStyle = (filled: boolean) => ({
     width: '100%' as const,
     border: `2px solid ${filled ? ORANGE : BORDER_DARK}`,
@@ -365,14 +376,7 @@ export default function UnidadScreen() {
               )}
             </div>
 
-            <button onClick={handleFoto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: `2px dashed ${BORDER_DARK}`, borderRadius: 12, padding: '12px', background: FIELD_DARK, cursor: 'pointer', fontFamily: MONO, flexShrink: 0, transition: 'border-color 0.15s' }}>
-              {fotoUnidad ? (
-                <img src={fotoUnidad} alt="Foto unidad" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M8 4l1.5-2h3L14 4h4a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h4z" stroke={LABEL_BLUE} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="11" cy="11" r="3" stroke={LABEL_BLUE} strokeWidth="1.8"/></svg>
-              )}
-              <span style={{ fontSize: 12, fontWeight: 700, color: fotoUnidad ? VALUE_COLOR : LABEL_BLUE }}>{fotoUnidad ? 'Cambiar foto' : 'Tomar foto'}</span>
-            </button>
+            {fotoButton}
           </div>
         )}
 
@@ -403,14 +407,7 @@ export default function UnidadScreen() {
               </div>
             </div>
 
-            <button onClick={handleFoto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: `2px dashed ${BORDER_DARK}`, borderRadius: 12, padding: '12px', background: FIELD_DARK, cursor: 'pointer', fontFamily: MONO, flexShrink: 0, transition: 'border-color 0.15s' }}>
-              {fotoUnidad ? (
-                <img src={fotoUnidad} alt="Foto unidad" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
-              ) : (
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M8 4l1.5-2h3L14 4h4a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h4z" stroke={LABEL_BLUE} strokeWidth="1.8" strokeLinejoin="round"/><circle cx="11" cy="11" r="3" stroke={LABEL_BLUE} strokeWidth="1.8"/></svg>
-              )}
-              <span style={{ fontSize: 12, fontWeight: 700, color: fotoUnidad ? VALUE_COLOR : LABEL_BLUE }}>{fotoUnidad ? 'Cambiar foto' : 'Tomar foto'}</span>
-            </button>
+            {fotoButton}
 
             <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 8 }}>CONFIGURACIÓN DEL VEHÍCULO</div>

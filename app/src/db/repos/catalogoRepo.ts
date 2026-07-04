@@ -1,9 +1,6 @@
 import { getDb, persistDb } from '../sqlite';
+import { slugify } from '../slugify';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../schema';
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
 
 export const catalogoRepo = {
   async marcas(): Promise<CatMarca[]> {
