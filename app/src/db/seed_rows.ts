@@ -2,6 +2,7 @@
 // Usado por seed.ts (para insertar) y por scripts/verify-db.ts (para auditar sin DB).
 import catalogoPatron from './seed_data/catalogo_patron.json';
 import catalogoFlota from './seed_data/catalogo_flota.json';
+import { slugify } from './slugify';
 
 const EMPRESAS = [
   { id: 'movil', nombre: 'MÓVIL BUS',    flota: null },
@@ -24,10 +25,6 @@ const ALL_CONDICIONES = [
   { codigo: 'R3', nombre: 'Tercer reencauche' },
   { codigo: 'R4', nombre: 'Cuarto reencauche' },
 ];
-
-function slugify(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
 
 export interface SeedRows {
   catValvulas:        Array<{ id: string; nombre: string }>;
