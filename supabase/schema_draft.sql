@@ -2,6 +2,15 @@
 -- RENOVA INSPECTOR — Supabase schema DRAFT (Run 1)
 -- ============================================================================
 -- BORRADOR PARA REVISIÓN. NO es una migración final ni destructiva.
+--
+-- ⚠ ACTUALIZACIÓN RUN 2: la sección de neumáticos de este borrador (tabla
+-- `tires`) fue SUPERSEDIDA por el modelo de ciclo de vida implementado en
+-- migrations/20260706120000_demo_vertical_slice.sql:
+--   tires  →  tire_casings (casco físico) + tire_life_cycles (N/R1/R2…)
+-- OTD, costo y km acumulado son atributos/derivados DEL CICLO, no del casco.
+-- Ver docs/run2_tire_lifecycle_architecture.md y docs/ARCHITECTURE_DECISIONS.md.
+-- El resto del borrador (catálogos, umbrales, imports, RLS) sigue vigente
+-- como plan para Run 3+.
 -- No ejecutar contra un proyecto con datos. Cuando se apruebe, se convertirá
 -- en migraciones versionadas en supabase/migrations/.
 --
