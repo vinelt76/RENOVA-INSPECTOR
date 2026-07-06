@@ -426,26 +426,6 @@ main{flex:1;display:flex;min-height:0}
 .wheel.estado-cambio .hub span{color:var(--orange)}
 .wheel.estado-cambio .pulse{animation:pulse 1.8s cubic-bezier(.22,1,.36,1) infinite}
 
-/* botón flotante sobre posición en alerta (naranja/rojo) — sin requerir selección previa */
-#acciones-flotantes{position:absolute;inset:0;z-index:25;pointer-events:none}
-.accion-flotante{
-  position:absolute;transform:translate(-50%, calc(-100% - 16px));
-  display:flex;gap:6px;pointer-events:auto;
-}
-.accion-flotante::after{
-  content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);
-  border:6px solid transparent;border-top-color:var(--border);
-}
-.af-btn{
-  font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.05em;
-  padding:8px 11px;border-radius:8px;border:2px solid var(--border);cursor:pointer;
-  background:var(--field);color:var(--ice);white-space:nowrap;text-transform:uppercase;
-  box-shadow:0 8px 22px rgba(0,0,0,.5);transition:border-color .15s;
-}
-.af-btn:hover{border-color:var(--label)}
-.af-btn.af-descartar{border-color:var(--orange);color:var(--orange)}
-.af-btn.af-descartar:hover{background:rgba(240,104,34,.15)}
-
 @media (prefers-reduced-motion: reduce){
   .world{animation:none}
   .wheel.estado-cambio .pulse{animation:none;opacity:.5;transform:scale(1.05)}
@@ -610,7 +590,6 @@ main{flex:1;display:flex;min-height:0}
       </div>
 
       <svg id="connector"></svg>
-      <div id="acciones-flotantes"></div>
 
       <div class="pos-dock" id="pos-dock"></div>
     </div>
@@ -848,31 +827,6 @@ document.getElementById('ds-confirmar').addEventListener('click', ()=>{
 document.getElementById('btn-reten').addEventListener('click', ()=>enviarARetenAction(selected));
 document.getElementById('btn-descartar').addEventListener('click', ()=>openDescartarModal(selected));
 
-/* ================= BOTÓN FLOTANTE SOBRE POSICIÓN EN ALERTA ================= */
-/* Se muestra sobre la rueda en el 3D sin requerir clic previo para seleccionarla. */
-function buildFloatingActions(){
-  document.getElementById('acciones-flotantes').innerHTML = Object.keys(POSICIONES)
-    .filter(n=>estadoWheel(n).cls==='cambio')
-    .map(n=>`<div class="accion-flotante" data-pos="${n}">
-      <button type="button" class="af-btn" data-action="reten" data-pos="${n}">Enviar a Retén</button>
-      <button type="button" class="af-btn af-descartar" data-action="descartar" data-pos="${n}">Descartar</button>
-    </div>`).join('');
-}
-function updateFloatingActionsPosition(){
-  const sr = stage.getBoundingClientRect();
-  document.querySelectorAll('.accion-flotante').forEach(el=>{
-    const wr = document.querySelector(`#wheel-${el.dataset.pos} .tire`).getBoundingClientRect();
-    el.style.left = (wr.left + wr.width/2 - sr.left) + 'px';
-    el.style.top  = (wr.top - sr.top) + 'px';
-  });
-}
-document.getElementById('acciones-flotantes').addEventListener('click', e=>{
-  const b = e.target.closest('.af-btn'); if(!b) return;
-  const n = +b.dataset.pos;
-  if (b.dataset.action==='reten') enviarARetenAction(n);
-  else openDescartarModal(n);
-});
-
 /* ================= SELECCIÓN + DOCK ================= */
 const SHORT={1:'DEL IZQ',2:'DEL DER',3:'POS IZQ EXT',4:'POS IZQ INT',5:'POS DER INT',6:'POS DER EXT'};
 let selected = 1;
@@ -917,12 +871,11 @@ function drawConnector(){
     <circle cx="${tx}" cy="${ty}" r="1.8" fill="#F06822"/>
     <circle cx="${tx}" cy="${y0}" r="3" fill="#F06822"/>`;
 }
-(function loop(){ drawConnector(); updateFloatingActionsPosition(); requestAnimationFrame(loop); })();
+(function loop(){ drawConnector(); requestAnimationFrame(loop); })();
 window.addEventListener('resize', drawConnector);
 
 /* init */
 updateWheelStates();
-buildFloatingActions();
 select(1);
 </script>
 
