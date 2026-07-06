@@ -14,10 +14,11 @@
 
   Regla de color EXCLUSIVA de esta pantalla (más simple que la de Inspección, priorizando
   velocidad de lectura sobre muchas unidades):
-    · Anomalía causal de retiro            → CRÍTICO (rojo)
-    · RTD remanente < 4 mm                 → CRÍTICO (rojo)
-    · RTD remanente entre 4 mm y 8 mm      → OBSERVACIÓN (naranja)
-    · RTD remanente > 8 mm y sin anomalía  → NORMAL
+    · Anomalía causal de retiro            → CRÍTICO (naranja)
+    · RTD remanente < 4 mm                 → CRÍTICO (naranja)
+    · RTD remanente entre 4 mm y 8 mm      → OBSERVACIÓN (amarillo)
+    · RTD remanente > 8 mm y sin anomalía  → NORMAL (verde)
+  (Semáforo del negocio, DESIGN.md §8: el naranja ES la máxima severidad; no se usa rojo.)
   El color de la unidad = el PEOR caso entre todos sus neumáticos.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -36,12 +37,14 @@
     --signal-yellow:#f4b821;
     --verified-green:#1f9d6b;
 
-    /* Semáforo de esta pantalla (según spec: rojo crítico) */
-    --crit:#E5484D;
-    --crit-bg:rgba(229,72,77,.13);
-    --warn:#F06822;
-    --warn-bg:rgba(240,104,34,.13);
-    --normal:#6EA9C6;
+    /* Semáforo del negocio (DESIGN.md §8): verde Normal · amarillo Observación · naranja Crítico.
+       El naranja ES la máxima severidad del sistema; no se introduce rojo. Máxima
+       separación de hue entre los 3 estados => lectura rápida sobre muchas unidades. */
+    --crit:#F06822;                    /* Crítico      = ember-orange */
+    --crit-bg:rgba(240,104,34,.14);
+    --warn:#f4b821;                    /* Observación  = signal-yellow */
+    --warn-bg:rgba(244,184,33,.14);
+    --normal:var(--verified-green);    /* Normal       = verified-green */
 
     --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
     --display:'Bebas Neue',sans-serif;
@@ -149,7 +152,7 @@
   .swatch{width:12px;height:12px;border-radius:3px;border:2px solid}
   .swatch.crit{background:var(--crit-bg);border-color:var(--crit)}
   .swatch.warn{background:var(--warn-bg);border-color:var(--warn)}
-  .swatch.normal{background:transparent;border-color:var(--border-dark)}
+  .swatch.normal{background:rgba(31,157,107,.16);border-color:var(--verified-green)}
 
   /* ───────────────── Grid de unidades ───────────────── */
   .fleet-grid{
@@ -206,7 +209,7 @@
   }
   .badge.critical{background:var(--crit-bg);color:var(--crit)}
   .badge.warning{background:var(--warn-bg);color:var(--warn)}
-  .badge.normal{background:transparent;color:var(--label-blue);border:1px solid var(--border-dark)}
+  .badge.normal{background:transparent;color:var(--verified-green);border:1px solid rgba(31,157,107,.42)}
   .uc-worst{font-size:10px;font-weight:800;color:var(--label-blue)}
   .uc-worst b{color:var(--value-ice);font-size:12px}
 
