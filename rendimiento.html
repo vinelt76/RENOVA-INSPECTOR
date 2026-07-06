@@ -1,0 +1,873 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RENOVA — Rendimiento</title>
+<!--
+  PANTALLA RENDIMIENTO — vista de consulta para el JEFE DE FLOTA.
+  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
+
+  Un solo componente con DOS estados, alternados por el switch superior:
+    · "Ver por neumático" → pills de todas las posiciones + card individual.
+    · "Ver por eje"       → selector de eje + pills filtradas + card individual
+                            + sección exclusiva de análisis del eje.
+  Estado ACTIVO por defecto: "Ver por eje".
+
+  Reglas que respeta este prototipo:
+    · Solo muestra datos DERIVADOS/calculados. Nada de datos crudos del inspector
+      (no se muestra RTD Actual, Km Actual, presión, etc.).
+    · La card individual es LA MISMA en ambos modos (no se duplica).
+    · Las métricas por eje se calculan agregando las métricas por neumático:
+      primero cada posición, luego el promedio/diferencia del eje.
+    · El verde/rojo del BALANCE del eje es un concepto propio de Rendimiento y
+      NO reutiliza el semáforo de Inspección (retiro/presión/anomalías).
+    · No hay 3D, isométricos, ni representación visual del eje: pills + barras simples.
+
+  Fórmulas base (reutilizadas de "por neumático"):
+    RTD Gastado   = RTD Instalación − RTD Actual
+    % de Consumo  = RTD Gastado / OTD
+    Km Recorrido  = Km Actual − Km Instalación
+    Km/mm         = Km Recorrido / RTD Gastado
+    Km Proyectado = Km/mm × (OTD − RTD Retiro recomendado)
+    Costo/Km      = Costo $ / Km Recorrido
+    Km Acumulado  = km_previo_acumulado + Km Recorrido
+  Agregados del eje:
+    Km/mm promedio      = promedio(Km/mm de las posiciones con datos válidos)
+    % de Consumo prom.  = promedio(% de Consumo de las posiciones con datos válidos)
+    Diferencia          = |A − B| / promedio(A,B) × 100      (eje de 2 posiciones)
+                        = (máx − mín) / promedio × 100       (>2 posiciones)
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Paleta RENOVA (DESIGN.md) */
+    --screen-dark:#07111C;
+    --field-dark:#111E2E;
+    --navy-brand:#15233f;
+    --border-dark:#1B2D42;
+    --label-blue:#7AABCC;
+    --value-ice:#F0F8FF;
+    --ember-orange:#F06822;
+    --signal-yellow:#f4b821;
+    --verified-green:#1f9d6b;
+
+    /* Balance del eje — SEMÁNTICA PROPIA de Rendimiento (no es el semáforo de
+       Inspección). Solo dos estados: balanceado (verde) / desbalance (rojo/naranja). */
+    --balance-ok:#1f9d6b;
+    --balance-ok-bg:rgba(31,157,107,.14);
+    --balance-bad:#F06822;
+    --balance-bad-bg:rgba(240,104,34,.14);
+
+    /* Barra neutra del gráfico posición-vs-posición: acero frío, deliberadamente
+       NO verde/naranja para no confundir con estados de Inspección ni de balance. */
+    --bar-steel:#4E7CA8;
+
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--screen-dark);
+    color:var(--value-ice);
+    font-family:var(--mono);
+    font-weight:700;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    padding-bottom:48px;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ───────────────── Header ───────────────── */
+  header{
+    background:var(--navy-brand);
+    padding:18px 16px 16px;
+    position:sticky;top:0;z-index:20;
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;max-width:1080px;margin:0 auto;
+  }
+  .brand .logo{
+    font-family:var(--display);font-size:32px;line-height:1;
+    letter-spacing:.06em;color:var(--value-ice);
+  }
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{
+    font-family:var(--display);font-size:19px;line-height:1;
+    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
+  }
+  .brand .subtitle{
+    font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--label-blue);margin-top:8px;
+  }
+  .unit-picker{display:flex;flex-direction:column;gap:6px}
+  .unit-picker label{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);
+  }
+  .unit-picker select{
+    appearance:none;-webkit-appearance:none;
+    background:var(--field-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;font-size:14px;
+    border:2px solid var(--border-dark);border-radius:8px;
+    padding:11px 40px 11px 14px;cursor:pointer;
+    transition:border-color .15s ease-out;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  .unit-picker select:focus{outline:none;border-color:var(--ember-orange)}
+
+  /* ───────────────── Layout ───────────────── */
+  main{max-width:1080px;margin:0 auto;padding:16px}
+
+  /* ───────────────── Switch de modo (segmented) ───────────────── */
+  .mode-switch{
+    display:inline-flex;gap:4px;padding:4px;margin-bottom:18px;
+    background:var(--field-dark);
+    border:2px solid var(--border-dark);border-radius:12px;
+  }
+  .mode-btn{
+    font-family:var(--mono);font-weight:800;font-size:11px;
+    letter-spacing:.1em;text-transform:uppercase;
+    color:var(--label-blue);background:transparent;border:none;cursor:pointer;
+    padding:11px 18px;border-radius:8px;
+    transition:background .15s ease-out,color .15s ease-out,transform .12s ease-out;
+  }
+  .mode-btn:active{transform:scale(.97)}
+  .mode-btn[aria-pressed="true"]{
+    background:var(--ember-orange);color:#fff;   /* activo = naranja sólido */
+  }
+  .mode-btn:focus-visible{outline:2px solid var(--value-ice);outline-offset:2px}
+
+  /* ───────────────── Selector de eje (tabs) ───────────────── */
+  .selector-block{margin-bottom:16px}
+  .selector-label{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:9px;
+  }
+  .axle-tabs{display:flex;gap:8px;flex-wrap:wrap}
+  .axle-tab{
+    font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.06em;
+    color:var(--value-ice);background:var(--field-dark);
+    border:2px solid var(--border-dark);border-radius:10px;
+    padding:10px 16px;cursor:pointer;
+    transition:border-color .15s ease-out,background .15s ease-out,transform .12s ease-out;
+  }
+  .axle-tab .tab-sub{
+    display:block;font-size:9px;font-weight:700;letter-spacing:.08em;
+    color:var(--label-blue);margin-top:3px;text-transform:uppercase;
+  }
+  .axle-tab:active{transform:scale(.97)}
+  .axle-tab[aria-selected="true"]{border-color:var(--ember-orange)}
+  .axle-tab[aria-selected="true"] .tab-sub{color:var(--value-ice)}
+  .axle-tab:focus-visible{outline:none;border-color:var(--value-ice)}
+
+  /* ───────────────── Pills de posición ───────────────── */
+  .pos-pills{display:flex;gap:8px;flex-wrap:wrap}
+  .pos-pill{
+    font-family:var(--mono);font-weight:800;font-size:13px;letter-spacing:.04em;
+    color:var(--value-ice);background:var(--field-dark);
+    border:2px solid var(--border-dark);border-radius:8px;
+    min-width:48px;padding:10px 12px;cursor:pointer;text-align:center;
+    transition:border-color .15s ease-out,background .15s ease-out,transform .12s ease-out;
+  }
+  .pos-pill:active{transform:scale(.97)}
+  .pos-pill[aria-selected="true"]{border-color:var(--ember-orange);background:#132538}
+  .pos-pill.no-data{color:var(--label-blue)}
+  .pos-pill.no-data::after{content:" ·";color:var(--signal-yellow)}
+  .pos-pill:focus-visible{outline:none;border-color:var(--value-ice)}
+
+  /* ───────────────── Card individual (compartida) ───────────────── */
+  .tire-card{
+    background:var(--field-dark);border:2px solid var(--border-dark);
+    border-radius:14px;padding:0;margin-top:18px;overflow:hidden;
+  }
+  /* Bloque de identidad — clickeable (abre historial). Solo ESTE bloque. */
+  .identity{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    width:100%;text-align:left;font-family:var(--mono);cursor:pointer;
+    background:var(--navy-brand);border:none;border-bottom:2px solid var(--border-dark);
+    padding:15px 18px;color:var(--value-ice);
+    transition:background .15s ease-out;
+  }
+  .identity:hover{background:#1b2c4d}
+  .identity:focus-visible{outline:none;background:#1b2c4d;box-shadow:inset 0 0 0 2px var(--ember-orange)}
+  .identity .id-model{font-size:16px;font-weight:800;letter-spacing:.02em}
+  .identity .id-retread{
+    font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--signal-yellow);margin-top:5px;
+  }
+  .identity .id-hint{
+    display:flex;align-items:center;gap:6px;flex:none;
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .identity .id-hint svg{width:13px;height:13px}
+
+  .card-cols{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .card-col{padding:16px 18px}
+  .card-col+.card-col{border-left:2px solid var(--border-dark)}
+  .col-title{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:12px;
+  }
+  .metric{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 0}
+  .metric+.metric{border-top:1px solid rgba(27,45,66,.6)}
+  .metric .m-label{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--label-blue)}
+  .metric .m-value{font-size:16px;font-weight:800;color:var(--value-ice)}
+  .metric .m-value .m-unit{font-size:10px;font-weight:700;color:var(--label-blue);margin-left:3px}
+  .metric .m-value.empty{color:var(--label-blue);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+
+  /* ───────────────── Sección exclusiva del eje ───────────────── */
+  .axle-analysis{margin-top:20px}
+  .analysis-head{
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:12px;
+    display:flex;align-items:center;gap:10px;
+  }
+  .analysis-head .ah-axle{color:var(--value-ice)}
+
+  .avg-kpis{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-bottom:16px}
+  .avg-stat{
+    background:var(--field-dark);border:2px solid var(--border-dark);padding:14px 16px;
+    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  }
+  .avg-stat .a-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .avg-stat .a-value{font-size:28px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice)}
+  .avg-stat .a-value .a-unit{font-size:12px;font-weight:700;color:var(--label-blue);margin-left:4px}
+  .avg-stat .a-sub{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:7px}
+
+  /* Gráfico de barras posición vs posición (horizontal, mobile-first) */
+  .chart{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
+    padding:16px 18px;
+  }
+  .chart-title{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:14px;
+  }
+  .chart-title b{color:var(--value-ice)}
+  .bar-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:6px 0}
+  .bar-row .bar-pos{font-size:13px;font-weight:800;color:var(--value-ice)}
+  .bar-track{height:16px;background:var(--screen-dark);border-radius:4px;overflow:hidden}
+  .bar-fill{
+    display:block;height:100%;background:var(--bar-steel);border-radius:4px;min-width:2px;
+    transition:width .3s cubic-bezier(.22,1,.36,1);
+  }
+  .bar-fill.is-min{background:var(--signal-yellow)}   /* posición de menor rendimiento */
+  .bar-val{font-size:13px;font-weight:800;color:var(--value-ice);white-space:nowrap}
+  .bar-val .bv-unit{font-size:9px;font-weight:700;color:var(--label-blue);margin-left:2px}
+  .bar-val.empty{color:var(--label-blue);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+
+  /* Veredicto de balance */
+  .balance{
+    display:flex;align-items:center;gap:14px;margin-top:14px;
+    border:2px solid var(--border-dark);border-radius:12px;padding:14px 16px;
+  }
+  .balance.ok{border-color:var(--balance-ok);background:linear-gradient(180deg,var(--balance-ok-bg),transparent 70%),var(--field-dark)}
+  .balance.bad{border-color:var(--balance-bad);background:linear-gradient(180deg,var(--balance-bad-bg),transparent 70%),var(--field-dark)}
+  .balance .b-dot{width:14px;height:14px;border-radius:50%;flex:none}
+  .balance.ok  .b-dot{background:var(--balance-ok);box-shadow:0 0 0 4px var(--balance-ok-bg)}
+  .balance.bad .b-dot{background:var(--balance-bad);box-shadow:0 0 0 4px var(--balance-bad-bg)}
+  .balance .b-text{flex:1}
+  .balance .b-verdict{font-size:13px;font-weight:800;letter-spacing:.04em}
+  .balance.ok  .b-verdict{color:var(--balance-ok)}
+  .balance.bad .b-verdict{color:var(--balance-bad)}
+  .balance .b-detail{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--label-blue);margin-top:4px}
+  .balance .b-metric{text-align:right}
+  .balance .b-metric .bm-value{font-size:22px;font-weight:800;line-height:1}
+  .balance.ok  .b-metric .bm-value{color:var(--balance-ok)}
+  .balance.bad .b-metric .bm-value{color:var(--balance-bad)}
+  .balance .b-metric .bm-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:3px}
+
+  .note{
+    margin-top:14px;border:2px dashed var(--border-dark);border-radius:12px;
+    padding:16px;font-size:12px;font-weight:700;color:var(--label-blue);line-height:1.5;
+  }
+
+  /* ───────────────── Modal historial (placeholder) ───────────────── */
+  .scrim{
+    position:fixed;inset:0;background:rgba(3,8,14,.72);z-index:50;
+    display:none;align-items:flex-end;justify-content:center;
+  }
+  .scrim.open{display:flex}
+  @media (min-width:640px){.scrim{align-items:center}}
+  .modal{
+    width:100%;max-width:520px;background:var(--field-dark);
+    border:2px solid var(--border-dark);border-radius:16px 16px 0 0;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    /* cinta de seguridad = filo superior del sheet (DESIGN.md §7) */
+    border-top:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  @media (min-width:640px){.modal{border-radius:16px}}
+  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 14px}
+  .modal-head .mh-title{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue)}
+  .modal-head .mh-model{font-size:18px;font-weight:800;color:var(--value-ice);margin-top:6px}
+  .modal-head .mh-retread{font-size:11px;font-weight:800;color:var(--signal-yellow);margin-top:4px}
+  .modal-close{
+    background:transparent;border:none;color:var(--value-ice);cursor:pointer;
+    width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex:none;border-radius:8px;
+  }
+  .modal-close:hover{background:var(--navy-brand)}
+  .modal-body{padding:0 18px 22px}
+  .modal-placeholder{
+    border:2px dashed var(--border-dark);border-radius:12px;padding:26px 18px;text-align:center;
+    color:var(--label-blue);font-size:12px;font-weight:700;line-height:1.6;
+  }
+
+  footer{
+    max-width:1080px;margin:28px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
+  }
+
+  @media (max-width:560px){
+    .brand .logo{font-size:26px}
+    .unit-picker{width:100%}
+    .unit-picker select{width:100%}
+    .card-cols{grid-template-columns:1fr}
+    .card-col+.card-col{border-left:none;border-top:2px solid var(--border-dark)}
+    .avg-kpis{grid-template-columns:1fr}
+    .mode-switch{width:100%}
+    .mode-btn{flex:1}
+    .balance{flex-wrap:wrap}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">RENDIMIENTO</div>
+      <div class="subtitle">Consulta de rendimiento por neumático y por eje</div>
+    </div>
+    <div class="unit-picker">
+      <label for="unitSelect">Unidad</label>
+      <select id="unitSelect" aria-label="Seleccionar unidad"></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Switch de modo -->
+  <div class="mode-switch" role="group" aria-label="Modo de vista">
+    <button class="mode-btn" id="modeTire"  type="button" aria-pressed="false" onclick="setMode('tire')">Ver por neumático</button>
+    <button class="mode-btn" id="modeAxle"  type="button" aria-pressed="true"  onclick="setMode('axle')">Ver por eje</button>
+  </div>
+
+  <!-- Selector de eje (solo en modo eje) -->
+  <div class="selector-block" id="axleBlock">
+    <div class="selector-label">Eje</div>
+    <div class="axle-tabs" id="axleTabs" role="tablist" aria-label="Seleccionar eje"></div>
+  </div>
+
+  <!-- Pills de posición -->
+  <div class="selector-block">
+    <div class="selector-label" id="posLabel">Posición</div>
+    <div class="pos-pills" id="posPills" role="tablist" aria-label="Seleccionar posición"></div>
+  </div>
+
+  <!-- Card individual (compartida entre modos) -->
+  <div id="cardMount"></div>
+
+  <!-- Sección exclusiva del eje (solo en modo eje) -->
+  <div id="analysisMount"></div>
+</main>
+
+<!-- Modal de historial (interacción preparada; contenido fuera de alcance) -->
+<div class="scrim" id="historyScrim" role="dialog" aria-modal="true" aria-labelledby="histTitle" onclick="if(event.target===this)closeHistory()">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="mh-title" id="histTitle">Historial del neumático</div>
+        <div class="mh-model" id="histModel">—</div>
+        <div class="mh-retread" id="histRetread"></div>
+      </div>
+      <button class="modal-close" type="button" aria-label="Cerrar historial" onclick="closeHistory()">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-placeholder">
+        El historial detallado del neumático (instalaciones, reencauches, inspecciones)<br>
+        se diseñará en un alcance posterior.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Datos de demostración · Vista de consulta (solo lectura) para jefe de flota<br>
+  El balance de eje es una métrica propia de Rendimiento, distinta de las alertas de Inspección.
+</footer>
+
+<script>
+/* =========================================================================
+   UMBRAL CONFIGURABLE — pendiente de definir con RENOVA según experiencia de
+   campo. Editar SOLO aquí; no repartir el número por el código.
+   Diferencia de Km/mm entre posiciones ≤ umbral  → balance saludable (verde)
+   Diferencia de Km/mm entre posiciones  > umbral  → desbalance detectado (rojo)
+   ========================================================================= */
+const AXLE_BALANCE_THRESHOLD_PERCENT = 15;
+
+/* =========================================================================
+   DATASET MOCK
+   Cada posición trae SOLO datos fuente; las métricas derivadas se calculan en
+   computeTire(). "rtdActual"/"kmActual" son fuente (Inspección) y NO se muestran:
+   la card expone únicamente resultados calculados.
+     reencauche: null (nuevo) | { codigo, ciclo }
+   ========================================================================= */
+const UNITS = [
+  {
+    id:"B-118", plate:"B-118", label:"B-118 · Bus 2-4-2",
+    config:"2-4-2",
+    // Orden de ejes tal como aparecen en la unidad.
+    axles:[
+      {key:"direccional", name:"Dirección", positions:["P1","P2"]},
+      {key:"traccion",    name:"Tracción",  positions:["P3","P4","P5","P6"]},
+      {key:"libre",       name:"Libre",     positions:["P7","P8"]},
+    ],
+    tires:{
+      // Dirección — desbalance marcado (P1 rinde ~28% más que P2).
+      P1:{modelo:"295/80R22.5 XZE2", reencauche:null,
+          rtdInstalacion:16, rtdActual:11, kmInstalacion:120000, kmActual:160000,
+          otd:16, rtdRetiro:4, costo:340, kmPrevioAcumulado:0},
+      P2:{modelo:"295/80R22.5 XZE2", reencauche:null,
+          rtdInstalacion:16, rtdActual:9,  kmInstalacion:120000, kmActual:162000,
+          otd:16, rtdRetiro:4, costo:340, kmPrevioAcumulado:0},
+      // Tracción — dual reencauchada, eje balanceado (~2%).
+      P3:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
+          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108000,
+          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
+      P4:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
+          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108600,
+          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
+      P5:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
+          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:107400,
+          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
+      P6:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
+          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108000,
+          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
+      // Libre — P8 aún sin RTD Actual: demuestra "Sin datos suficientes" y su
+      // exclusión del promedio (queda 1 posición válida → sin veredicto de balance).
+      P7:{modelo:"295/80R22.5 XZE2", reencauche:null,
+          rtdInstalacion:16, rtdActual:10, kmInstalacion:80000, kmActual:116000,
+          otd:16, rtdRetiro:4, costo:330, kmPrevioAcumulado:0},
+      P8:{modelo:"295/80R22.5 XZE2", reencauche:null,
+          rtdInstalacion:16, rtdActual:null, kmInstalacion:80000, kmActual:null,
+          otd:16, rtdRetiro:4, costo:330, kmPrevioAcumulado:0},
+    },
+  },
+  {
+    id:"B-204", plate:"B-204", label:"B-204 · Bus 2-4",
+    config:"2-4",
+    axles:[
+      {key:"direccional", name:"Dirección", positions:["P1","P2"]},
+      {key:"traccion",    name:"Tracción",  positions:["P3","P4","P5","P6"]},
+    ],
+    tires:{
+      P1:{modelo:"295/80R22.5 XZE2", reencauche:null,
+          rtdInstalacion:16, rtdActual:10, kmInstalacion:0, kmActual:54000,
+          otd:16, rtdRetiro:4, costo:345, kmPrevioAcumulado:0},
+      P2:{modelo:"295/80R22.5 XZE2", reencauche:null,
+          rtdInstalacion:16, rtdActual:10.2, kmInstalacion:0, kmActual:53200,
+          otd:16, rtdRetiro:4, costo:345, kmPrevioAcumulado:0},
+      // Tracción — un lado se desgasta más rápido (P3/P5 vs P4/P6).
+      P3:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
+          rtdInstalacion:20, rtdActual:11, kmInstalacion:0, kmActual:63000,
+          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:210000},
+      P4:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
+          rtdInstalacion:20, rtdActual:13, kmInstalacion:0, kmActual:63000,
+          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:205000},
+      P5:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
+          rtdInstalacion:20, rtdActual:11.2, kmInstalacion:0, kmActual:62500,
+          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:208000},
+      P6:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
+          rtdInstalacion:20, rtdActual:13.2, kmInstalacion:0, kmActual:62500,
+          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:206000},
+    },
+  },
+];
+
+/* =========================================================================
+   CÁLCULO POR NEUMÁTICO — misma lógica base para ambos modos.
+   Devuelve { valid, ...métricas }. Si faltan datos fuente → valid:false y las
+   métricas quedan null (no se inventan valores, no se usa 0 como reemplazo).
+   ========================================================================= */
+function computeTire(t){
+  if(!t) return {valid:false};
+  const hasSource =
+    t.rtdInstalacion != null && t.rtdActual != null &&
+    t.kmInstalacion  != null && t.kmActual  != null &&
+    t.otd != null && t.otd > 0;
+
+  const rtdGastado = hasSource ? (t.rtdInstalacion - t.rtdActual) : null;
+  const kmRecorrido = hasSource ? (t.kmActual - t.kmInstalacion) : null;
+
+  // Datos insuficientes para rendimiento si no hay desgaste o no hay recorrido.
+  const valid = hasSource && rtdGastado > 0 && kmRecorrido > 0;
+  if(!valid){
+    return {valid:false, modelo:t.modelo, reencauche:t.reencauche};
+  }
+
+  const pctConsumo   = (rtdGastado / t.otd) * 100;
+  const kmMm         = kmRecorrido / rtdGastado;
+  const kmProyectado = kmMm * (t.otd - t.rtdRetiro);
+  const costoKm      = t.costo / kmRecorrido;
+  const kmAcumulado  = (t.kmPrevioAcumulado || 0) + kmRecorrido;
+
+  return {
+    valid:true,
+    modelo:t.modelo, reencauche:t.reencauche,
+    rtdGastado, kmRecorrido, pctConsumo, kmMm, kmProyectado, costoKm, kmAcumulado,
+  };
+}
+
+/* =========================================================================
+   AGREGADO DEL EJE — se calcula SOBRE las métricas ya derivadas por posición.
+   Excluye posiciones sin datos válidos.
+   ========================================================================= */
+function computeAxle(unit, axle){
+  const rows = axle.positions.map(pos => ({pos, m:computeTire(unit.tires[pos])}));
+  const valids = rows.filter(r => r.m.valid);
+
+  let avgKmMm = null, avgPct = null, diffPct = null, minPos = null;
+  if(valids.length >= 1){
+    avgKmMm = valids.reduce((s,r)=>s+r.m.kmMm,0)/valids.length;
+    avgPct  = valids.reduce((s,r)=>s+r.m.pctConsumo,0)/valids.length;
+    minPos  = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).pos;
+  }
+  if(valids.length >= 2){
+    const kms = valids.map(r=>r.m.kmMm);
+    const mean = kms.reduce((s,v)=>s+v,0)/kms.length;
+    // 2 posiciones → |A−B|/prom. >2 → dispersión (máx−mín)/prom (generalización
+    // documentada del criterio de dos lados a ejes con más posiciones).
+    const spread = valids.length === 2 ? Math.abs(kms[0]-kms[1]) : (Math.max(...kms)-Math.min(...kms));
+    diffPct = (spread / mean) * 100;
+  }
+
+  return {
+    rows, valids,
+    canCompare: valids.length >= 2,       // hay balance verde/rojo
+    avgKmMm, avgPct, diffPct, minPos,
+    balanced: diffPct != null ? diffPct <= AXLE_BALANCE_THRESHOLD_PERCENT : null,
+  };
+}
+
+/* =========================================================================
+   FORMATO
+   ========================================================================= */
+const nf = new Intl.NumberFormat("es-PE");
+const fmtKm  = v => nf.format(Math.round(v));
+const fmtMm  = v => (Math.round(v*10)/10).toFixed(1);
+const fmtKmMm= v => nf.format(Math.round(v));
+const fmtPct = v => (Math.round(v*10)/10).toFixed(1);
+const fmtCost= v => "$ " + v.toFixed(4);
+
+/* =========================================================================
+   ESTADO DE UI
+   ========================================================================= */
+let mode = "axle";              // "tire" | "axle" — arranca en "por eje"
+let unitId = UNITS[0].id;
+let axleKey = null;             // eje seleccionado (modo eje)
+let selectedPos = null;
+
+function currentUnit(){ return UNITS.find(u => u.id === unitId); }
+function currentAxle(){ return currentUnit().axles.find(a => a.key === axleKey) || null; }
+
+// Posiciones visibles en las pills según el modo.
+function visiblePositions(){
+  const u = currentUnit();
+  if(mode === "axle"){
+    const ax = currentAxle();
+    return ax ? ax.positions.slice() : [];
+  }
+  // por neumático → todas, en orden de ejes.
+  return u.axles.flatMap(a => a.positions);
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function renderUnitOptions(){
+  const sel = document.getElementById("unitSelect");
+  sel.innerHTML = UNITS.map(u => `<option value="${u.id}">${u.label}</option>`).join("");
+  sel.value = unitId;
+  sel.addEventListener("change", e => { unitId = e.target.value; initSelectionForUnit(); renderAll(); });
+}
+
+function renderModeButtons(){
+  document.getElementById("modeTire").setAttribute("aria-pressed", String(mode==="tire"));
+  document.getElementById("modeAxle").setAttribute("aria-pressed", String(mode==="axle"));
+  // El selector de eje solo existe en modo eje y solo si hay >1 eje agrupado.
+  const showAxle = mode==="axle" && currentUnit().axles.length > 1;
+  document.getElementById("axleBlock").style.display = showAxle ? "" : "none";
+  document.getElementById("posLabel").textContent =
+    mode==="axle" ? "Posición del eje" : "Posición";
+}
+
+function renderAxleTabs(){
+  const wrap = document.getElementById("axleTabs");
+  const u = currentUnit();
+  wrap.innerHTML = u.axles.map(a => {
+    const sel = a.key === axleKey;
+    return `<button class="axle-tab" role="tab" aria-selected="${sel}"
+              onclick="selectAxle('${a.key}')">
+        ${a.name}
+        <span class="tab-sub">${a.positions.length} pos.</span>
+      </button>`;
+  }).join("");
+}
+
+function renderPills(){
+  const wrap = document.getElementById("posPills");
+  const u = currentUnit();
+  wrap.innerHTML = visiblePositions().map(pos => {
+    const m = computeTire(u.tires[pos]);
+    const sel = pos === selectedPos;
+    const nd = m.valid ? "" : "no-data";
+    return `<button class="pos-pill ${nd}" role="tab" aria-selected="${sel}"
+              title="${m.valid ? "" : "Sin datos suficientes"}"
+              onclick="selectPos('${pos}')">${pos}</button>`;
+  }).join("");
+}
+
+function metricRow(label, value, unit){
+  if(value === null || value === undefined){
+    return `<div class="metric"><span class="m-label">${label}</span>
+      <span class="m-value empty">Sin datos</span></div>`;
+  }
+  const u = unit ? `<span class="m-unit">${unit}</span>` : "";
+  return `<div class="metric"><span class="m-label">${label}</span>
+    <span class="m-value num">${value}${u}</span></div>`;
+}
+
+function renderCard(){
+  const mount = document.getElementById("cardMount");
+  const u = currentUnit();
+  if(!selectedPos){ mount.innerHTML = ""; return; }
+  const raw = u.tires[selectedPos];
+  const m = computeTire(raw);
+
+  // Bloque de identidad: Modelo + (si aplica) Reencauche. Clickeable → historial.
+  const retreadLine = (m.reencauche)
+    ? `<div class="id-retread">Reencauche: ${m.reencauche.codigo} (${m.reencauche.ciclo})</div>`
+    : ``;
+
+  const left = m.valid ? `
+    ${metricRow("Km Acumulado",  fmtKm(m.kmAcumulado), "km")}
+    ${metricRow("Km Recorrido",  fmtKm(m.kmRecorrido), "km")}
+    ${metricRow("Km Proyectado", fmtKm(m.kmProyectado),"km")}
+    ${metricRow("RTD Gastado",   fmtMm(m.rtdGastado),  "mm")}
+  ` : `
+    ${metricRow("Km Acumulado",  null)}
+    ${metricRow("Km Recorrido",  null)}
+    ${metricRow("Km Proyectado", null)}
+    ${metricRow("RTD Gastado",   null)}
+  `;
+  const right = m.valid ? `
+    ${metricRow("Km/mm",       fmtKmMm(m.kmMm), "km/mm")}
+    ${metricRow("% de Consumo",fmtPct(m.pctConsumo), "%")}
+    ${metricRow("Costo/Km",    fmtCost(m.costoKm), "/km")}
+  ` : `
+    ${metricRow("Km/mm",       null)}
+    ${metricRow("% de Consumo",null)}
+    ${metricRow("Costo/Km",    null)}
+  `;
+
+  mount.innerHTML = `
+    <div class="tire-card">
+      <button class="identity" type="button" onclick="openHistory('${selectedPos}')"
+              aria-label="Ver historial del neumático de la posición ${selectedPos}">
+        <div>
+          <div class="id-model">${m.modelo || "—"} · ${selectedPos}</div>
+          ${retreadLine}
+        </div>
+        <span class="id-hint">
+          Historial
+          <svg viewBox="0 0 12 20" fill="none"><path d="M2 2l7 8-7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </button>
+      <div class="card-cols">
+        <div class="card-col">
+          <div class="col-title">Identidad y acumulados</div>
+          ${left}
+        </div>
+        <div class="card-col">
+          <div class="col-title">Rendimiento</div>
+          ${right}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderAnalysis(){
+  const mount = document.getElementById("analysisMount");
+  if(mode !== "axle"){ mount.innerHTML = ""; return; }
+  const u = currentUnit();
+  const ax = currentAxle();
+  if(!ax){ mount.innerHTML = ""; return; }
+
+  const agg = computeAxle(u, ax);
+
+  // KPIs promedio — mostrar solo si hay al menos una posición válida.
+  const kpis = (agg.avgKmMm != null) ? `
+    <div class="avg-kpis">
+      <div class="avg-stat">
+        <div class="a-label">Km/mm promedio</div>
+        <div class="a-value num">${fmtKmMm(agg.avgKmMm)}<span class="a-unit">km/mm</span></div>
+        <div class="a-sub">Promedio de ${agg.valids.length} posición${agg.valids.length>1?"es":""} del eje</div>
+      </div>
+      <div class="avg-stat">
+        <div class="a-label">% Consumo promedio</div>
+        <div class="a-value num">${fmtPct(agg.avgPct)}<span class="a-unit">%</span></div>
+        <div class="a-sub">Promedio de ${agg.valids.length} posición${agg.valids.length>1?"es":""} del eje</div>
+      </div>
+    </div>` : `
+    <div class="note">Sin datos suficientes en este eje para calcular promedios.</div>`;
+
+  // Gráfico posición vs posición (Km/mm) — todas las posiciones del eje.
+  const maxKmMm = agg.valids.length ? Math.max(...agg.valids.map(r=>r.m.kmMm)) : 1;
+  const bars = agg.rows.map(r => {
+    if(!r.m.valid){
+      return `<div class="bar-row">
+        <span class="bar-pos">${r.pos}</span>
+        <span class="bar-track"></span>
+        <span class="bar-val empty">Sin datos</span>
+      </div>`;
+    }
+    const pct = Math.max(3, (r.m.kmMm / maxKmMm) * 100);
+    const isMin = r.pos === agg.minPos && agg.valids.length >= 2;
+    return `<div class="bar-row">
+      <span class="bar-pos">${r.pos}</span>
+      <span class="bar-track"><span class="bar-fill ${isMin?"is-min":""}" style="width:${pct}%"></span></span>
+      <span class="bar-val num">${fmtKmMm(r.m.kmMm)}<span class="bv-unit">km/mm</span></span>
+    </div>`;
+  }).join("");
+
+  let chartBlock = "";
+  if(ax.positions.length < 2){
+    // Eje de una sola posición → no hay comparación posible.
+    chartBlock = `<div class="note">Este eje no tiene posiciones suficientes para comparar balance.</div>`;
+  } else {
+    chartBlock = `
+      <div class="chart">
+        <div class="chart-title">Rendimiento por posición · <b>Km/mm</b></div>
+        ${bars}
+      </div>`;
+    // Veredicto de balance — solo si hay ≥2 posiciones con datos válidos.
+    if(agg.canCompare){
+      const cls = agg.balanced ? "ok" : "bad";
+      const verdict = agg.balanced ? "Balance saludable" : "Desbalance detectado";
+      const detail = agg.balanced
+        ? `Diferencia dentro del umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%)`
+        : `Supera el umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%) · revisar presión, alineación o carga`;
+      chartBlock += `
+        <div class="balance ${cls}">
+          <span class="b-dot"></span>
+          <div class="b-text">
+            <div class="b-verdict">${verdict}</div>
+            <div class="b-detail">${detail}</div>
+          </div>
+          <div class="b-metric">
+            <div class="bm-value num">${fmtPct(agg.diffPct)}%</div>
+            <div class="bm-label">Diferencia</div>
+          </div>
+        </div>`;
+    } else {
+      chartBlock += `<div class="note">No hay suficientes posiciones con datos para evaluar el balance del eje.</div>`;
+    }
+  }
+
+  mount.innerHTML = `
+    <div class="axle-analysis">
+      <div class="analysis-head">Análisis del eje · <span class="ah-axle">${ax.name}</span></div>
+      ${kpis}
+      ${chartBlock}
+    </div>`;
+}
+
+function renderAll(){
+  renderModeButtons();
+  renderAxleTabs();
+  renderPills();
+  renderCard();
+  renderAnalysis();
+}
+
+/* =========================================================================
+   INTERACCIÓN
+   ========================================================================= */
+function initSelectionForUnit(){
+  const u = currentUnit();
+  if(mode === "axle"){
+    // primer eje + primera posición del eje
+    axleKey = u.axles[0].key;
+    selectedPos = currentAxle().positions[0];
+  } else {
+    axleKey = null;
+    selectedPos = u.axles.flatMap(a=>a.positions)[0];
+  }
+}
+
+function setMode(next){
+  if(mode === next) return;
+  mode = next;
+  const u = currentUnit();
+  if(mode === "axle"){
+    // reencontrar el eje de la posición actual para no perder contexto
+    const owning = u.axles.find(a => a.positions.includes(selectedPos));
+    axleKey = (owning || u.axles[0]).key;
+    if(!currentAxle().positions.includes(selectedPos)){
+      selectedPos = currentAxle().positions[0];
+    }
+  } else {
+    axleKey = null;
+    // mantiene selectedPos (la card es la misma)
+  }
+  renderAll();
+}
+
+function selectAxle(key){
+  if(axleKey === key) return;
+  axleKey = key;
+  selectedPos = currentAxle().positions[0];   // auto-selecciona 1ª posición del eje
+  renderAll();
+}
+
+function selectPos(pos){
+  selectedPos = pos;
+  renderAll();
+}
+
+/* Historial — interacción preparada; contenido fuera de alcance. */
+function openHistory(pos){
+  const u = currentUnit();
+  const m = computeTire(u.tires[pos]);
+  document.getElementById("histModel").textContent = `${m.modelo || "—"} · ${pos}`;
+  document.getElementById("histRetread").textContent =
+    m.reencauche ? `Reencauche: ${m.reencauche.codigo} (${m.reencauche.ciclo})` : "";
+  document.getElementById("historyScrim").classList.add("open");
+}
+function closeHistory(){
+  document.getElementById("historyScrim").classList.remove("open");
+}
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeHistory(); });
+
+/* init */
+renderUnitOptions();
+initSelectionForUnit();
+renderAll();
+</script>
+</body>
+</html>
