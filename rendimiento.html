@@ -14,6 +14,12 @@
                             + sección exclusiva de análisis del eje.
   Estado ACTIVO por defecto: "Ver por eje".
 
+  VISTA INTERNA "Historial de Neumático" (currentView === "tireHistory"): al hacer
+  clic en el # Serie / Código de la card, la app cambia — dentro del MISMO HTML,
+  sin modal ni overlay — a una vista secundaria de SOLO LECTURA con la identidad
+  del neumático, su resumen actual, las unidades donde estuvo instalado y las
+  inspecciones pasadas (todo filtrado por serie). "Volver a Rendimiento" regresa.
+
   Reglas que respeta este prototipo:
     · Solo muestra datos DERIVADOS/calculados. Nada de datos crudos del inspector
       (no se muestra RTD Actual, Km Actual, presión, etc.).
@@ -290,36 +296,99 @@
     padding:16px;font-size:12px;font-weight:700;color:var(--label-blue);line-height:1.5;
   }
 
-  /* ───────────────── Modal historial (placeholder) ───────────────── */
-  .scrim{
-    position:fixed;inset:0;background:rgba(3,8,14,.72);z-index:50;
-    display:none;align-items:flex-end;justify-content:center;
+  /* ───────────────── Vista interna: Historial de Neumático ─────────────────
+     Vista SECUNDARIA de solo lectura. NO es modal ni overlay: reemplaza el
+     contenido de Rendimiento mientras currentView === "tireHistory".
+     El # Serie / Código es la llave; todo se filtra por él. */
+  .th-back{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--label-blue);background:var(--field-dark);
+    border:2px solid var(--border-dark);border-radius:10px;
+    padding:10px 14px;cursor:pointer;margin-bottom:16px;
+    transition:border-color .15s ease-out,color .15s ease-out,transform .12s ease-out;
   }
-  .scrim.open{display:flex}
-  @media (min-width:640px){.scrim{align-items:center}}
-  .modal{
-    width:100%;max-width:520px;background:var(--field-dark);
-    border:2px solid var(--border-dark);border-radius:16px 16px 0 0;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-    /* cinta de seguridad = filo superior del sheet (DESIGN.md §7) */
-    border-top:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  .th-back:hover{color:var(--value-ice);border-color:#294263}
+  .th-back:active{transform:scale(.97)}
+  .th-back:focus-visible{outline:none;border-color:var(--ember-orange)}
+  .th-back svg{width:14px;height:14px}
+
+  .th-head{margin-bottom:4px}
+  .th-title{
+    font-family:var(--display);font-size:24px;letter-spacing:.1em;color:var(--value-ice);line-height:1;
   }
-  @media (min-width:640px){.modal{border-radius:16px}}
-  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 14px}
-  .modal-head .mh-title{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue)}
-  .modal-head .mh-model{font-size:18px;font-weight:800;color:var(--value-ice);margin-top:6px}
-  .modal-head .mh-retread{font-size:11px;font-weight:800;color:var(--signal-yellow);margin-top:4px}
-  .modal-close{
-    background:transparent;border:none;color:var(--value-ice);cursor:pointer;
-    width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex:none;border-radius:8px;
+  .th-serie{
+    font-size:22px;font-weight:800;letter-spacing:.04em;color:var(--ember-orange);margin-top:8px;
   }
-  .modal-close:hover{background:var(--navy-brand)}
-  .modal-body{padding:0 18px 22px}
-  .modal-placeholder{
-    border:2px dashed var(--border-dark);border-radius:12px;padding:26px 18px;text-align:center;
+  .th-sub{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--label-blue);margin-top:7px}
+
+  .th-section{margin-top:22px}
+  .th-section-title{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:11px;
+  }
+
+  .th-card{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;padding:16px 18px;
+  }
+
+  /* Identidad — grilla de campos */
+  .th-idgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+  .th-field .f-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue)}
+  .th-field .f-value{font-size:15px;font-weight:800;color:var(--value-ice);margin-top:6px}
+  .th-badge{
+    display:inline-block;font-size:13px;font-weight:800;letter-spacing:.04em;
+    padding:3px 11px;border-radius:6px;border:2px solid var(--border-dark);color:var(--value-ice);
+  }
+  .th-badge.estado{border-color:var(--signal-yellow);color:var(--signal-yellow)}
+  .th-badge.cond-instalado{border-color:var(--verified-green);color:var(--verified-green)}
+  .th-badge.cond-retirado,.th-badge.cond-desechado{border-color:var(--ember-orange);color:var(--ember-orange)}
+  .th-badge.cond-reten{border-color:var(--label-blue);color:var(--label-blue)}
+
+  /* Resumen rápido — mini stats */
+  .th-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .th-stat{background:var(--screen-dark);border:2px solid var(--border-dark);border-radius:10px;padding:12px 14px}
+  .th-stat .s-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue)}
+  .th-stat .s-value{font-size:19px;font-weight:800;color:var(--value-ice);margin-top:6px}
+  .th-stat .s-value small{font-size:11px;font-weight:700;color:var(--label-blue);margin-left:3px}
+  .th-stat .s-value.muted{font-size:12px;font-weight:800;color:var(--label-blue);letter-spacing:.04em}
+
+  /* Listas de historial (instalaciones) */
+  .th-list{display:flex;flex-direction:column;gap:10px}
+  .th-inst{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
+    padding:13px 15px;
+  }
+  .th-inst .r-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .th-inst .r-plate{font-size:16px;font-weight:800;color:var(--value-ice);letter-spacing:.02em}
+  .th-inst .r-km{font-size:15px;font-weight:800;color:var(--value-ice)}
+  .th-inst .r-km small{font-size:10px;font-weight:700;color:var(--label-blue);margin-left:3px}
+  .th-inst .r-dates{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--label-blue);margin-top:7px}
+  .th-chip-actual{
+    font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--verified-green);
+    border:2px solid var(--verified-green);border-radius:6px;padding:2px 8px;
+  }
+
+  /* Inspecciones — cards apiladas (mobile-first); tabla compacta en desktop */
+  .th-insp{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;padding:13px 15px;
+  }
+  .th-insp .i-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+  .th-insp .i-date{font-size:14px;font-weight:800;color:var(--value-ice)}
+  .th-insp .i-loc{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--label-blue)}
+  .th-metrics{display:flex;gap:20px;flex-wrap:wrap}
+  .th-metrics .im .im-label{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--label-blue)}
+  .th-metrics .im .im-value{font-size:16px;font-weight:800;color:var(--value-ice);margin-top:3px}
+  .th-metrics .im .im-value small{font-size:10px;color:var(--label-blue);margin-left:2px}
+  .th-obs{margin-top:10px;font-size:11px;font-weight:700;color:var(--signal-yellow);letter-spacing:.02em;line-height:1.4}
+
+  .th-empty{
+    border:2px dashed var(--border-dark);border-radius:12px;padding:26px 20px;text-align:center;
     color:var(--label-blue);font-size:12px;font-weight:700;line-height:1.6;
   }
+
+  /* En Historial, ocultar el selector de unidad del header global (no aplica). */
+  body.viewing-history .unit-picker{display:none}
 
   footer{
     max-width:1080px;margin:28px auto 0;padding:0 16px;
@@ -358,7 +427,7 @@
   </div>
 </header>
 
-<main>
+<main id="perfMain">
   <!-- Switch de modo -->
   <div class="mode-switch" role="group" aria-label="Modo de vista">
     <button class="mode-btn" id="modeTire"  type="button" aria-pressed="false" onclick="setMode('tire')">Ver por neumático</button>
@@ -384,27 +453,8 @@
   <div id="analysisMount"></div>
 </main>
 
-<!-- Modal de historial (interacción preparada; contenido fuera de alcance) -->
-<div class="scrim" id="historyScrim" role="dialog" aria-modal="true" aria-labelledby="histTitle" onclick="if(event.target===this)closeHistory()">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="mh-title" id="histTitle">Historial del neumático</div>
-        <div class="mh-model" id="histModel">—</div>
-        <div class="mh-retread" id="histRetread"></div>
-      </div>
-      <button class="modal-close" type="button" aria-label="Cerrar historial" onclick="closeHistory()">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-placeholder">
-        El historial detallado del neumático (instalaciones, reencauches, inspecciones)<br>
-        se diseñará en un alcance posterior.
-      </div>
-    </div>
-  </div>
-</div>
+<!-- Vista interna: Historial de Neumático (secundaria, solo lectura; NO modal) -->
+<main id="tireHistoryView" hidden></main>
 
 <footer>
   Datos de demostración · Vista de consulta (solo lectura) para jefe de flota<br>
@@ -498,6 +548,81 @@ const UNITS = [
     },
   },
 ];
+
+/* =========================================================================
+   # SERIE / CÓDIGO — llave única del neumático (generada en fábrica/inventario).
+   Es la LLAVE del Historial: instalaciones e inspecciones se filtran por ella.
+   Mock; en producción viene de Inventario. Mapea unidad+posición → código.
+   ========================================================================= */
+const TIRE_SERIES = {
+  "B-118": {P1:"NEU-04182", P2:"NEU-03911", P3:"NEU-04533", P4:"NEU-02748",
+            P5:"NEU-04102", P6:"NEU-03650", P7:"NEU-05007", P8:"NEU-05108"},
+  "B-204": {P1:"NEU-06110", P2:"NEU-06111", P3:"NEU-06220", P4:"NEU-06221",
+            P5:"NEU-06322", P6:"NEU-06323"},
+};
+function serieOf(uId, pos){ return (TIRE_SERIES[uId] || {})[pos] || null; }
+
+/* Ubica el neumático VIVO (instalado hoy) por su serie → {unit, pos, tire}. */
+function findTireBySerie(serie){
+  for(const u of UNITS){
+    const map = TIRE_SERIES[u.id] || {};
+    for(const pos of Object.keys(map)){
+      if(map[pos] === serie) return {unit:u, pos, tire:u.tires[pos]};
+    }
+  }
+  return null;
+}
+
+/* =========================================================================
+   HISTORIAL — mock de DEMOSTRACIÓN. NO es una fuente de datos nueva: modela lo
+   que en producción ya existe (Instalaciones, Desinstalaciones, Inspecciones).
+   Se indexa por # Serie / Código. Solo se detallan aquí los neumáticos con
+   varias vidas (reencauches / rotaciones); el resto se sintetiza desde el dato
+   vivo del propio neumático (ver buildTireHistory()).
+     instalaciones[]: {placa, desde, hasta(null=montado), km}   (más reciente 1º al render)
+     inspecciones[]:  {fecha, placa, posicion, rtd[canales], psi, obs}
+   RTD por inspección = MIN de los canales de remanente disponibles.
+   ========================================================================= */
+const HISTORY = {
+  // B-118 · P3 — dual de tracción reencauchada (R1); estuvo antes en otra unidad.
+  "NEU-04533": {
+    marca:"Michelin", diseno:"XDN2", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
+    instalaciones:[
+      {placa:"B-118", desde:"2024-02-18", hasta:null,          km:48000},
+      {placa:"B-090", desde:"2022-07-05", hasta:"2023-12-10",  km:140000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P3", rtd:[12.4,12.0,12.6,12.2], psi:115, obs:""},
+      {fecha:"2024-05-12", placa:"B-118", posicion:"P3", rtd:[13.1,12.8,13.3,12.9], psi:112, obs:"Desgaste parejo"},
+      {fecha:"2024-03-02", placa:"B-118", posicion:"P3", rtd:[14.0,13.7,14.2,13.9], psi:118, obs:""},
+      {fecha:"2023-10-20", placa:"B-090", posicion:"P5", rtd:[9.6,9.1,9.8,9.4],     psi:108, obs:"Piedra en ranura (retirada)"},
+    ],
+  },
+  // B-118 · P1 — direccional nueva; una sola vida, varias inspecciones.
+  "NEU-04182": {
+    marca:"Michelin", diseno:"XZE2", medida:"295/80R22.5", estado:"N", condicion:"Instalado",
+    instalaciones:[
+      {placa:"B-118", desde:"2023-11-02", hasta:null, km:40000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P1", rtd:[11.2,11.0,11.4], psi:120, obs:""},
+      {fecha:"2024-04-15", placa:"B-118", posicion:"P1", rtd:[13.0,12.8,13.1], psi:118, obs:"Presión baja corregida"},
+      {fecha:"2024-01-08", placa:"B-118", posicion:"P1", rtd:[15.0,14.8,15.1], psi:120, obs:""},
+    ],
+  },
+  // B-204 · P3 — tracción reencauchada 2 veces (R2), rotó de lado.
+  "NEU-06220": {
+    marca:"Michelin", diseno:"XDN2", medida:"295/80R22.5", estado:"R2", condicion:"Instalado",
+    instalaciones:[
+      {placa:"B-204", desde:"2024-01-15", hasta:null,         km:63000},
+      {placa:"B-204", desde:"2022-09-01", hasta:"2023-11-30", km:150000},
+    ],
+    inspecciones:[
+      {fecha:"2024-06-28", placa:"B-204", posicion:"P3", rtd:[11.0,10.6,11.2,10.8], psi:110, obs:"Desgaste de hombro leve"},
+      {fecha:"2024-04-05", placa:"B-204", posicion:"P3", rtd:[13.4,13.0,13.6,13.2], psi:112, obs:""},
+    ],
+  },
+};
 
 /* =========================================================================
    CÁLCULO POR NEUMÁTICO — misma lógica base para ambos modos.
@@ -658,8 +783,9 @@ function renderCard(){
   if(!selectedPos){ mount.innerHTML = ""; return; }
   const raw = u.tires[selectedPos];
   const m = computeTire(raw);
+  const serie = serieOf(unitId, selectedPos);
 
-  // Bloque de identidad: Modelo + (si aplica) Reencauche. Clickeable → historial.
+  // Bloque de identidad: # Serie / Código (LLAVE, clickeable → Historial) + modelo.
   const retreadLine = (m.reencauche)
     ? `<div class="id-retread">Reencauche: ${m.reencauche.codigo} (${m.reencauche.ciclo})</div>`
     : ``;
@@ -687,14 +813,15 @@ function renderCard(){
 
   mount.innerHTML = `
     <div class="tire-card">
-      <button class="identity" type="button" onclick="openHistory('${selectedPos}')"
-              aria-label="Ver historial del neumático de la posición ${selectedPos}">
+      <button class="identity" type="button" onclick="openTireHistory('${serie}')"
+              aria-label="Ver historial del neumático ${serie || selectedPos}">
         <div>
-          <div class="id-model">${m.modelo || "—"} · ${selectedPos}</div>
+          <div class="id-model">${serie || "—"} · ${selectedPos}</div>
+          <div class="id-retread" style="color:var(--label-blue)">${m.modelo || "—"}</div>
           ${retreadLine}
         </div>
         <span class="id-hint">
-          Historial
+          Ver historial
           <svg viewBox="0 0 12 20" fill="none"><path d="M2 2l7 8-7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
       </button>
@@ -850,19 +977,231 @@ function selectPos(pos){
   renderAll();
 }
 
-/* Historial — interacción preparada; contenido fuera de alcance. */
-function openHistory(pos){
-  const u = currentUnit();
-  const m = computeTire(u.tires[pos]);
-  document.getElementById("histModel").textContent = `${m.modelo || "—"} · ${pos}`;
-  document.getElementById("histRetread").textContent =
-    m.reencauche ? `Reencauche: ${m.reencauche.codigo} (${m.reencauche.ciclo})` : "";
-  document.getElementById("historyScrim").classList.add("open");
+/* =========================================================================
+   VISTA INTERNA — Historial de Neumático (solo lectura).
+   Navegación por estado dentro del MISMO HTML (no modal, no overlay, no otra app).
+     currentView : "performance" | "tireHistory"
+     previousView: origen para rotular el botón "Volver a …"
+   En este archivo el único origen es Rendimiento ("performance"). El mismo
+   patrón, portado a Inspección, usaría previousView = "inspection".
+   ========================================================================= */
+let currentView = "performance";
+let previousView = "performance";
+
+function minCanal(arr){
+  if(!Array.isArray(arr)) return null;
+  const vals = arr.filter(v => v != null);
+  return vals.length ? Math.min(...vals) : null;
 }
-function closeHistory(){
-  document.getElementById("historyScrim").classList.remove("open");
+function fmtDate(iso){
+  if(!iso) return "—";
+  const p = String(iso).split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : String(iso);
 }
-document.addEventListener("keydown", e => { if(e.key === "Escape") closeHistory(); });
+function parseModelo(modelo){
+  if(!modelo) return {medida:"—", diseno:"—", marca:"—"};
+  const i = modelo.indexOf(" ");
+  const medida = i > 0 ? modelo.slice(0, i) : modelo;
+  const diseno = i > 0 ? modelo.slice(i + 1) : "—";
+  const marca  = /^X[A-Z]/.test(diseno) ? "Michelin" : "—";   // XDN2/XZE2 → Michelin (mock)
+  return {medida, diseno, marca};
+}
+function condClass(c){
+  const k = (c || "").toLowerCase();
+  if(k.includes("instalado")) return "cond-instalado";
+  if(k.includes("retén") || k.includes("reten")) return "cond-reten";
+  if(k.includes("desech")) return "cond-desechado";
+  if(k.includes("retir")) return "cond-retirado";
+  return "";
+}
+
+/* Arma el historial filtrando TODO por la # Serie / Código. Reutiliza
+   computeTire() (misma lógica que Rendimiento) para el Km acumulado. */
+function buildTireHistory(serie){
+  const live = findTireBySerie(serie);
+  const hist = HISTORY[serie] || null;
+  if(!live && !hist) return {found:false, serie};
+
+  const modelo = live ? live.tire.modelo : `${hist.medida} ${hist.diseno}`;
+  const parsed = parseModelo(modelo);
+  const marca     = (hist && hist.marca)  || parsed.marca;
+  const diseno    = (hist && hist.diseno) || parsed.diseno;
+  const medida    = (hist && hist.medida) || parsed.medida;
+  const estado    = (hist && hist.estado) || (live && live.tire.reencauche ? live.tire.reencauche.ciclo : "N");
+  const condicion = (hist && hist.condicion) || (live ? "Instalado" : "—");
+
+  // Instalaciones: del historial si existe; si no, se sintetiza la actual del dato vivo.
+  let instalaciones;
+  if(hist && hist.instalaciones){
+    instalaciones = hist.instalaciones.slice();
+  } else if(live){
+    const cm = computeTire(live.tire);
+    instalaciones = [{placa:live.unit.plate, desde:null, hasta:null, km:cm.valid ? cm.kmRecorrido : null}];
+  } else {
+    instalaciones = [];
+  }
+  instalaciones.sort((a,b) => String(b.desde||"").localeCompare(String(a.desde||"")));
+
+  // Inspecciones: del historial si existe; si no, la actual del dato vivo.
+  let inspecciones;
+  if(hist && hist.inspecciones){
+    inspecciones = hist.inspecciones.slice();
+  } else if(live){
+    inspecciones = [{fecha:null, placa:live.unit.plate, posicion:live.pos, rtd:[live.tire.rtdActual], psi:null, obs:""}];
+  } else {
+    inspecciones = [];
+  }
+  inspecciones.sort((a,b) => String(b.fecha||"").localeCompare(String(a.fecha||"")));
+
+  // Resumen — Km acumulado con la MISMA fórmula que Rendimiento (computeTire).
+  const liveM = live ? computeTire(live.tire) : null;
+  const kmAcum = (liveM && liveM.valid)
+    ? liveM.kmAcumulado
+    : (instalaciones.reduce((s,i) => s + (i.km || 0), 0) || null);
+  const lastInsp = inspecciones[0] || null;
+  const rtdMin = lastInsp ? minCanal(lastInsp.rtd) : (live ? live.tire.rtdActual : null);
+  const psi = lastInsp ? lastInsp.psi : null;
+
+  return {
+    found:true, serie, marca, diseno, medida, estado, condicion,
+    unidadActual: live ? live.unit.plate : null,
+    posActual: live ? live.pos : null,
+    kmAcum, ultimaInspeccion: lastInsp ? lastInsp.fecha : null, rtdMin, psi,
+    instalaciones, inspecciones,
+  };
+}
+
+function renderTireHistory(serie){
+  const mount = document.getElementById("tireHistoryView");
+  const th = buildTireHistory(serie);
+  const backLabel = previousView === "inspection" ? "Volver a Inspección"
+                  : previousView === "performance" ? "Volver a Rendimiento" : "Volver";
+  const header = `
+    <button class="th-back" type="button" onclick="backFromHistory()">
+      <svg viewBox="0 0 20 12" fill="none"><path d="M8 2L2 6l6 4M2 6h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${backLabel}
+    </button>
+    <div class="th-head">
+      <div class="th-title">Historial de Neumático</div>
+      <div class="th-serie num">${serie || "—"}</div>
+    </div>`;
+
+  // Estado vacío global: la serie no existe en el sistema.
+  if(!th.found){
+    mount.innerHTML = header +
+      `<div class="th-section"><div class="th-empty">No hay historial registrado para este neumático.</div></div>`;
+    return;
+  }
+
+  const kmAcumStr = th.kmAcum != null
+    ? `<span class="s-value num">${fmtKm(th.kmAcum)}<small>km</small></span>`
+    : `<span class="s-value muted">Sin datos</span>`;
+  const rtdStr = th.rtdMin != null
+    ? `<span class="s-value num">${fmtMm(th.rtdMin)}<small>mm</small></span>`
+    : `<span class="s-value muted">Sin datos</span>`;
+  const psiStr = th.psi != null
+    ? `<span class="s-value num">${th.psi}<small>psi</small></span>`
+    : `<span class="s-value muted">Sin datos</span>`;
+
+  const identity = `
+    <div class="th-section">
+      <div class="th-section-title">Identidad</div>
+      <div class="th-card">
+        <div class="th-idgrid">
+          <div class="th-field"><div class="f-label">Serie / Código</div><div class="f-value num">${th.serie}</div></div>
+          <div class="th-field"><div class="f-label">Marca</div><div class="f-value">${th.marca}</div></div>
+          <div class="th-field"><div class="f-label">Diseño / Modelo</div><div class="f-value">${th.diseno}</div></div>
+          <div class="th-field"><div class="f-label">Medida</div><div class="f-value num">${th.medida}</div></div>
+          <div class="th-field"><div class="f-label">Estado actual</div><div class="f-value"><span class="th-badge estado">${th.estado}</span></div></div>
+          <div class="th-field"><div class="f-label">Condición actual</div><div class="f-value"><span class="th-badge ${condClass(th.condicion)}">${th.condicion}</span></div></div>
+        </div>
+      </div>
+    </div>`;
+
+  const resumen = `
+    <div class="th-section">
+      <div class="th-section-title">Resumen rápido</div>
+      <div class="th-summary">
+        <div class="th-stat"><div class="s-label">Km acumulado</div>${kmAcumStr}</div>
+        <div class="th-stat"><div class="s-label">Última inspección</div><span class="s-value num">${fmtDate(th.ultimaInspeccion)}</span></div>
+        <div class="th-stat"><div class="s-label">RTD actual (mín.)</div>${rtdStr}</div>
+        <div class="th-stat"><div class="s-label">PSI actual</div>${psiStr}</div>
+        <div class="th-stat"><div class="s-label">Unidad actual</div><span class="s-value">${th.unidadActual || "—"}</span></div>
+        <div class="th-stat"><div class="s-label">Posición actual</div><span class="s-value">${th.posActual || "—"}</span></div>
+      </div>
+    </div>`;
+
+  // Unidades donde estuvo instalado.
+  const instList = th.instalaciones.map(i => {
+    const hasta = i.hasta
+      ? fmtDate(i.hasta)
+      : `<span class="th-chip-actual">Instalado actualmente</span>`;
+    const km = i.km != null ? `${fmtKm(i.km)}<small>km</small>` : "—";
+    return `
+      <div class="th-inst">
+        <div class="r-top">
+          <span class="r-plate">${i.placa || "—"}</span>
+          <span class="r-km num">${km}</span>
+        </div>
+        <div class="r-dates">${fmtDate(i.desde)} → ${hasta}</div>
+      </div>`;
+  }).join("");
+  const instBlock = `
+    <div class="th-section">
+      <div class="th-section-title">Unidades donde estuvo instalado</div>
+      ${th.instalaciones.length
+        ? `<div class="th-list">${instList}</div>`
+        : `<div class="th-empty">Hay inspecciones registradas, pero no se encontró historial de instalación asociado.</div>`}
+    </div>`;
+
+  // Inspecciones pasadas — RTD = MIN de canales de remanente.
+  const inspList = th.inspecciones.map(ins => {
+    const rtd = minCanal(ins.rtd);
+    const obs = ins.obs ? `<div class="th-obs">${ins.obs}</div>` : "";
+    return `
+      <div class="th-insp">
+        <div class="i-top">
+          <span class="i-date num">${fmtDate(ins.fecha)}</span>
+          <span class="i-loc">${ins.placa || "—"} · ${ins.posicion || "—"}</span>
+        </div>
+        <div class="th-metrics">
+          <div class="im"><div class="im-label">RTD actual</div><div class="im-value num">${rtd != null ? fmtMm(rtd) : "—"}<small>mm</small></div></div>
+          <div class="im"><div class="im-label">PSI</div><div class="im-value num">${ins.psi != null ? ins.psi : "—"}<small>psi</small></div></div>
+        </div>
+        ${obs}
+      </div>`;
+  }).join("");
+  const inspBlock = `
+    <div class="th-section">
+      <div class="th-section-title">Inspecciones pasadas</div>
+      ${th.inspecciones.length
+        ? `<div class="th-list">${inspList}</div>`
+        : `<div class="th-empty">Este neumático existe en el sistema, pero aún no tiene inspecciones registradas.</div>`}
+    </div>`;
+
+  mount.innerHTML = header + identity + resumen + instBlock + inspBlock;
+}
+
+function showView(view){
+  currentView = view;
+  document.getElementById("perfMain").hidden = (view !== "performance");
+  document.getElementById("tireHistoryView").hidden = (view !== "tireHistory");
+  document.body.classList.toggle("viewing-history", view === "tireHistory");
+  window.scrollTo(0, 0);
+}
+
+function openTireHistory(serie){
+  if(!serie) return;
+  previousView = currentView;              // recordar origen (aquí: "performance")
+  renderTireHistory(serie);
+  showView("tireHistory");
+}
+function backFromHistory(){
+  showView(previousView || "performance");
+}
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && currentView === "tireHistory") backFromHistory();
+});
 
 /* init */
 renderUnitOptions();
