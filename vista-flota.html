@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RENOVA — Vista de Flota</title>
+<!--
+  PANTALLA NUEVA E INDEPENDIENTE — Vista de Flota (dashboard para jefes de flota).
+  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
+
+  NO modifica la app existente, ni la pantalla de inspección, ni el gemelo digital 3D.
+  Solo visualiza, en una fecha de inspección, la salud general de todas las unidades y
+  sirve de entrada hacia la inspección individual ya existente (openInspection()).
+
+  Regla de color EXCLUSIVA de esta pantalla (más simple que la de Inspección, priorizando
+  velocidad de lectura sobre muchas unidades):
+    · Anomalía causal de retiro            → CRÍTICO (rojo)
+    · RTD remanente < 4 mm                 → CRÍTICO (rojo)
+    · RTD remanente entre 4 mm y 8 mm      → OBSERVACIÓN (naranja)
+    · RTD remanente > 8 mm y sin anomalía  → NORMAL
+  El color de la unidad = el PEOR caso entre todos sus neumáticos.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Paleta RENOVA (DESIGN.md) */
+    --screen-dark:#07111C;
+    --field-dark:#111E2E;
+    --navy-brand:#15233f;
+    --border-dark:#1B2D42;
+    --label-blue:#7AABCC;
+    --value-ice:#F0F8FF;
+    --ember-orange:#F06822;
+    --signal-yellow:#f4b821;
+    --verified-green:#1f9d6b;
+
+    /* Semáforo de esta pantalla (según spec: rojo crítico) */
+    --crit:#E5484D;
+    --crit-bg:rgba(229,72,77,.13);
+    --warn:#F06822;
+    --warn-bg:rgba(240,104,34,.13);
+    --normal:#6EA9C6;
+
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--screen-dark);
+    color:var(--value-ice);
+    font-family:var(--mono);
+    font-weight:700;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    padding-bottom:40px;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ───────────────── Header ───────────────── */
+  header{
+    background:var(--navy-brand);
+    padding:18px 16px 16px;
+    position:sticky;top:0;z-index:20;
+    /* filo inferior = "cinta de seguridad" (DESIGN.md §7) */
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto;
+  }
+  .brand .logo{
+    font-family:var(--display);font-size:32px;line-height:1;
+    letter-spacing:.06em;color:var(--value-ice);
+  }
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{
+    font-family:var(--display);font-size:19px;line-height:1;
+    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
+  }
+  .brand .subtitle{
+    font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--label-blue);margin-top:8px;
+  }
+  .date-picker{display:flex;flex-direction:column;gap:6px}
+  .date-picker label{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);
+  }
+  .date-picker select{
+    appearance:none;-webkit-appearance:none;
+    background:var(--field-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;font-size:14px;
+    border:2px solid var(--border-dark);border-radius:8px;
+    padding:11px 40px 11px 14px;cursor:pointer;
+    transition:border-color .15s ease-out;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  .date-picker select:focus{outline:none;border-color:var(--ember-orange)}
+
+  /* ───────────────── Layout ───────────────── */
+  main{max-width:1200px;margin:0 auto;padding:16px}
+
+  /* ───────────────── KPIs ───────────────── */
+  .kpis{
+    display:grid;gap:10px;
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    margin-bottom:22px;
+  }
+  .stat{
+    background:var(--field-dark);
+    border:2px solid var(--border-dark);
+    padding:14px 16px;
+    /* chaflán industrial 8px (DESIGN.md §7) */
+    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  }
+  .stat .k-label{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);
+  }
+  .stat .k-value{
+    font-size:30px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice);
+  }
+  .stat.crit .k-value{color:var(--crit)}
+  .stat.warn .k-value{color:var(--warn)}
+  .stat.ok   .k-value{color:var(--verified-green)}
+  .stat .k-sub{
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:6px;
+  }
+
+  /* ───────────────── Sección + leyenda ───────────────── */
+  .section-head{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;margin-bottom:12px;
+  }
+  .section-head h2{
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .legend{display:flex;gap:14px;flex-wrap:wrap}
+  .legend-item{
+    display:flex;align-items:center;gap:7px;
+    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .swatch{width:12px;height:12px;border-radius:3px;border:2px solid}
+  .swatch.crit{background:var(--crit-bg);border-color:var(--crit)}
+  .swatch.warn{background:var(--warn-bg);border-color:var(--warn)}
+  .swatch.normal{background:transparent;border-color:var(--border-dark)}
+
+  /* ───────────────── Grid de unidades ───────────────── */
+  .fleet-grid{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(auto-fill,minmax(158px,1fr));
+  }
+  .unit-card{
+    background:var(--field-dark);
+    border:2px solid var(--border-dark);
+    border-radius:12px;
+    padding:12px 12px 11px;
+    cursor:pointer;
+    display:flex;flex-direction:column;gap:10px;
+    transition:transform .12s ease-out,border-color .15s ease-out,background .15s ease-out;
+    text-align:left;font-family:var(--mono);
+  }
+  .unit-card:hover{background:#132538}
+  .unit-card:focus-visible{outline:none;border-color:var(--value-ice)}
+  .unit-card.pressable:active{transform:scale(.97)}
+  .unit-card.status-critical{border-color:var(--crit);background:linear-gradient(180deg,var(--crit-bg),transparent 60%),var(--field-dark)}
+  .unit-card.status-warning{border-color:var(--warn);background:linear-gradient(180deg,var(--warn-bg),transparent 60%),var(--field-dark)}
+
+  .uc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .uc-plate{font-size:20px;font-weight:800;line-height:1;color:var(--value-ice);letter-spacing:.02em}
+  .uc-meta{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:5px;text-transform:uppercase}
+  .uc-dot{width:11px;height:11px;border-radius:50%;flex:none;margin-top:3px}
+  .status-critical .uc-dot{background:var(--crit);box-shadow:0 0 0 3px var(--crit-bg)}
+  .status-warning  .uc-dot{background:var(--warn);box-shadow:0 0 0 3px var(--warn-bg)}
+  .status-normal   .uc-dot{background:var(--verified-green);box-shadow:0 0 0 3px rgba(31,157,107,.15)}
+
+  /* Esquema plano (vista superior simple) — NO 3D */
+  .schematic{
+    display:flex;flex-direction:column;gap:6px;
+    padding:9px 8px;background:var(--screen-dark);
+    border:2px solid var(--border-dark);border-radius:8px;
+  }
+  .axle-row{display:grid;grid-template-columns:1fr 22px 1fr;align-items:center;gap:6px}
+  .axle-side{display:flex;gap:4px}
+  .axle-side.left{justify-content:flex-end}
+  .axle-side.right{justify-content:flex-start}
+  .spine{height:4px;border-radius:2px;background:var(--border-dark)}
+  .tire{
+    width:15px;height:9px;border-radius:2px;background:var(--border-dark);
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .tire.t-critical{background:var(--crit)}
+  .tire.t-warning{background:var(--warn)}
+  .tire.t-normal{background:var(--verified-green)}
+
+  .uc-foot{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .badge{
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 7px;border-radius:4px;
+  }
+  .badge.critical{background:var(--crit-bg);color:var(--crit)}
+  .badge.warning{background:var(--warn-bg);color:var(--warn)}
+  .badge.normal{background:transparent;color:var(--label-blue);border:1px solid var(--border-dark)}
+  .uc-worst{font-size:10px;font-weight:800;color:var(--label-blue)}
+  .uc-worst b{color:var(--value-ice);font-size:12px}
+
+  .empty{
+    grid-column:1/-1;text-align:center;color:var(--label-blue);
+    font-size:12px;padding:40px 0;border:2px dashed var(--border-dark);border-radius:12px;
+  }
+
+  footer{
+    max-width:1200px;margin:24px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;
+  }
+
+  @media (max-width:520px){
+    .brand .logo{font-size:26px}
+    .date-picker{width:100%}
+    .date-picker select{width:100%}
+    .uc-plate{font-size:18px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">VISTA DE FLOTA</div>
+      <div class="subtitle">Estado general de unidades inspeccionadas</div>
+    </div>
+    <div class="date-picker">
+      <label for="dateSelect">Fecha de inspección</label>
+      <select id="dateSelect" aria-label="Fecha de inspección"></select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- KPIs -->
+  <section class="kpis" id="kpis" aria-label="Resumen de flota"></section>
+
+  <!-- Grid -->
+  <div class="section-head">
+    <h2 id="gridTitle">Unidades inspeccionadas</h2>
+    <div class="legend" aria-label="Leyenda de colores">
+      <span class="legend-item"><span class="swatch crit"></span>Crítica &lt; 4 mm / retiro</span>
+      <span class="legend-item"><span class="swatch warn"></span>Observación 4–8 mm</span>
+      <span class="legend-item"><span class="swatch normal"></span>Normal &gt; 8 mm</span>
+    </div>
+  </div>
+
+  <section class="fleet-grid" id="fleetGrid" aria-live="polite"></section>
+</main>
+
+<footer>Datos de demostración · Regla de color exclusiva de Vista de Flota (peor caso por unidad)</footer>
+
+<script>
+/* =========================================================================
+   DATASET MOCK  (una entrada por fecha de inspección)
+   Estructura por unidad:
+     { id, plate, company, equipmentType, inspectionDate, tires:[
+         { position, rtd, withdrawalAnomaly, axle, side }  // axle/side => esquema
+     ] }
+   En producción esto vendría de SQLite/Supabase; aquí se genera de forma
+   determinista para poblar el grid con ~30 unidades por fecha.
+   ========================================================================= */
+
+// RNG determinista (mulberry32) para un mock reproducible.
+function makeRng(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const COMPANIES = ["Transportes Cielo","Expreso Andino","Turismo Real","Línea Sur","Cruz del Valle"];
+
+// Configuraciones de BUS del MVP (posiciones = neumáticos con axle/side).
+// side 'L'/'R'; ejes duales aportan 2 neumáticos por lado.
+const CONFIGS = {
+  "2-4":   [ {axle:1,side:"L"},{axle:1,side:"R"},
+             {axle:2,side:"L"},{axle:2,side:"L"},{axle:2,side:"R"},{axle:2,side:"R"} ],
+  "2-4-2": [ {axle:1,side:"L"},{axle:1,side:"R"},
+             {axle:2,side:"L"},{axle:2,side:"L"},{axle:2,side:"R"},{axle:2,side:"R"},
+             {axle:3,side:"L"},{axle:3,side:"R"} ],
+};
+
+// Genera una unidad con un perfil de salud objetivo ("normal" | "warn" | "crit").
+function buildUnit(rng, idx, dateISO, profile){
+  const configKey = rng() < 0.5 ? "2-4" : "2-4-2";
+  const layout = CONFIGS[configKey];
+  const company = COMPANIES[Math.floor(rng()*COMPANIES.length)];
+  const plate = randomPlate(rng);
+
+  const tires = layout.map((slot, i) => {
+    let rtd, anomaly = false;
+    const r = rng();
+    if(profile === "crit"){
+      // al menos un neumático en rojo
+      rtd = i === 0 ? +(1.5 + r*2).toFixed(1)          // < 4 mm
+                    : +(4 + r*7).toFixed(1);
+      if(i === 2 && rng() < 0.4) anomaly = true;         // ocasional causal de retiro
+    } else if(profile === "warn"){
+      rtd = i === 0 ? +(4 + r*3.5).toFixed(1)            // 4–8 mm
+                    : +(8.2 + r*3).toFixed(1);
+    } else {
+      rtd = +(8.6 + r*4).toFixed(1);                     // > 8 mm
+    }
+    return {
+      position: "P" + (i+1),
+      rtd,
+      withdrawalAnomaly: anomaly,
+      axle: slot.axle,
+      side: slot.side,
+    };
+  });
+
+  return {
+    id: "unit-" + dateISO + "-" + String(idx).padStart(3,"0"),
+    plate,
+    company,
+    equipmentType: "Bus " + configKey,
+    inspectionDate: dateISO,
+    tires,
+  };
+}
+
+function randomPlate(rng){
+  const L = "ABCDEFGHJKLMPRSTUVWXYZ";
+  const l = () => L[Math.floor(rng()*L.length)];
+  const d = () => Math.floor(rng()*10);
+  return `${l()}${l()}${l()}-${d()}${d()}${d()}`;
+}
+
+// Construye una inspección (fecha) con una mezcla realista de perfiles.
+function buildInspection(dateISO, seed, count){
+  const rng = makeRng(seed);
+  const units = [];
+  for(let i=0;i<count;i++){
+    const p = rng();
+    const profile = p < 0.18 ? "crit" : p < 0.45 ? "warn" : "normal";
+    units.push(buildUnit(rng, i+1, dateISO, profile));
+  }
+  return units;
+}
+
+// Varias fechas de inspección para comparar días.
+const INSPECTIONS = {
+  "2025-12-16": buildInspection("2025-12-16", 20251216, 32),
+  "2025-11-18": buildInspection("2025-11-18", 20251118, 28),
+  "2025-10-21": buildInspection("2025-10-21", 20251021, 24),
+};
+
+/* =========================================================================
+   LÓGICA DE ESTADO  (regla EXCLUSIVA de Vista de Flota)
+   El color NUNCA se fija a mano en la unidad: sale de estas funciones.
+   ========================================================================= */
+
+// Estado de un neumático individual.
+function tireStatus(tire){
+  if(tire.withdrawalAnomaly) return "critical";   // causal de retiro → rojo
+  if(tire.rtd < 4)  return "critical";            // < 4 mm            → rojo
+  if(tire.rtd <= 8) return "warning";             // 4–8 mm            → naranja
+  return "normal";                                // > 8 mm            → normal
+}
+
+// Estado de la unidad = PEOR caso entre sus neumáticos.
+function calculateUnitStatus(unit){
+  let worst = "normal";
+  for(const t of unit.tires){
+    const s = tireStatus(t);
+    if(s === "critical") return "critical";       // no hay nada peor
+    if(s === "warning")  worst = "warning";
+  }
+  return worst;
+}
+
+// RTD remanente más bajo de la unidad (mm).
+function getWorstRTD(unit){
+  return unit.tires.reduce((min,t)=> t.rtd < min ? t.rtd : min, Infinity);
+}
+
+function countCriticalTires(unit){
+  return unit.tires.filter(t => tireStatus(t) === "critical").length;
+}
+function countWarningTires(unit){
+  return unit.tires.filter(t => tireStatus(t) === "warning").length;
+}
+
+// PLACEHDER de navegación → abre la inspección YA EXISTENTE de la unidad.
+// No se crea inspección nueva ni se duplica el gemelo digital aquí.
+function openInspection(unitId){
+  // TODO: conectar con el routing real de la app (p.ej. /inspeccion/:unitId).
+  console.log("openInspection ->", unitId);
+  const unit = currentUnits().find(u => u.id === unitId);
+  alert("Abrir inspección existente de la unidad:\n" +
+        (unit ? unit.plate + "  (" + unit.equipmentType + ")" : unitId) +
+        "\n\n[placeholder — aquí navegaría a la pantalla de Inspección]");
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+
+const STATUS_LABEL = { critical:"Crítica", warning:"Observación", normal:"Normal" };
+
+let selectedDate = Object.keys(INSPECTIONS)[0];
+function currentUnits(){ return INSPECTIONS[selectedDate] || []; }
+
+function formatDate(iso){
+  const meses = ["enero","febrero","marzo","abril","mayo","junio","julio",
+                 "agosto","septiembre","octubre","noviembre","diciembre"];
+  const [y,m,d] = iso.split("-").map(Number);
+  return `${d} ${meses[m-1]} ${y}`;
+}
+
+function renderDateOptions(){
+  const sel = document.getElementById("dateSelect");
+  sel.innerHTML = Object.keys(INSPECTIONS)
+    .sort().reverse()
+    .map(iso => `<option value="${iso}">${formatDate(iso)}</option>`).join("");
+  sel.value = selectedDate;
+  sel.addEventListener("change", e => { selectedDate = e.target.value; renderAll(); });
+}
+
+function renderKpis(){
+  const units = currentUnits();
+  const total = units.length;
+  let crit=0, warn=0, normal=0;
+  units.forEach(u=>{
+    const s = calculateUnitStatus(u);
+    if(s==="critical") crit++; else if(s==="warning") warn++; else normal++;
+  });
+  const atRisk = crit + warn;
+  const riskPct = total ? Math.round((atRisk/total)*100) : 0;
+
+  const cards = [
+    {label:"Unidades inspeccionadas", value:total, cls:"", sub:formatDate(selectedDate)},
+    {label:"Críticas", value:crit, cls:"crit", sub:"&lt; 4 mm o retiro"},
+    {label:"En observación", value:warn, cls:"warn", sub:"4 – 8 mm"},
+    {label:"Normales", value:normal, cls:"ok", sub:"&gt; 8 mm"},
+    {label:"% flota en riesgo", value:riskPct+"%", cls:"crit", sub:atRisk+" de "+total+" unidades"},
+  ];
+  document.getElementById("kpis").innerHTML = cards.map(c => `
+    <div class="stat ${c.cls}">
+      <div class="k-label">${c.label}</div>
+      <div class="k-value num">${c.value}</div>
+      <div class="k-sub">${c.sub}</div>
+    </div>`).join("");
+}
+
+// Esquema plano (vista superior): filas por eje, neumáticos izq/der coloreados.
+function renderSchematic(unit){
+  const byAxle = {};
+  unit.tires.forEach(t=>{
+    (byAxle[t.axle] = byAxle[t.axle] || {L:[],R:[]})[t.side].push(t);
+  });
+  const rows = Object.keys(byAxle).sort((a,b)=>a-b).map(ax=>{
+    const {L,R} = byAxle[ax];
+    const pill = t => `<span class="tire t-${tireStatus(t)}"></span>`;
+    return `<div class="axle-row">
+      <span class="axle-side left">${L.map(pill).join("")}</span>
+      <span class="spine"></span>
+      <span class="axle-side right">${R.map(pill).join("")}</span>
+    </div>`;
+  }).join("");
+  return `<div class="schematic" aria-hidden="true">${rows}</div>`;
+}
+
+function renderGrid(){
+  const grid = document.getElementById("fleetGrid");
+  const units = currentUnits();
+  document.getElementById("gridTitle").textContent =
+    `Unidades inspeccionadas · ${units.length}`;
+
+  if(!units.length){
+    grid.innerHTML = `<div class="empty">Sin unidades inspeccionadas en esta fecha.</div>`;
+    return;
+  }
+
+  // Orden: críticas primero, luego observación, luego normales; dentro, por RTD ascendente.
+  const rank = {critical:0, warning:1, normal:2};
+  const sorted = [...units].sort((a,b)=>{
+    const ra = rank[calculateUnitStatus(a)], rb = rank[calculateUnitStatus(b)];
+    return ra !== rb ? ra - rb : getWorstRTD(a) - getWorstRTD(b);
+  });
+
+  grid.innerHTML = sorted.map(u=>{
+    const status = calculateUnitStatus(u);
+    const worst = getWorstRTD(u);
+    const nCrit = countCriticalTires(u), nWarn = countWarningTires(u);
+    let footRight;
+    if(nCrit) footRight = `<span class="uc-worst">${nCrit} llanta${nCrit>1?"s":""} crít.</span>`;
+    else if(nWarn) footRight = `<span class="uc-worst">${nWarn} en obs.</span>`;
+    else footRight = `<span class="uc-worst">RTD mín <b>${worst.toFixed(1)}</b></span>`;
+
+    return `<button class="unit-card pressable status-${status}"
+              onclick="openInspection('${u.id}')"
+              aria-label="Unidad ${u.plate}, estado ${STATUS_LABEL[status]}. Abrir inspección.">
+      <div class="uc-top">
+        <div>
+          <div class="uc-plate">${u.plate}</div>
+          <div class="uc-meta">${u.company} · ${u.equipmentType}</div>
+        </div>
+        <span class="uc-dot"></span>
+      </div>
+      ${renderSchematic(u)}
+      <div class="uc-foot">
+        <span class="badge ${status}">${STATUS_LABEL[status]}</span>
+        ${footRight}
+      </div>
+    </button>`;
+  }).join("");
+}
+
+function renderAll(){ renderKpis(); renderGrid(); }
+
+// init
+renderDateOptions();
+renderAll();
+</script>
+</body>
+</html>
