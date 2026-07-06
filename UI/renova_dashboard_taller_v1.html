@@ -125,6 +125,11 @@ main{flex:1;display:flex;min-height:0}
 .id-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .id-cell{background:var(--screen);border:2px solid var(--border);border-radius:8px;padding:9px 11px}
 .id-cell .v{font-size:13px;font-weight:800;color:var(--ice);margin-top:4px;letter-spacing:.02em}
+/* El Código es un LINK a la vista aparte Historial de Neumático. */
+.id-codigo-link{cursor:pointer;color:var(--orange);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
+.id-codigo-link:hover{color:var(--ice)}
+.id-codigo-link:focus-visible{outline:2px solid var(--orange);outline-offset:2px;border-radius:3px}
+.id-hist-hint{color:var(--orange);letter-spacing:.04em}
 
 /* RTD */
 .rtd-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
@@ -466,7 +471,7 @@ main{flex:1;display:flex;min-height:0}
           <span class="badge proximo" id="estado-badge">⚠ PRÓXIMO A REENCAUCHE</span>
         </div>
         <div class="id-grid">
-          <div class="id-cell"><div class="lbl">Código</div><div class="v num" id="id-codigo">NEU-04182</div></div>
+          <div class="id-cell"><div class="lbl">Código · <span class="id-hist-hint">ver historial ›</span></div><div class="v num id-codigo-link" id="id-codigo" role="link" tabindex="0" title="Ver historial del neumático">NEU-04182</div></div>
           <div class="id-cell"><div class="lbl">Medida</div><div class="v num" id="id-medida">295/80R22.5</div></div>
           <div class="id-cell"><div class="lbl">Diseño</div><div class="v" id="id-diseno">RIB HWY</div></div>
           <div class="id-cell"><div class="lbl">Reencauches</div><div class="v num" id="id-reenc">2 / MÁX 3</div></div>
@@ -873,6 +878,19 @@ function drawConnector(){
 }
 (function loop(){ drawConnector(); requestAnimationFrame(loop); })();
 window.addEventListener('resize', drawConnector);
+
+/* ================= LINK AL HISTORIAL DEL NEUMÁTICO =================
+   El # Código navega a la vista APARTE historial-neumatico.html (en la raíz del
+   repo; esta pantalla vive en UI/, de ahí el ../), pasando el código y el origen. */
+function goToTireHistory(){
+  const code = POSICIONES[selected] && POSICIONES[selected].codigo;
+  if(!code) return;
+  location.href = `../historial-neumatico.html?serie=${encodeURIComponent(code)}&from=inspeccion`;
+}
+document.getElementById('id-codigo').addEventListener('click', goToTireHistory);
+document.getElementById('id-codigo').addEventListener('keydown', e=>{
+  if(e.key==='Enter' || e.key===' '){ e.preventDefault(); goToTireHistory(); }
+});
 
 /* init */
 updateWheelStates();
