@@ -177,25 +177,67 @@ main{flex:1;display:flex;min-height:0}
 }
 .anom-empty{border-style:dashed;color:var(--label);justify-content:center;font-size:10px;letter-spacing:.08em}
 
-/* chart */
-.chart-wrap{position:relative}
-.chart-wrap svg{display:block;width:100%;height:auto}
-.tooltip{
-  position:absolute;pointer-events:none;z-index:5;display:none;
-  background:var(--navy);border:2px solid var(--border);border-radius:8px;
-  padding:8px 10px;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--ice);
-  box-shadow:0 8px 24px rgba(0,0,0,.4);white-space:nowrap;
+/* anomalías clicables (detalle + foto) */
+.anom-item{cursor:pointer;transition:border-color .15s}
+.anom-item:hover{border-color:var(--label)}
+.anom-item .foto-tag{font-size:10px;margin-left:6px}
+.anom-empty{cursor:default}
+
+/* acciones sobre el neumático seleccionado (independientes de la inspección diaria) */
+.acciones-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
+.btn-accion{
+  font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;
+  padding:11px 10px;border-radius:8px;border:2px solid var(--border);
+  background:var(--screen);color:var(--ice);cursor:pointer;text-align:center;
+  text-transform:uppercase;transition:border-color .15s,background .15s;
 }
-.tooltip .tl{color:var(--label);font-size:9px;letter-spacing:.12em;margin-bottom:3px}
-.kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
-.kpi{background:var(--screen);border:2px solid var(--border);border-radius:8px;padding:10px 11px}
-.kpi .v{font-size:17px;font-weight:800;color:var(--ice);margin-top:5px;letter-spacing:.01em}
-.kpi .s{font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--label);margin-top:4px;line-height:1.4}
-.kpi .s .up{color:var(--green)}
-.gauges{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
-.gauge{background:var(--screen);border:2px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center}
-.gauge svg{display:block;margin:0 auto 6px}
-.gauge .gl{font-size:8px;font-weight:800;letter-spacing:.1em;color:var(--label);line-height:1.4}
+.btn-accion:hover{border-color:var(--label)}
+.btn-accion.danger{color:var(--orange);border-color:rgba(240,104,34,.4)}
+.btn-accion.danger:hover{background:rgba(240,104,34,.1);border-color:var(--orange)}
+.btn-accion:disabled{opacity:.4;cursor:not-allowed}
+.btn-accion:disabled:hover{border-color:var(--border);background:var(--screen)}
+
+/* ============ MODALES (detalle anomalía / descartar) ============ */
+.overlay{
+  position:fixed;inset:0;z-index:100;background:rgba(7,17,28,.72);
+  display:none;align-items:center;justify-content:center;
+}
+.overlay.open{display:flex}
+.modal{
+  width:380px;max-width:92vw;max-height:86vh;overflow-y:auto;
+  background:var(--field);border:2px solid var(--border);border-radius:14px;padding:18px;
+}
+.modal h3{font-size:14px;font-weight:800;color:var(--ice);letter-spacing:.03em;margin-bottom:4px}
+.modal .modal-sub{font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--label);margin-bottom:14px}
+.modal-foto{
+  width:100%;height:150px;border-radius:10px;border:2px solid var(--border);
+  background:var(--screen) center/cover no-repeat;margin-bottom:12px;
+  display:grid;place-items:center;overflow:hidden;
+}
+.modal-foto.empty{color:var(--label);font-size:10px;font-weight:800;letter-spacing:.1em;border-style:dashed}
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--label);margin-bottom:6px}
+.modal-field select{
+  width:100%;background:var(--screen);color:var(--ice);border:2px solid var(--border);
+  border-radius:8px;padding:9px 10px;font-family:var(--mono);font-size:11px;font-weight:800;
+}
+.modal-foto-btn{
+  width:100%;padding:14px;border-radius:10px;border:2px dashed var(--border);
+  background:var(--screen);color:var(--label);font-family:var(--mono);font-size:10px;
+  font-weight:800;letter-spacing:.08em;cursor:pointer;margin-bottom:14px;text-transform:uppercase;
+}
+.modal-foto-btn.taken{border-style:solid;border-color:var(--green);color:var(--green)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.modal-actions .btn-accion{flex:none;padding:10px 16px}
+
+/* toast de confirmación */
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+  background:var(--navy);border:2px solid var(--green);border-radius:10px;
+  padding:11px 18px;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--ice);
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:200;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .src-note{
   display:flex;align-items:center;gap:8px;justify-content:center;
@@ -351,16 +393,12 @@ main{flex:1;display:flex;min-height:0}
 }
 .wheel:hover .tire{border-color:var(--label)}
 .wheel.sel .tire{
-  border-color:var(--orange);
-  box-shadow:0 0 22px rgba(240,104,34,.6), 0 0 64px rgba(240,104,34,.28), inset 0 0 18px rgba(240,104,34,.28);
+  box-shadow:0 0 0 3px rgba(240,248,255,.55), 0 0 28px rgba(240,248,255,.3), inset 0 0 14px rgba(240,248,255,.18);
 }
-.wheel.sel .hub{border-color:rgba(240,104,34,.7)}
-.wheel.sel .hub span{color:var(--orange)}
 .pulse{
   position:absolute;inset:-10px;border-radius:50%;border:2px solid var(--orange);
   opacity:0;pointer-events:none;
 }
-.wheel.sel .pulse{animation:pulse 2.2s cubic-bezier(.22,1,.36,1) infinite}
 @keyframes pulse{
   0%{transform:scale(.82);opacity:.85}
   70%{transform:scale(1.22);opacity:0}
@@ -374,9 +412,43 @@ main{flex:1;display:flex;min-height:0}
 }
 .wheel.sel .pos-3d-tag{display:block}
 
+/* estado por posición — RTD MOVI vs umbrales de empresa/medida, o anomalía marcada
+   como causal de retiro (naranja/rojo manda, sin importar el RTD). Ver reglas de
+   negocio en specs/reglas_negocio.md — umbrales SIEMPRE configurables, no fijos. */
+.wheel.estado-normal .tire{border-color:var(--green)}
+.wheel.estado-normal .hub{border-color:rgba(31,157,107,.7)}
+.wheel.estado-normal .hub span{color:var(--green)}
+.wheel.estado-proximo .tire{border-color:var(--yellow)}
+.wheel.estado-proximo .hub{border-color:rgba(244,184,33,.7)}
+.wheel.estado-proximo .hub span{color:var(--yellow)}
+.wheel.estado-cambio .tire{border-color:var(--orange)}
+.wheel.estado-cambio .hub{border-color:rgba(240,104,34,.7)}
+.wheel.estado-cambio .hub span{color:var(--orange)}
+.wheel.estado-cambio .pulse{animation:pulse 1.8s cubic-bezier(.22,1,.36,1) infinite}
+
+/* botón flotante sobre posición en alerta (naranja/rojo) — sin requerir selección previa */
+#acciones-flotantes{position:absolute;inset:0;z-index:25;pointer-events:none}
+.accion-flotante{
+  position:absolute;transform:translate(-50%, calc(-100% - 16px));
+  display:flex;gap:6px;pointer-events:auto;
+}
+.accion-flotante::after{
+  content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:var(--border);
+}
+.af-btn{
+  font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.05em;
+  padding:8px 11px;border-radius:8px;border:2px solid var(--border);cursor:pointer;
+  background:var(--field);color:var(--ice);white-space:nowrap;text-transform:uppercase;
+  box-shadow:0 8px 22px rgba(0,0,0,.5);transition:border-color .15s;
+}
+.af-btn:hover{border-color:var(--label)}
+.af-btn.af-descartar{border-color:var(--orange);color:var(--orange)}
+.af-btn.af-descartar:hover{background:rgba(240,104,34,.15)}
+
 @media (prefers-reduced-motion: reduce){
   .world{animation:none}
-  .wheel.sel .pulse{animation:none;opacity:.5;transform:scale(1.05)}
+  .wheel.estado-cambio .pulse{animation:none;opacity:.5;transform:scale(1.05)}
   .meter-marker{transition:none}
 }
 </style>
@@ -468,23 +540,13 @@ main{flex:1;display:flex;min-height:0}
       <section class="card">
         <div class="card-head">
           <div>
-            <div class="eyebrow">MENÚ DE RENDIMIENTO</div>
-            <h2>RENDIMIENTO POR REENCAUCHE</h2>
+            <div class="eyebrow"><span class="dot o"></span>POS <span id="acciones-pos-n">1</span> · INDEPENDIENTE DE LA INSPECCIÓN</div>
+            <h2>ACCIONES SOBRE EL NEUMÁTICO</h2>
           </div>
         </div>
-        <div class="lbl" style="margin-bottom:8px">VIDA ÚTIL · RTD (MM) VS KM · 0–110 000</div>
-        <div class="chart-wrap" id="chart-wrap">
-          <div class="tooltip" id="tooltip"></div>
-        </div>
-        <div class="kpis">
-          <div class="kpi"><div class="lbl">Costo / KM</div><div class="v num" id="kpi-costo">S/ 0.087</div><div class="s num" id="kpi-costo-sub">VS NUEVO S/ 0.142 · <span class="up">−39%</span></div></div>
-          <div class="kpi"><div class="lbl">KM Acumul.</div><div class="v num" id="kpi-km">96 400</div><div class="s">DESDE MONTAJE ORIGINAL</div></div>
-          <div class="kpi"><div class="lbl">KM Proyect.</div><div class="v num" id="kpi-proj">+13 600</div><div class="s num" id="kpi-proj-sub">HASTA UMBRAL 4.0 MM</div></div>
-        </div>
-        <div class="gauges">
-          <div class="gauge"><svg width="76" height="60" data-gauge="comb"></svg><div class="gl">EFICIENCIA<br>COMBUSTIBLE</div></div>
-          <div class="gauge"><svg width="76" height="60" data-gauge="trac"></svg><div class="gl">NIVEL DE<br>TRACCIÓN</div></div>
-          <div class="gauge"><svg width="76" height="60" data-gauge="imp"></svg><div class="gl">DESGASTE ACEL.<br>/ FRENADO</div></div>
+        <div class="acciones-row">
+          <button type="button" class="btn-accion" id="btn-reten">Enviar a Retén</button>
+          <button type="button" class="btn-accion danger" id="btn-descartar">Descartar</button>
         </div>
       </section>
 
@@ -548,10 +610,54 @@ main{flex:1;display:flex;min-height:0}
       </div>
 
       <svg id="connector"></svg>
+      <div id="acciones-flotantes"></div>
 
       <div class="pos-dock" id="pos-dock"></div>
     </div>
   </main>
+
+  <!-- ================= MODAL: DETALLE DE ANOMALÍA ================= -->
+  <div class="overlay" id="overlay-anomalia">
+    <div class="modal">
+      <h3 id="am-titulo">Anomalía</h3>
+      <div class="modal-sub" id="am-sub">POS 1 · NEU-04182</div>
+      <div class="modal-foto" id="am-foto"></div>
+      <div class="modal-field">
+        <label>Posible causa</label>
+        <div id="am-causa" style="color:var(--ice);font-size:12px;font-weight:800">—</div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-accion" id="am-cerrar">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: DESCARTAR NEUMÁTICO ================= -->
+  <div class="overlay" id="overlay-descartar">
+    <div class="modal">
+      <h3>Descartar neumático</h3>
+      <div class="modal-sub" id="ds-sub">POS 1 · NEU-04182</div>
+      <button type="button" class="modal-foto-btn" id="ds-foto-btn">📷 Adjuntar foto del daño (obligatorio)</button>
+      <div class="modal-field">
+        <label>Causa de retiro (obligatorio)</label>
+        <select id="ds-causa">
+          <option value="">Seleccionar causa…</option>
+          <option>Servicio</option>
+          <option>Neumático</option>
+          <option>Conducción-Ruta</option>
+          <option>Mantenimiento Alineación</option>
+          <option>Proveedor</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-accion" id="ds-cancelar">Cancelar</button>
+        <button type="button" class="btn-accion danger" id="ds-confirmar" disabled>Confirmar descarte</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 </div>
 
 <script>
@@ -563,53 +669,40 @@ main{flex:1;display:flex;min-height:0}
    ============================================================ */
 const CONFIG_EMPRESA = { rtdCambio: 4.0, rtdProximo: 7.0, presionRef: 105, deltaAltoPct: 8, deltaBajoPct: 10, medida: '295/80R22.5', rtdMax: 16 };
 
+/* Placeholder de foto de anomalía — mockup autocontenido, sin red. En producción
+   viene de la foto registrada en la inspección (Capacitor Camera). */
+const FOTO_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="380" height="220">' +
+  '<rect width="380" height="220" fill="#0B1826"/>' +
+  '<circle cx="190" cy="92" r="34" fill="none" stroke="#7AABCC" stroke-width="4"/>' +
+  '<circle cx="190" cy="92" r="13" fill="#7AABCC"/>' +
+  '<rect x="150" y="56" width="80" height="14" rx="3" fill="#0B1826" stroke="#7AABCC" stroke-width="4"/>' +
+  '<text x="190" y="158" fill="#7AABCC" font-family="monospace" font-size="12" font-weight="700" ' +
+  'text-anchor="middle" letter-spacing="1">FOTO REGISTRADA · DEMO</text></svg>'
+);
+
 const POSICIONES = {
   1: { nombre:'DELANTERA IZQUIERDA', codigo:'NEU-04182', diseno:'RIB HWY',   reenc:2,
        canales:{A:7.2,B:6.9,C:6.5}, presion:98,
-       anomalias:[{txt:'DESGASTE IRREGULAR · HOMBRO', nivel:'REVISAR'}], desecho:false,
-       km:96400, costo:0.087, costoNuevo:0.142, gauges:{comb:94,trac:82,imp:37},
-       vidas:[[[0,14.5],[10,12.6],[20,10.9],[30,8.9],[38,6.8],[45,4.3]],
-              [[45,12.8],[55,10.7],[65,8.3],[72,6.4],[78,4.5]],
-              [[78,12.5],[86,10.2],[92,7.9],[96.4,6.5]]],
-       proy:[[96.4,6.5],[103,5.3],[110,4.1]] },
+       anomalias:[{txt:'Desgaste irregular · hombro', nivel:'REVISAR', causal:false,
+                    causaPosible:'Conducción-Ruta', foto:FOTO_DEMO}] },
   2: { nombre:'DELANTERA DERECHA', codigo:'NEU-03911', diseno:'RIB HWY',   reenc:1,
        canales:{A:11.6,B:11.4,C:11.2}, presion:106,
-       anomalias:[], desecho:false,
-       km:41200, costo:0.094, costoNuevo:0.142, gauges:{comb:96,trac:88,imp:22},
-       vidas:[[[0,14.5],[10,12.3],[20,9.8],[28,6.9],[34,4.4]],
-              [[34,12.9],[38,12.0],[41.2,11.2]]],
-       proy:[[41.2,11.2],[70,7.1],[95,4.6],[110,3.6]] },
+       anomalias:[{txt:'Corte profundo en flanco', nivel:'DESECHO', causal:true,
+                    causaPosible:'Servicio', foto:FOTO_DEMO}] },
   3: { nombre:'POSTERIOR IZQ · EXTERNA', codigo:'NEU-04533', diseno:'TRACCIÓN', reenc:1,
        canales:{A:10.1,B:9.9,C:10.3,D:9.8}, presion:108,
-       anomalias:[], desecho:false,
-       km:52800, costo:0.091, costoNuevo:0.139, gauges:{comb:93,trac:91,imp:31},
-       vidas:[[[0,15.0],[12,12.5],[24,9.7],[34,6.8],[42,4.4]],
-              [[42,13.2],[48,11.4],[52.8,9.8]]],
-       proy:[[52.8,9.8],[75,6.9],[98,4.4],[110,3.3]] },
+       anomalias:[] },
   4: { nombre:'POSTERIOR IZQ · INTERNA', codigo:'NEU-02748', diseno:'TRACCIÓN', reenc:3,
        canales:{A:4.4,B:4.1,C:3.9,D:4.6}, presion:101,
-       anomalias:[{txt:'DESGASTE CENTRO', nivel:'REVISAR'}], desecho:false,
-       km:128900, costo:0.079, costoNuevo:0.139, gauges:{comb:88,trac:64,imp:52},
-       vidas:[[[0,15.0],[11,12.2],[22,9.3],[31,6.5],[37,4.2]],
-              [[37,13.0],[47,10.4],[57,7.6],[66,4.6]],
-              [[66,12.8],[76,10.1],[86,7.3],[94,4.4]],
-              [[94,12.6],[102,9.8],[110,7.2]]],
-       proy:[], kmOffset:28.9 },
+       anomalias:[{txt:'Desgaste centro', nivel:'REVISAR', causal:false,
+                    causaPosible:'Mantenimiento Alineación', foto:null}] },
   5: { nombre:'POSTERIOR DER · INTERNA', codigo:'NEU-04102', diseno:'TRACCIÓN', reenc:1,
        canales:{A:10.6,B:10.4,C:10.9,D:10.7}, presion:116,
-       anomalias:[], desecho:false,
-       km:49300, costo:0.092, costoNuevo:0.139, gauges:{comb:92,trac:90,imp:28},
-       vidas:[[[0,15.0],[12,12.4],[24,9.5],[33,6.6],[39,4.3]],
-              [[39,13.1],[45,11.6],[49.3,10.4]]],
-       proy:[[49.3,10.4],[72,7.2],[96,4.3],[110,3.1]] },
+       anomalias:[] },
   6: { nombre:'POSTERIOR DER · EXTERNA', codigo:'NEU-03650', diseno:'TRACCIÓN', reenc:2,
        canales:{A:7.4,B:7.0,C:6.9,D:7.2}, presion:104,
-       anomalias:[], desecho:false,
-       km:88100, costo:0.084, costoNuevo:0.139, gauges:{comb:91,trac:79,imp:35},
-       vidas:[[[0,15.0],[12,12.3],[24,9.4],[33,6.5],[40,4.2]],
-              [[40,13.1],[50,10.6],[60,7.8],[68,4.5]],
-              [[68,12.9],[78,10.3],[88.1,6.9]]],
-       proy:[[88.1,6.9],[98,5.4],[110,3.8]] },
+       anomalias:[] },
 };
 
 /* ---- Reglas de negocio (paridad con reference/calculations.py) ---- */
@@ -625,96 +718,20 @@ function estadoPresion(psi, cfg){         // solo modo FRÍO (CALIENTE: sin defi
   if (d < -cfg.deltaBajoPct) return {txt:'BAJA',  cls:'cambio',  delta:d};
   return {txt:'NORMAL', cls:'normal', delta:d};
 }
-const fmtKm = km => Math.round(km).toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ');
-
-/* ================= GRÁFICO DE VIDA ÚTIL ================= */
-const CH = {w:396,h:198,padL:30,padR:38,padT:12,padB:22,xMax:110,yMax:16};
-const sx = km => CH.padL + km/CH.xMax*(CH.w-CH.padL-CH.padR);
-const sy = mm => CH.padT + (1-mm/CH.yMax)*(CH.h-CH.padT-CH.padB);
-let hoverPts = [];
-
-function renderChart(d, cfg){
-  const NS='http://www.w3.org/2000/svg';
-  let s = `<svg viewBox="0 0 ${CH.w} ${CH.h}" xmlns="${NS}" aria-label="Degradación de RTD por kilómetro">`;
-  // grilla recesiva
-  for (const mm of [0,4,8,12,16])
-    s += `<line x1="${CH.padL}" y1="${sy(mm)}" x2="${CH.w-CH.padR}" y2="${sy(mm)}" stroke="rgba(122,171,204,.12)" stroke-width="1"/>
-          <text x="${CH.padL-6}" y="${sy(mm)+3}" text-anchor="end" font-size="8" font-weight="800" fill="#7AABCC" font-family="inherit">${mm}</text>`;
-  for (const km of [0,25,50,75,110])
-    s += `<line x1="${sx(km)}" y1="${CH.padT}" x2="${sx(km)}" y2="${CH.h-CH.padB}" stroke="rgba(122,171,204,.07)" stroke-width="1"/>
-          <text x="${sx(km)}" y="${CH.h-8}" text-anchor="middle" font-size="8" font-weight="800" fill="#7AABCC" font-family="inherit">${km===0?'0':km+'K'}</text>`;
-  // umbrales (config empresa)
-  for (const [val,color,tag] of [[cfg.rtdProximo,'#f4b821','7.0'],[cfg.rtdCambio,'#F06822','4.0']])
-    s += `<line x1="${CH.padL}" y1="${sy(val)}" x2="${CH.w-CH.padR}" y2="${sy(val)}" stroke="${color}" stroke-width="1.5" stroke-dasharray="5 4" opacity=".75"/>
-          <text x="${CH.w-CH.padR+5}" y="${sy(val)+3}" font-size="8" font-weight="800" fill="${color}" font-family="inherit">${tag}</text>`;
-  // vidas (serie única, tono hielo)
-  hoverPts = [];
-  d.vidas.forEach((vida,i)=>{
-    const pts = vida.map(p=>`${sx(p[0])},${sy(p[1])}`).join(' ');
-    s += `<polyline points="${pts}" fill="none" stroke="#F0F8FF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    // caída vertical del reencauche (punteada) + marcador R
-    if (i>0){
-      const prev=d.vidas[i-1], last=prev[prev.length-1], first=vida[0];
-      s += `<line x1="${sx(last[0])}" y1="${sy(last[1])}" x2="${sx(first[0])}" y2="${sy(first[1])}" stroke="rgba(240,248,255,.35)" stroke-width="1.5" stroke-dasharray="2 3"/>
-            <rect x="${sx(first[0])-4.5}" y="${sy(first[1])-4.5}" width="9" height="9" transform="rotate(45 ${sx(first[0])} ${sy(first[1])})" fill="#f4b821" stroke="#111E2E" stroke-width="2"/>
-            <text x="${sx(first[0])}" y="${sy(first[1])-9}" text-anchor="middle" font-size="8" font-weight="800" fill="#f4b821" font-family="inherit">R${i}</text>`;
-    }
-    vida.forEach(p=>hoverPts.push({km:p[0],mm:p[1],vida:i+1}));
-  });
-  // punto actual + proyección
-  const lastVida = d.vidas[d.vidas.length-1], cur = lastVida[lastVida.length-1];
-  if (d.proy && d.proy.length){
-    const pp = d.proy.map(p=>`${sx(p[0])},${sy(p[1])}`).join(' ');
-    s += `<polyline points="${pp}" fill="none" stroke="rgba(240,248,255,.45)" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round"/>`;
-  }
-  s += `<circle cx="${sx(cur[0])}" cy="${sy(cur[1])}" r="5" fill="#F0F8FF" stroke="#111E2E" stroke-width="2"/>
-        <text x="${sx(cur[0])}" y="${sy(cur[1])-10}" text-anchor="middle" font-size="8.5" font-weight="800" fill="#F0F8FF" font-family="inherit">HOY ${cur[1].toFixed(1)}</text>`;
-  s += `<line id="xhair" x1="0" y1="${CH.padT}" x2="0" y2="${CH.h-CH.padB}" stroke="rgba(240,248,255,.4)" stroke-width="1" visibility="hidden"/>`;
-  s += `</svg>`;
-  const wrap = document.getElementById('chart-wrap');
-  wrap.querySelectorAll('svg').forEach(el=>el.remove());
-  wrap.insertAdjacentHTML('beforeend', s);
-  bindHover(wrap);
-}
-
-function bindHover(wrap){
-  const svg = wrap.querySelector('svg'), tip = document.getElementById('tooltip'), xh = svg.querySelector('#xhair');
-  svg.addEventListener('mousemove', e=>{
-    const r = svg.getBoundingClientRect();
-    const km = ((e.clientX-r.left)/r.width*CH.w - CH.padL)/(CH.w-CH.padL-CH.padR)*CH.xMax;
-    let best=null, bd=1e9;
-    for (const p of hoverPts){ const d=Math.abs(p.km-km); if(d<bd){bd=d;best=p;} }
-    if(!best){tip.style.display='none';xh.setAttribute('visibility','hidden');return;}
-    xh.setAttribute('x1',sx(best.km)); xh.setAttribute('x2',sx(best.km));
-    xh.setAttribute('visibility','visible');
-    tip.innerHTML = `<div class="tl">KM ${fmtKm(best.km*1000)} · VIDA ${best.vida}</div>RTD ${best.mm.toFixed(1)} MM`;
-    tip.style.display='block';
-    const tx = sx(best.km)/CH.w*r.width, ty = sy(best.mm)/CH.h*r.height;
-    tip.style.left = Math.min(tx+12, r.width-120)+'px';
-    tip.style.top = Math.max(ty-46, 0)+'px';
-  });
-  svg.addEventListener('mouseleave', ()=>{tip.style.display='none';xh.setAttribute('visibility','hidden');});
-}
-
-/* ================= GAUGES RADIALES ================= */
-function renderGauge(svgEl, pct){
-  const cx=38, cy=40, r=27, a0=Math.PI*1.2, a1=-Math.PI*.2;   // arco 252°
-  const arc=(from,to,color,w)=>{
-    const p=t=>[cx+r*Math.cos(t), cy-r*Math.sin(t)];
-    const [x0,y0]=p(from),[x1,y1]=p(to);
-    const large=(from-to)>Math.PI?1:0;
-    return `<path d="M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round"/>`;
-  };
-  const av = a0-(a0-a1)*Math.max(0,Math.min(100,pct))/100;
-  svgEl.innerHTML = arc(a0,a1,'#1B2D42',6) + arc(a0,av,'#7AABCC',6) +
-    `<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="14" font-weight="800" fill="#F0F8FF" font-family="inherit">${pct}</text>` +
-    `<text x="${cx}" y="${cy+15}" text-anchor="middle" font-size="7" font-weight="800" fill="#7AABCC" font-family="inherit">%</text>`;
+/* estado de la posición para el gemelo digital 3D: RTD por umbral de empresa/medida,
+   salvo que haya una anomalía marcada como causal de retiro → manda naranja/rojo. */
+function estadoWheel(n){
+  const d = POSICIONES[n];
+  const causal = d.anomalias.some(a=>a.causal);
+  if (causal) return {cls:'cambio', dot:'o'};
+  return estadoRTD(rtdMovi(d.canales), CONFIG_EMPRESA);
 }
 
 /* ================= RENDER DEL PANEL ================= */
 function renderPanel(n){
   const d = POSICIONES[n], cfg = CONFIG_EMPRESA;
   const movi = rtdMovi(d.canales), eR = estadoRTD(movi,cfg), eP = estadoPresion(d.presion,cfg);
+  const desecho = d.anomalias.some(a=>a.causal);
 
   document.getElementById('pos-title').textContent = `POS ${n} · ${d.nombre}`;
   const badge = document.getElementById('estado-badge');
@@ -754,29 +771,107 @@ function renderPanel(n){
   pB.className = 'badge '+eP.cls;
 
   document.getElementById('anomalias').innerHTML = d.anomalias.length
-    ? d.anomalias.map(a=>`<div class="anom-item">${a.txt}<span class="badge cambio">⚠ ${a.nivel}</span></div>`).join('')
+    ? d.anomalias.map((a,i)=>`<div class="anom-item" data-idx="${i}">
+        <span>${a.txt}${a.foto?' <span class="foto-tag">📷</span>':''}</span>
+        <span class="badge ${a.causal?'cambio':'proximo'}">⚠ ${a.nivel}</span>
+      </div>`).join('')
     : `<div class="anom-item anom-empty">SIN ANOMALÍAS REGISTRADAS</div>`;
-  document.getElementById('desecho').textContent = d.desecho?'SÍ':'NO';
-  document.getElementById('desecho').style.color = d.desecho?'var(--orange)':'var(--ice)';
+  document.getElementById('desecho').textContent = desecho?'SÍ':'NO';
+  document.getElementById('desecho').style.color = desecho?'var(--orange)':'var(--ice)';
 
-  renderChart(d, cfg);
-  document.getElementById('kpi-costo').textContent = `S/ ${d.costo.toFixed(3)}`;
-  const ahorro = Math.round((1-d.costo/d.costoNuevo)*100);
-  document.getElementById('kpi-costo-sub').innerHTML =
-    `VS NUEVO S/ ${d.costoNuevo.toFixed(3)} · <span class="up">−${ahorro}%</span>`;
-  document.getElementById('kpi-km').textContent = fmtKm(d.km);
-  const lastVida=d.vidas[d.vidas.length-1], cur=lastVida[lastVida.length-1];
-  if (d.proy && d.proy.length){
-    const rate=(cur[1]-d.proy[d.proy.length-1][1])/((d.proy[d.proy.length-1][0]-cur[0])||1);
-    const kmLeft=Math.max(0,(cur[1]-cfg.rtdCambio)/(rate||1))*1000;
-    document.getElementById('kpi-proj').textContent = '+'+fmtKm(kmLeft);
-    document.getElementById('kpi-proj-sub').textContent = `HASTA UMBRAL ${cfg.rtdCambio.toFixed(1)} MM`;
-  } else {
-    document.getElementById('kpi-proj').textContent = '—';
-    document.getElementById('kpi-proj-sub').textContent = 'ÚLTIMO CICLO EN CURSO';
-  }
-  document.querySelectorAll('[data-gauge]').forEach(g=>renderGauge(g, d.gauges[g.dataset.gauge]));
+  document.getElementById('acciones-pos-n').textContent = n;
 }
+
+/* ================= ANOMALÍAS · DETALLE + FOTO ================= */
+document.getElementById('anomalias').addEventListener('click', e=>{
+  const item = e.target.closest('.anom-item'); if(!item || item.classList.contains('anom-empty')) return;
+  const a = POSICIONES[selected].anomalias[+item.dataset.idx];
+  document.getElementById('am-titulo').textContent = a.txt;
+  document.getElementById('am-sub').textContent = `POS ${selected} · ${POSICIONES[selected].codigo}`;
+  document.getElementById('am-causa').textContent = a.causaPosible || '—';
+  const foto = document.getElementById('am-foto');
+  if (a.foto){ foto.classList.remove('empty'); foto.style.backgroundImage = `url("${a.foto}")`; foto.textContent=''; }
+  else { foto.classList.add('empty'); foto.style.backgroundImage='none'; foto.textContent='SIN FOTO REGISTRADA'; }
+  document.getElementById('overlay-anomalia').classList.add('open');
+});
+document.getElementById('am-cerrar').addEventListener('click', ()=>{
+  document.getElementById('overlay-anomalia').classList.remove('open');
+});
+
+/* ================= ACCIONES SOBRE EL NEUMÁTICO ================= */
+/* Independientes del formulario de inspección diaria: no se disparan al guardar
+   una inspección, son botones aparte sobre el neumático seleccionado. */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function enviarARetenAction(n){
+  showToast(`✓ POS ${n} · ${POSICIONES[n].codigo} enviado a retén`);
+}
+let descartarPos = null;
+let descartarFotoTomada = false;
+function openDescartarModal(n){
+  descartarPos = n;
+  descartarFotoTomada = false;
+  document.getElementById('ds-sub').textContent = `POS ${n} · ${POSICIONES[n].codigo}`;
+  const fotoBtn = document.getElementById('ds-foto-btn');
+  fotoBtn.textContent = '📷 Adjuntar foto del daño (obligatorio)';
+  fotoBtn.classList.remove('taken');
+  document.getElementById('ds-causa').value = '';
+  document.getElementById('ds-confirmar').disabled = true;
+  document.getElementById('overlay-descartar').classList.add('open');
+}
+function closeDescartarModal(){
+  document.getElementById('overlay-descartar').classList.remove('open');
+}
+function checkDescartarValido(){
+  document.getElementById('ds-confirmar').disabled =
+    !(descartarFotoTomada && document.getElementById('ds-causa').value);
+}
+document.getElementById('ds-foto-btn').addEventListener('click', ()=>{
+  descartarFotoTomada = true;
+  const fotoBtn = document.getElementById('ds-foto-btn');
+  fotoBtn.textContent = '✓ Foto del daño adjuntada';
+  fotoBtn.classList.add('taken');
+  checkDescartarValido();
+});
+document.getElementById('ds-causa').addEventListener('change', checkDescartarValido);
+document.getElementById('ds-cancelar').addEventListener('click', closeDescartarModal);
+document.getElementById('ds-confirmar').addEventListener('click', ()=>{
+  const causa = document.getElementById('ds-causa').value;
+  showToast(`✓ POS ${descartarPos} descartado · causa: ${causa}`);
+  closeDescartarModal();
+});
+document.getElementById('btn-reten').addEventListener('click', ()=>enviarARetenAction(selected));
+document.getElementById('btn-descartar').addEventListener('click', ()=>openDescartarModal(selected));
+
+/* ================= BOTÓN FLOTANTE SOBRE POSICIÓN EN ALERTA ================= */
+/* Se muestra sobre la rueda en el 3D sin requerir clic previo para seleccionarla. */
+function buildFloatingActions(){
+  document.getElementById('acciones-flotantes').innerHTML = Object.keys(POSICIONES)
+    .filter(n=>estadoWheel(n).cls==='cambio')
+    .map(n=>`<div class="accion-flotante" data-pos="${n}">
+      <button type="button" class="af-btn" data-action="reten" data-pos="${n}">Enviar a Retén</button>
+      <button type="button" class="af-btn af-descartar" data-action="descartar" data-pos="${n}">Descartar</button>
+    </div>`).join('');
+}
+function updateFloatingActionsPosition(){
+  const sr = stage.getBoundingClientRect();
+  document.querySelectorAll('.accion-flotante').forEach(el=>{
+    const wr = document.querySelector(`#wheel-${el.dataset.pos} .tire`).getBoundingClientRect();
+    el.style.left = (wr.left + wr.width/2 - sr.left) + 'px';
+    el.style.top  = (wr.top - sr.top) + 'px';
+  });
+}
+document.getElementById('acciones-flotantes').addEventListener('click', e=>{
+  const b = e.target.closest('.af-btn'); if(!b) return;
+  const n = +b.dataset.pos;
+  if (b.dataset.action==='reten') enviarARetenAction(n);
+  else openDescartarModal(n);
+});
 
 /* ================= SELECCIÓN + DOCK ================= */
 const SHORT={1:'DEL IZQ',2:'DEL DER',3:'POS IZQ EXT',4:'POS IZQ INT',5:'POS DER INT',6:'POS DER EXT'};
@@ -784,10 +879,17 @@ let selected = 1;
 
 function renderDock(){
   document.getElementById('pos-dock').innerHTML = Object.keys(POSICIONES).map(n=>{
-    const e = estadoRTD(rtdMovi(POSICIONES[n].canales), CONFIG_EMPRESA);
+    const e = estadoWheel(n);
     return `<button class="pos-chip ${+n===selected?'sel':''}" data-pos="${n}" type="button" aria-pressed="${+n===selected}">
       <span class="dot ${e.dot}"></span><span class="pn num">P${n}</span><span class="pl">${SHORT[n]}</span></button>`;
   }).join('');
+}
+function updateWheelStates(){
+  Object.keys(POSICIONES).forEach(n=>{
+    const w = document.getElementById('wheel-'+n), e = estadoWheel(n);
+    w.classList.remove('estado-normal','estado-proximo','estado-cambio');
+    w.classList.add('estado-'+e.cls);
+  });
 }
 function select(n){
   selected = +n;
@@ -815,10 +917,12 @@ function drawConnector(){
     <circle cx="${tx}" cy="${ty}" r="1.8" fill="#F06822"/>
     <circle cx="${tx}" cy="${y0}" r="3" fill="#F06822"/>`;
 }
-(function loop(){ drawConnector(); requestAnimationFrame(loop); })();
+(function loop(){ drawConnector(); updateFloatingActionsPosition(); requestAnimationFrame(loop); })();
 window.addEventListener('resize', drawConnector);
 
 /* init */
+updateWheelStates();
+buildFloatingActions();
 select(1);
 </script>
 
