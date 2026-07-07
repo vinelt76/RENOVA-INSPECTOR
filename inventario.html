@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RENOVA — Inventario</title>
+<!--
+  PANTALLA INVENTARIO — vista de consulta para el JEFE DE FLOTA / almacén.
+  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
+
+  Otra pantalla principal del dashboard web (NO modal, NO overlay, NO sección de
+  Inspección ni de Rendimiento). Lista ÚNICAMENTE neumáticos que NO están
+  instalados en ninguna unidad.
+
+  Un solo componente con DOS estados, alternados por el switch superior — mismo
+  patrón visual del switch de Rendimiento (activo = naranja sólido):
+    · "En Inventario" → neumáticos retirados temporalmente / en retén, disponibles
+                        para REINSTALAR. Card con botón "Reinstalar".
+    · "Descartado"    → neumáticos dados de baja definitivamente. SOLO consulta,
+                        sin acciones. Estado FINAL.
+
+  Reglas que respeta este prototipo:
+    · El ESTADO del neumático decide dónde aparece. No hay fuente de datos nueva:
+      una sola lista TIRES; status ∈ {"inventario","descartado"} (e "instalado"
+      cuando se reinstala, que lo saca de esta vista). No se duplican datos.
+    · Reinstalar REUTILIZA el evento de Instalación existente (aquí representado
+      por su formulario). Exige Unidad, Posición, Km Instalación y RTD Instalación;
+      no permite reinstalar sin esos datos. Tras reinstalar, el neumático deja de
+      aparecer en Inventario.
+    · Descartado es FINAL: sin reinstalar, editar, cambiar causa/foto, restaurar
+      ni eliminar.
+    · El # Serie/Código es clickeable en AMBAS vistas → abre el Historial de
+      Neumático (misma vista interna que en Inspección/Rendimiento; aquí su
+      interacción queda preparada, el contenido detallado es de otra pantalla).
+    · Análisis agregado: ranking de causas de retiro, calculado SOLO sobre
+      neumáticos con causa registrada. Filtros simples (marca/medida/diseño/estado).
+      Resumen preventivo, no un dashboard de rendimiento.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Paleta RENOVA (DESIGN.md) */
+    --screen-dark:#07111C;
+    --field-dark:#111E2E;
+    --navy-brand:#15233f;
+    --border-dark:#1B2D42;
+    --label-blue:#7AABCC;
+    --value-ice:#F0F8FF;
+    --ember-orange:#F06822;
+    --signal-yellow:#f4b821;
+    --verified-green:#1f9d6b;
+
+    /* Descartado = baja definitiva. Acento rojo apagado propio del estado final,
+       deliberadamente distinto del naranja de acción (no invita a tocar). */
+    --discard-red:#c0453a;
+    --discard-red-bg:rgba(192,69,58,.12);
+
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--screen-dark);
+    color:var(--value-ice);
+    font-family:var(--mono);
+    font-weight:700;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    padding-bottom:48px;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ───────────────── Header ───────────────── */
+  header{
+    background:var(--navy-brand);
+    padding:18px 16px 16px;
+    position:sticky;top:0;z-index:20;
+    /* filo inferior = "cinta de seguridad" (DESIGN.md §7) */
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-inner{max-width:1080px;margin:0 auto}
+  .brand .logo{
+    font-family:var(--display);font-size:32px;line-height:1;
+    letter-spacing:.06em;color:var(--value-ice);
+  }
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{
+    font-family:var(--display);font-size:19px;line-height:1;
+    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
+  }
+  .brand .subtitle{
+    font-size:11px;font-weight:800;letter-spacing:.06em;
+    color:var(--label-blue);margin-top:10px;max-width:640px;line-height:1.5;
+  }
+
+  /* ───────────────── Layout ───────────────── */
+  main{max-width:1080px;margin:0 auto;padding:16px}
+
+  /* ───────────────── Switch de estado (segmented) ─────────────────
+     Mismo patrón del switch de Rendimiento: activo = naranja SÓLIDO,
+     inactivo neutro, bordes redondeados. Solo un estado a la vez. */
+  .switch{
+    display:grid;grid-template-columns:1fr 1fr;gap:4px;
+    background:var(--field-dark);
+    border:2px solid var(--border-dark);
+    border-radius:12px;padding:4px;margin-bottom:18px;
+  }
+  .switch button{
+    font-family:var(--mono);font-weight:800;font-size:12px;
+    letter-spacing:.08em;text-transform:uppercase;
+    color:var(--label-blue);background:transparent;border:0;
+    padding:12px 10px;border-radius:9px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    transition:background .15s ease-out,color .15s ease-out,transform .12s ease-out;
+  }
+  .switch button[aria-pressed="true"]{background:var(--ember-orange);color:#fff}
+  .switch button[aria-pressed="false"]:hover{color:var(--value-ice)}
+  .switch button:active{transform:scale(.97)}
+  .switch .count{
+    font-size:11px;font-weight:800;padding:1px 7px;border-radius:20px;
+    background:rgba(255,255,255,.14);color:inherit;min-width:22px;
+  }
+  .switch button[aria-pressed="false"] .count{background:var(--border-dark);color:var(--label-blue)}
+
+  /* ───────────────── Filtros simples ───────────────── */
+  .filters{
+    display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:flex-end;
+  }
+  .filter{display:flex;flex-direction:column;gap:6px}
+  .filter label{
+    font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .filter select{
+    appearance:none;-webkit-appearance:none;
+    background:var(--field-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;font-size:13px;
+    border:2px solid var(--border-dark);border-radius:8px;
+    padding:9px 34px 9px 12px;cursor:pointer;min-width:132px;
+    transition:border-color .15s ease-out;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;
+  }
+  .filter select:focus{outline:none;border-color:var(--ember-orange)}
+  .filter-clear{
+    font-family:var(--mono);font-weight:800;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--label-blue);background:transparent;border:2px solid var(--border-dark);
+    border-radius:8px;padding:9px 14px;cursor:pointer;transition:border-color .15s,color .15s;
+  }
+  .filter-clear:hover{color:var(--value-ice);border-color:#294263}
+
+  /* ───────────────── Grid de cards ───────────────── */
+  .grid{
+    display:grid;gap:14px;
+    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+    margin-bottom:14px;
+  }
+
+  .tcard{
+    background:var(--field-dark);
+    border:2px solid var(--border-dark);
+    border-radius:16px;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  /* Filo de estado del neumático descartado — señal de baja definitiva. */
+  .tcard.discard{border-color:#3a2320}
+
+  /* Cabecera clickeable: # Serie/Código → Historial. SOLO este bloque. */
+  .identity{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    width:100%;text-align:left;font-family:var(--mono);cursor:pointer;
+    background:var(--screen-dark);border:0;border-bottom:2px solid var(--border-dark);
+    padding:13px 16px;color:var(--value-ice);
+    transition:background .15s ease-out;
+  }
+  .identity:hover{background:#0b1826}
+  .identity:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--ember-orange)}
+  .identity .id-serie{
+    display:flex;align-items:center;gap:8px;
+    font-size:16px;font-weight:800;letter-spacing:.02em;color:var(--value-ice);
+  }
+  .identity .id-serie .hash{color:var(--ember-orange)}
+  .identity .id-hint{
+    display:flex;align-items:center;gap:5px;flex:none;
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .identity .id-hint svg{width:12px;height:12px}
+
+  /* Chip de estado del neumático (N / R1 / R2) */
+  .estado-chip{
+    font-size:11px;font-weight:800;letter-spacing:.06em;
+    padding:3px 9px;border-radius:20px;border:2px solid var(--border-dark);
+    color:var(--label-blue);background:transparent;flex:none;
+  }
+  .estado-chip.re{color:var(--signal-yellow);border-color:rgba(244,184,33,.4)}  /* reencauche = hito */
+
+  .tcard-body{padding:15px 16px;flex:1;display:flex;flex-direction:column;gap:14px}
+
+  .id-line{display:flex;flex-direction:column;gap:4px}
+  .id-line .marca{
+    font-size:15px;font-weight:800;color:var(--value-ice);letter-spacing:.02em;
+  }
+  .id-line .diseno{
+    font-size:12px;font-weight:700;color:var(--label-blue);letter-spacing:.02em;
+  }
+
+  /* Grilla de datos crudos del neumático (dato manda) */
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+  .fact .f-label{
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .fact .f-value{
+    font-size:14px;font-weight:800;color:var(--value-ice);margin-top:3px;line-height:1.15;
+  }
+  .fact .f-value small{font-size:10px;font-weight:800;color:var(--label-blue);margin-left:2px}
+  .fact .f-value.muted{color:var(--label-blue);font-weight:700;font-size:12px}
+  .fact.wide{grid-column:1 / -1}
+
+  /* Causa de retiro (solo descartado) */
+  .causa{
+    border:2px solid #3a2320;border-radius:10px;padding:11px 12px;
+    background:var(--discard-red-bg);
+  }
+  .causa .c-label{
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .causa .c-value{font-size:13px;font-weight:800;color:var(--value-ice);margin-top:4px;line-height:1.3}
+
+  /* Foto del daño (miniatura estática — solo consulta) */
+  .foto{
+    display:flex;align-items:center;gap:11px;
+    border:2px solid var(--border-dark);border-radius:10px;padding:9px 11px;
+  }
+  .foto .thumb{
+    width:46px;height:46px;border-radius:8px;flex:none;overflow:hidden;
+    border:2px solid var(--border-dark);background:var(--screen-dark);
+  }
+  .foto .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .foto .f-cap{
+    font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--label-blue);line-height:1.4;
+  }
+  .foto .f-cap b{display:block;color:var(--value-ice);font-size:11px;margin-bottom:2px}
+
+  /* Acción: Reinstalar (solo En Inventario) — botón primario naranja sólido */
+  .tcard-foot{padding:0 16px 16px;margin-top:auto}
+  .btn-reinstalar{
+    width:100%;font-family:var(--mono);font-weight:800;font-size:13px;
+    letter-spacing:.08em;text-transform:uppercase;
+    color:#fff;background:var(--ember-orange);border:0;border-radius:10px;
+    padding:13px 14px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    transition:filter .15s ease-out,transform .12s ease-out;
+  }
+  .btn-reinstalar:hover{filter:brightness(1.08)}
+  .btn-reinstalar:active{transform:scale(.985)}
+  .btn-reinstalar svg{width:15px;height:15px}
+  .btn-reinstalar:focus-visible{outline:2px solid var(--value-ice);outline-offset:2px}
+
+  /* Sello "BAJA DEFINITIVA" en el pie del descartado (sin acción) */
+  .final-seal{
+    padding:0 16px 15px;margin-top:auto;
+    display:flex;align-items:center;gap:8px;
+    font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--discard-red);
+  }
+  .final-seal svg{width:14px;height:14px}
+
+  /* ───────────────── Estado vacío ───────────────── */
+  .empty{
+    border:2px dashed var(--border-dark);border-radius:14px;
+    padding:44px 24px;text-align:center;color:var(--label-blue);
+    font-size:13px;font-weight:700;letter-spacing:.02em;line-height:1.6;
+    grid-column:1 / -1;
+  }
+  .empty svg{width:34px;height:34px;color:var(--border-dark);margin-bottom:12px;display:inline-block}
+
+  /* ───────────────── Análisis: ranking de causas ───────────────── */
+  .analysis{margin-top:26px}
+  .analysis-head{
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:6px;
+  }
+  .analysis-sub{
+    font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--label-blue);
+    opacity:.8;margin-bottom:14px;line-height:1.5;
+  }
+  .ranking{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;
+    padding:16px 18px;
+  }
+  .rank-row{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:12px;padding:9px 0}
+  .rank-row + .rank-row{border-top:1px solid rgba(27,45,66,.7)}
+  .rank-pos{
+    font-size:13px;font-weight:800;color:var(--label-blue);text-align:center;
+  }
+  .rank-row:first-child .rank-pos{color:var(--signal-yellow)}
+  .rank-body{min-width:0}
+  .rank-causa{font-size:13px;font-weight:800;color:var(--value-ice);letter-spacing:.02em}
+  .rank-bar-track{height:7px;background:var(--screen-dark);border-radius:4px;overflow:hidden;margin-top:7px}
+  .rank-bar-fill{
+    display:block;height:100%;background:var(--ember-orange);border-radius:4px;min-width:3px;
+    transition:width .3s cubic-bezier(.22,1,.36,1);
+  }
+  .rank-count{font-size:13px;font-weight:800;color:var(--value-ice);white-space:nowrap}
+  .rank-count small{font-size:9px;font-weight:700;color:var(--label-blue);margin-left:3px;text-transform:uppercase;letter-spacing:.06em}
+  .rank-empty{
+    text-align:center;color:var(--label-blue);font-size:12px;font-weight:700;line-height:1.6;padding:22px 12px;
+  }
+
+  /* ───────────────── Modal Historial (interacción preparada) ───────────────── */
+  /* ───────────────── Modal genérico (sheet) ───────────────── */
+  .scrim{
+    position:fixed;inset:0;background:rgba(4,9,16,.72);
+    display:none;align-items:flex-end;justify-content:center;z-index:60;
+  }
+  .scrim.open{display:flex}
+  @media (min-width:640px){.scrim{align-items:center}}
+  .sheet{
+    width:100%;max-width:520px;
+    background:var(--field-dark);
+    border-top:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+    border-radius:18px 18px 0 0;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);   /* única sombra permitida: overlay flotante */
+    padding:20px 20px 24px;
+    max-height:92vh;overflow-y:auto;
+    transform:translateY(12px);
+    animation:sheetIn .25s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  @media (min-width:640px){.sheet{border-radius:18px}}
+  @keyframes sheetIn{to{transform:translateY(0)}}
+  .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .sheet-title{font-family:var(--display);font-size:22px;letter-spacing:.09em;color:var(--value-ice);line-height:1}
+  .sheet-sub{font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--label-blue);margin-top:8px;line-height:1.5}
+  .sheet-sub b{color:var(--value-ice)}
+  .sheet-close{
+    background:transparent;border:0;cursor:pointer;color:rgba(255,255,255,.9);
+    width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex:none;
+    border-radius:10px;transition:background .15s ease-out;
+  }
+  .sheet-close:hover{background:var(--border-dark)}
+  .sheet-close svg{width:20px;height:20px}
+  .sheet-placeholder{
+    border:2px dashed var(--border-dark);border-radius:12px;
+    padding:32px 20px;text-align:center;color:var(--label-blue);
+    font-size:12px;font-weight:700;letter-spacing:.02em;line-height:1.7;
+  }
+  .sheet-placeholder span{display:block;color:var(--border-dark);font-size:10px;margin-top:10px;letter-spacing:.1em;text-transform:uppercase}
+
+  /* Formulario de Reinstalación (evento de Instalación) */
+  .form-field{margin-bottom:16px}
+  .form-field label{
+    display:block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:8px;
+  }
+  .form-field label .req{color:var(--ember-orange);margin-left:3px}
+  .form-field select,.form-field input{
+    width:100%;appearance:none;-webkit-appearance:none;
+    background:var(--screen-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;font-size:15px;
+    border:2px solid var(--border-dark);border-radius:10px;
+    padding:12px 14px;transition:border-color .15s ease-out;
+  }
+  .form-field select{
+    padding-right:38px;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  .form-field input::placeholder{color:#3c5a78}
+  .form-field select:focus,.form-field input:focus{outline:none;border-color:var(--ember-orange)}
+  .form-field.invalid select,.form-field.invalid input{border-color:var(--discard-red)}
+  .form-field .err{
+    font-size:10px;font-weight:800;letter-spacing:.02em;color:var(--discard-red);
+    margin-top:7px;display:none;
+  }
+  .form-field.invalid .err{display:block}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .reinstalar-target{
+    background:var(--screen-dark);border:2px solid var(--border-dark);border-radius:10px;
+    padding:12px 14px;margin-bottom:18px;
+  }
+  .reinstalar-target .rt-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .reinstalar-target .rt-serie{font-size:16px;font-weight:800;color:var(--value-ice);margin-top:5px}
+  .reinstalar-target .rt-serie .hash{color:var(--ember-orange)}
+  .reinstalar-target .rt-meta{font-size:11px;font-weight:700;color:var(--label-blue);margin-top:4px}
+  .btn-submit{
+    width:100%;font-family:var(--mono);font-weight:800;font-size:14px;
+    letter-spacing:.08em;text-transform:uppercase;
+    color:#fff;background:var(--ember-orange);border:0;border-radius:11px;
+    padding:15px 14px;cursor:pointer;margin-top:6px;
+    transition:filter .15s ease-out,transform .12s ease-out;
+  }
+  .btn-submit:hover{filter:brightness(1.08)}
+  .btn-submit:active{transform:scale(.99)}
+
+  /* Toast de confirmación */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--navy-brand);border:2px solid var(--verified-green);
+    border-radius:12px;padding:13px 18px;z-index:80;
+    display:flex;align-items:center;gap:11px;opacity:0;pointer-events:none;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+    transition:opacity .25s ease-out,transform .25s ease-out;
+    max-width:calc(100% - 32px);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast svg{width:18px;height:18px;color:var(--verified-green);flex:none}
+  .toast .t-text{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--value-ice);line-height:1.4}
+  .toast .t-text b{color:var(--verified-green)}
+
+  footer{
+    max-width:1080px;margin:30px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
+  }
+
+  @media (max-width:560px){
+    .brand .logo{font-size:26px}
+    .switch button{font-size:11px;padding:12px 6px}
+    .filter select{min-width:0;flex:1}
+    .filter{flex:1 1 44%}
+    .form-grid{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">INVENTARIO DE NEUMÁTICOS</div>
+      <div class="subtitle">Neumáticos fuera de servicio, disponibles para reinstalación o descartados definitivamente.</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Switch de estado: En Inventario / Descartado -->
+  <div class="switch" role="group" aria-label="Estado del inventario">
+    <button id="tabInv" aria-pressed="true"  onclick="setEstado('inventario')">
+      En Inventario <span class="count" id="cntInv">0</span>
+    </button>
+    <button id="tabDes" aria-pressed="false" onclick="setEstado('descartado')">
+      Descartado <span class="count" id="cntDes">0</span>
+    </button>
+  </div>
+
+  <!-- Filtros simples -->
+  <div class="filters" id="filters">
+    <div class="filter">
+      <label for="fMarca">Marca</label>
+      <select id="fMarca" onchange="applyFilters()"></select>
+    </div>
+    <div class="filter">
+      <label for="fMedida">Medida</label>
+      <select id="fMedida" onchange="applyFilters()"></select>
+    </div>
+    <div class="filter">
+      <label for="fDiseno">Diseño</label>
+      <select id="fDiseno" onchange="applyFilters()"></select>
+    </div>
+    <div class="filter">
+      <label for="fEstado">Estado</label>
+      <select id="fEstado" onchange="applyFilters()"></select>
+    </div>
+    <button class="filter-clear" type="button" onclick="clearFilters()">Limpiar</button>
+  </div>
+
+  <!-- Grid de cards -->
+  <div class="grid" id="grid"></div>
+
+  <!-- Análisis: ranking de causas de retiro -->
+  <section class="analysis">
+    <div class="analysis-head">Ranking de causas de retiro</div>
+    <div class="analysis-sub">
+      Causas más frecuentes entre neumáticos descartados o retirados con causa registrada.
+      Sirve para detectar problemas recurrentes de forma preventiva.
+    </div>
+    <div class="ranking" id="ranking"></div>
+  </section>
+</main>
+
+<footer>
+  Datos de demostración · Vista de consulta (Inventario) para jefe de flota / almacén.<br>
+  Inventario lista, consulta y permite reinstalar. Descartado es un estado final: solo se consulta.
+</footer>
+
+<!-- Modal Historial — interacción preparada; contenido de otra pantalla -->
+<div class="scrim" id="histScrim" onclick="if(event.target===this) closeHistory()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title" id="histTitle">HISTORIAL DEL NEUMÁTICO</div>
+        <div class="sheet-sub" id="histSub"></div>
+      </div>
+      <button class="sheet-close" onclick="closeHistory()" aria-label="Cerrar historial">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-placeholder">
+      El Historial de Neumático (instalaciones, reencauches, rotaciones, retiros y
+      descartes) es la misma vista interna que se abre desde Inspección y Rendimiento.
+      <span>Vista compartida · no se duplica aquí</span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reinstalar — evento de Instalación reutilizado -->
+<div class="scrim" id="reinstScrim" onclick="if(event.target===this) closeReinstalar()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reinstTitle">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title" id="reinstTitle">REINSTALAR NEUMÁTICO</div>
+        <div class="sheet-sub">Evento de Instalación · todos los campos son obligatorios</div>
+      </div>
+      <button class="sheet-close" onclick="closeReinstalar()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="reinstalar-target">
+      <div class="rt-label">Neumático a reinstalar</div>
+      <div class="rt-serie" id="reinstSerie"></div>
+      <div class="rt-meta" id="reinstMeta"></div>
+    </div>
+
+    <form id="reinstForm" onsubmit="submitReinstalar(event)" novalidate>
+      <div class="form-field" id="ffUnidad">
+        <label for="inUnidad">Unidad destino <span class="req">*</span></label>
+        <select id="inUnidad" onchange="onUnidadChange()">
+          <option value="">Seleccionar unidad…</option>
+        </select>
+        <div class="err">Elegí la unidad destino.</div>
+      </div>
+
+      <div class="form-field" id="ffPosicion">
+        <label for="inPosicion">Posición destino <span class="req">*</span></label>
+        <select id="inPosicion">
+          <option value="">Seleccionar posición…</option>
+        </select>
+        <div class="err">Elegí la posición destino.</div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-field" id="ffKm">
+          <label for="inKm">Km Instalación <span class="req">*</span></label>
+          <input id="inKm" type="number" inputmode="numeric" min="0" step="1" placeholder="Ej. 154000">
+          <div class="err">Ingresá el Km de instalación.</div>
+        </div>
+        <div class="form-field" id="ffRtd">
+          <label for="inRtd">RTD Instalación <span class="req">*</span></label>
+          <input id="inRtd" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ej. 12.5">
+          <div class="err">Ingresá el RTD de instalación.</div>
+        </div>
+      </div>
+
+      <button class="btn-submit" type="submit">Confirmar instalación</button>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <div class="t-text" id="toastText"></div>
+</div>
+
+<script>
+/* =========================================================================
+   FUENTE DE DATOS ÚNICA (mock).
+   El ESTADO decide dónde aparece cada neumático — no hay listas separadas:
+     status "inventario" → En Inventario (reinstalable)
+     status "descartado" → Descartado (baja definitiva, solo consulta)
+     status "instalado"  → montado en una unidad → NO aparece en esta vista
+                           (así queda un neumático tras reinstalarlo con éxito)
+
+   Campos crudos del neumático (viven en el registro de Inventario en producción):
+     serie, marca, diseno, medida, estado (N/R1/R2), costo
+   Contexto de salida (del evento de retiro/desinstalación):
+     ultimaUnidad   → última unidad donde estuvo instalado (o null)
+     fechaRetiro    → fecha en que salió de la unidad hacia inventario (o null)
+   Solo descartado:
+     causa          → causa de retiro registrada (para el ranking)
+     fotoDano       → miniatura del daño (data-uri) o null
+     fechaDescarte  → fecha de baja definitiva (o null)
+
+   Nota: 'causa' también puede existir en un neumático de inventario si su retiro
+   se registró con causa; el ranking suma TODAS las causas registradas.
+   ========================================================================= */
+
+// Miniatura de daño (SVG inline como data-uri — sin assets externos).
+function damageThumb(kind){
+  const g = {
+    corte:  ['#241014','#c0453a'],
+    banda:  ['#241a10','#d98a2b'],
+    flanco: ['#1a1020','#a05ac0'],
+  }[kind] || ['#141b24','#4E7CA8'];
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'>`+
+    `<rect width='46' height='46' fill='${g[0]}'/>`+
+    `<circle cx='23' cy='23' r='15' fill='none' stroke='#0a0f16' stroke-width='9'/>`+
+    `<path d='M12 30 L21 18 L26 26 L34 15' fill='none' stroke='${g[1]}' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/>`+
+    `</svg>`;
+  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+}
+
+let TIRES = [
+  // ── En Inventario (retirados / en retén, reinstalables) ──
+  { id:"t1", status:"inventario", serie:"MB-4471", marca:"MICHELIN", diseno:"X MULTI ENERGY",
+    medida:"295/80R22.5", estado:"R1", costo:420, ultimaUnidad:"B-118 · P4", fechaRetiro:"2026-06-18",
+    causa:"Desgaste irregular" },
+  { id:"t2", status:"inventario", serie:"BR-2093", marca:"BRIDGESTONE", diseno:"R269",
+    medida:"295/80R22.5", estado:"N", costo:780, ultimaUnidad:"B-204 · P2", fechaRetiro:"2026-06-25",
+    causa:null },
+  { id:"t3", status:"inventario", serie:"GY-8812", marca:"GOODYEAR", diseno:"KMA01",
+    medida:"315/80R22.5", estado:"R2", costo:390, ultimaUnidad:"B-118 · P7", fechaRetiro:"2026-05-30",
+    causa:"Baja presión recurrente" },
+  { id:"t4", status:"inventario", serie:"KH-1500", marca:"KUMHO", diseno:"KMD01",
+    medida:"295/80R22.5", estado:"R1", costo:405, ultimaUnidad:null, fechaRetiro:null,
+    causa:null },
+  { id:"t5", status:"inventario", serie:"MB-6620", marca:"MICHELIN", diseno:"X MULTI Z",
+    medida:"295/80R22.5", estado:"N", costo:865, ultimaUnidad:"C-030 · P6", fechaRetiro:"2026-07-01",
+    causa:"Desgaste irregular" },
+
+  // ── Descartado (baja definitiva, solo consulta) ──
+  { id:"t6", status:"descartado", serie:"MB-3308", marca:"MICHELIN", diseno:"X MULTI ENERGY",
+    medida:"295/80R22.5", estado:"R2", costo:410, ultimaUnidad:"B-118 · P3",
+    causa:"Corte profundo en flanco", fotoDano:damageThumb("flanco"), fechaDescarte:"2026-06-12" },
+  { id:"t7", status:"descartado", serie:"BR-7741", marca:"BRIDGESTONE", diseno:"R269",
+    medida:"315/80R22.5", estado:"R1", costo:395, ultimaUnidad:"B-204 · P5",
+    causa:"Separación de banda", fotoDano:damageThumb("banda"), fechaDescarte:"2026-06-20" },
+  { id:"t8", status:"descartado", serie:"GY-5567", marca:"GOODYEAR", diseno:"ARMOR MAX MSA",
+    medida:"295/80R22.5", estado:"N", costo:820, ultimaUnidad:"C-030 · P1",
+    causa:"Corte lateral", fotoDano:damageThumb("corte"), fechaDescarte:"2026-05-28" },
+  { id:"t9", status:"descartado", serie:"KH-9004", marca:"KUMHO", diseno:"KMD01",
+    medida:"295/80R22.5", estado:"R1", costo:400, ultimaUnidad:"B-118 · P5",
+    causa:"Corte lateral", fotoDano:damageThumb("corte"), fechaDescarte:"2026-06-15" },
+  { id:"t10", status:"descartado", serie:"MB-1120", marca:"MICHELIN", diseno:"X MULTI Z",
+    medida:"295/80R22.5", estado:"R2", costo:415, ultimaUnidad:"B-204 · P4",
+    causa:"Desgaste irregular", fotoDano:null, fechaDescarte:"2026-06-30" },
+  { id:"t11", status:"descartado", serie:"BR-4402", marca:"BRIDGESTONE", diseno:"R269",
+    medida:"295/80R22.5", estado:"N", costo:770, ultimaUnidad:"C-030 · P2",
+    causa:"Corte lateral", fotoDano:damageThumb("corte"), fechaDescarte:"2026-07-02" },
+  { id:"t12", status:"descartado", serie:"GY-3391", marca:"GOODYEAR", diseno:"KMA01",
+    medida:"315/80R22.5", estado:"R1", costo:388, ultimaUnidad:"B-118 · P6",
+    causa:"Baja presión recurrente", fotoDano:null, fechaDescarte:"2026-06-08" },
+];
+
+/* Unidades destino para la reinstalación (evento de Instalación).
+   Posiciones derivadas de la configuración de bus (specs/catalogo_patron.md §3). */
+const CONFIG_POS = {
+  "2-4":   ["P1","P2","P3","P4","P5","P6"],
+  "2-4-2": ["P1","P2","P3","P4","P5","P6","P7","P8"],
+};
+const UNITS = [
+  { plate:"B-118", empresa:"Transportes Cielo", config:"2-4-2" },
+  { plate:"B-204", empresa:"Transportes Cielo", config:"2-4" },
+  { plate:"C-030", empresa:"Andes Express",     config:"2-4" },
+];
+
+/* =========================================================================
+   ESTADO DE UI
+   ========================================================================= */
+let estado = "inventario";        // "inventario" | "descartado"
+let filters = { marca:"", medida:"", diseno:"", estado:"" };
+let reinstId = null;              // neumático en proceso de reinstalación
+
+/* =========================================================================
+   FORMATO
+   ========================================================================= */
+const nf = new Intl.NumberFormat("es-PE");
+const fmtCost = v => "$ " + nf.format(v);
+function fmtDate(iso){
+  if(!iso) return null;
+  const [y,m,d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* =========================================================================
+   SELECTORES DE DATOS
+   ========================================================================= */
+function tiresByEstado(e){ return TIRES.filter(t => t.status === e); }
+
+function matchesFilters(t){
+  return (!filters.marca  || t.marca  === filters.marca)
+      && (!filters.medida || t.medida === filters.medida)
+      && (!filters.diseno || t.diseno === filters.diseno)
+      && (!filters.estado || t.estado === filters.estado);
+}
+function visibleTires(){ return tiresByEstado(estado).filter(matchesFilters); }
+
+/* =========================================================================
+   RENDER — switch, filtros, grid
+   ========================================================================= */
+function renderCounts(){
+  document.getElementById("cntInv").textContent = tiresByEstado("inventario").length;
+  document.getElementById("cntDes").textContent = tiresByEstado("descartado").length;
+}
+
+function renderTabs(){
+  document.getElementById("tabInv").setAttribute("aria-pressed", String(estado==="inventario"));
+  document.getElementById("tabDes").setAttribute("aria-pressed", String(estado==="descartado"));
+}
+
+function fillFilterOptions(){
+  // Opciones a partir de los neumáticos del estado activo (data existente).
+  const pool = tiresByEstado(estado);
+  const uniq = key => [...new Set(pool.map(t => t[key]))].sort();
+  const build = (id, values, current) => {
+    const sel = document.getElementById(id);
+    const label = { fMarca:"Todas", fMedida:"Todas", fDiseno:"Todos", fEstado:"Todos" }[id];
+    sel.innerHTML = `<option value="">${label}</option>` +
+      values.map(v => `<option value="${esc(v)}"${v===current?" selected":""}>${esc(v)}</option>`).join("");
+  };
+  build("fMarca",  uniq("marca"),  filters.marca);
+  build("fMedida", uniq("medida"), filters.medida);
+  build("fDiseno", uniq("diseno"), filters.diseno);
+  build("fEstado", ["N","R1","R2"].filter(v => pool.some(t=>t.estado===v)), filters.estado);
+}
+
+function estadoChip(estadoTire){
+  const isRe = estadoTire === "R1" || estadoTire === "R2";
+  return `<span class="estado-chip ${isRe?"re":""}" title="${isRe?"Reencauche "+estadoTire.slice(1):"Nuevo"}">${estadoTire}</span>`;
+}
+
+function identityHeader(t){
+  return `
+    <button class="identity" type="button" onclick="openHistory('${t.id}')"
+            aria-label="Ver historial del neumático ${esc(t.serie)}">
+      <span class="id-serie"><span class="hash">#</span>${esc(t.serie)}</span>
+      <span class="id-hint">
+        Historial
+        <svg viewBox="0 0 12 20" fill="none"><path d="M2 2l7 8-7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+    </button>`;
+}
+
+function factsBlock(t, rows){
+  return `<div class="facts">` + rows.map(r => `
+    <div class="fact ${r.wide?"wide":""}">
+      <div class="f-label">${r.label}</div>
+      <div class="f-value ${r.muted?"muted":""}">${r.value}</div>
+    </div>`).join("") + `</div>`;
+}
+
+function cardInventario(t){
+  const rows = [
+    { label:"Medida",  value:`${esc(t.medida)}` },
+    { label:"Estado",  value: estadoChip(t.estado) },
+    { label:"Costo",   value:`<span class="num">${fmtCost(t.costo)}</span>` },
+    { label:"Últ. retiro", value: t.fechaRetiro ? `<span class="num">${fmtDate(t.fechaRetiro)}</span>` : "—", muted:!t.fechaRetiro },
+    { label:"Última unidad", value: t.ultimaUnidad ? esc(t.ultimaUnidad) : "Sin registro", muted:!t.ultimaUnidad, wide:true },
+  ];
+  return `
+    <article class="tcard">
+      ${identityHeader(t)}
+      <div class="tcard-body">
+        <div class="id-line">
+          <span class="marca">${esc(t.marca)}</span>
+          <span class="diseno">${esc(t.diseno)}</span>
+        </div>
+        ${factsBlock(t, rows)}
+      </div>
+      <div class="tcard-foot">
+        <button class="btn-reinstalar" type="button" onclick="openReinstalar('${t.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M20 10a8 8 0 0 0-14-3M4 14a8 8 0 0 0 14 3"/></svg>
+          Reinstalar
+        </button>
+      </div>
+    </article>`;
+}
+
+function cardDescartado(t){
+  const rows = [
+    { label:"Medida", value:`${esc(t.medida)}` },
+    { label:"Estado", value: estadoChip(t.estado) },
+    { label:"Costo",  value:`<span class="num">${fmtCost(t.costo)}</span>` },
+    { label:"Fecha descarte", value: t.fechaDescarte ? `<span class="num">${fmtDate(t.fechaDescarte)}</span>` : "—", muted:!t.fechaDescarte },
+    { label:"Última unidad", value: t.ultimaUnidad ? esc(t.ultimaUnidad) : "Sin registro", muted:!t.ultimaUnidad, wide:true },
+  ];
+  const causa = t.causa ? `
+    <div class="causa">
+      <div class="c-label">Causa de retiro</div>
+      <div class="c-value">${esc(t.causa)}</div>
+    </div>` : "";
+  const foto = t.fotoDano ? `
+    <div class="foto">
+      <div class="thumb"><img src="${t.fotoDano}" alt="Foto del daño de ${esc(t.serie)}"></div>
+      <div class="f-cap"><b>Foto del daño</b>Registrada al descartar</div>
+    </div>` : "";
+  return `
+    <article class="tcard discard">
+      ${identityHeader(t)}
+      <div class="tcard-body">
+        <div class="id-line">
+          <span class="marca">${esc(t.marca)}</span>
+          <span class="diseno">${esc(t.diseno)}</span>
+        </div>
+        ${factsBlock(t, rows)}
+        ${causa}
+        ${foto}
+      </div>
+      <div class="final-seal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Baja definitiva
+      </div>
+    </article>`;
+}
+
+function emptyState(){
+  const msg = estado === "inventario"
+    ? "No hay neumáticos disponibles para reinstalar."
+    : "No hay neumáticos descartados registrados.";
+  const anyBeforeFilter = tiresByEstado(estado).length > 0;
+  const sub = anyBeforeFilter ? "Ningún neumático coincide con los filtros activos." : "";
+  return `
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>
+      <div>${msg}</div>
+      ${sub ? `<div style="margin-top:8px;font-size:11px;opacity:.85">${sub}</div>` : ""}
+    </div>`;
+}
+
+function renderGrid(){
+  const grid = document.getElementById("grid");
+  const list = visibleTires();
+  if(list.length === 0){ grid.innerHTML = emptyState(); return; }
+  const render = estado === "inventario" ? cardInventario : cardDescartado;
+  grid.innerHTML = list.map(render).join("");
+}
+
+/* =========================================================================
+   RANKING DE CAUSAS — solo neumáticos con causa registrada.
+   No se limita al estado activo: agrega descartados + retirados con causa.
+   ========================================================================= */
+function renderRanking(){
+  const mount = document.getElementById("ranking");
+  const counts = {};
+  TIRES.forEach(t => { if(t.causa){ counts[t.causa] = (counts[t.causa]||0) + 1; } });
+  const ranked = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+
+  // "Suficientes causas": al menos 2 causas distintas registradas.
+  if(ranked.length < 2){
+    mount.innerHTML = `<div class="rank-empty">Aún no hay suficientes causas registradas para generar un ranking.</div>`;
+    return;
+  }
+  const max = ranked[0][1];
+  mount.innerHTML = ranked.map(([causa, n], i) => `
+    <div class="rank-row">
+      <div class="rank-pos num">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-causa">${esc(causa)}</div>
+        <div class="rank-bar-track"><span class="rank-bar-fill" style="width:${Math.max(6,(n/max)*100)}%"></span></div>
+      </div>
+      <div class="rank-count num">${n}<small>${n===1?"caso":"casos"}</small></div>
+    </div>`).join("");
+}
+
+/* =========================================================================
+   INTERACCIÓN — switch / filtros
+   ========================================================================= */
+function setEstado(next){
+  if(estado === next) return;
+  estado = next;
+  filters = { marca:"", medida:"", diseno:"", estado:"" };  // filtros se reinician por estado
+  renderTabs();
+  fillFilterOptions();
+  renderGrid();
+}
+function applyFilters(){
+  filters.marca  = document.getElementById("fMarca").value;
+  filters.medida = document.getElementById("fMedida").value;
+  filters.diseno = document.getElementById("fDiseno").value;
+  filters.estado = document.getElementById("fEstado").value;
+  renderGrid();
+}
+function clearFilters(){
+  filters = { marca:"", medida:"", diseno:"", estado:"" };
+  fillFilterOptions();
+  renderGrid();
+}
+
+/* =========================================================================
+   HISTORIAL — misma vista interna que Inspección/Rendimiento (interacción
+   preparada; el contenido no se duplica aquí).
+   ========================================================================= */
+function openHistory(id){
+  const t = TIRES.find(x => x.id === id);
+  if(!t) return;
+  document.getElementById("histSub").innerHTML =
+    `<b>#${esc(t.serie)}</b> · ${esc(t.marca)} ${esc(t.diseno)} · ${esc(t.medida)} · ${t.estado}`;
+  document.getElementById("histScrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeHistory(){
+  document.getElementById("histScrim").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+/* =========================================================================
+   REINSTALAR — reutiliza el evento de Instalación.
+   Exige Unidad, Posición, Km Instalación y RTD Instalación (validados).
+   ========================================================================= */
+function openReinstalar(id){
+  const t = TIRES.find(x => x.id === id);
+  if(!t || t.status !== "inventario") return;
+  reinstId = id;
+
+  document.getElementById("reinstSerie").innerHTML = `<span class="hash">#</span>${esc(t.serie)}`;
+  document.getElementById("reinstMeta").textContent = `${t.marca} ${t.diseno} · ${t.medida} · ${t.estado}`;
+
+  // Reset del formulario
+  const form = document.getElementById("reinstForm");
+  form.reset();
+  ["ffUnidad","ffPosicion","ffKm","ffRtd"].forEach(f => document.getElementById(f).classList.remove("invalid"));
+
+  // Poblar unidades
+  const selU = document.getElementById("inUnidad");
+  selU.innerHTML = `<option value="">Seleccionar unidad…</option>` +
+    UNITS.map(u => `<option value="${esc(u.plate)}">${esc(u.plate)} · ${esc(u.empresa)} · Bus ${esc(u.config)}</option>`).join("");
+  document.getElementById("inPosicion").innerHTML = `<option value="">Seleccionar posición…</option>`;
+
+  document.getElementById("reinstScrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeReinstalar(){
+  document.getElementById("reinstScrim").classList.remove("open");
+  document.body.style.overflow = "";
+  reinstId = null;
+}
+function onUnidadChange(){
+  const plate = document.getElementById("inUnidad").value;
+  const unit = UNITS.find(u => u.plate === plate);
+  const selP = document.getElementById("inPosicion");
+  const positions = unit ? (CONFIG_POS[unit.config] || []) : [];
+  selP.innerHTML = `<option value="">Seleccionar posición…</option>` +
+    positions.map(p => `<option value="${p}">${p}</option>`).join("");
+}
+
+function submitReinstalar(ev){
+  ev.preventDefault();
+  const unidad = document.getElementById("inUnidad").value;
+  const posicion = document.getElementById("inPosicion").value;
+  const km = document.getElementById("inKm").value;
+  const rtd = document.getElementById("inRtd").value;
+
+  // Validación: todos obligatorios (no permite reinstalar sin estos datos).
+  const checks = [
+    ["ffUnidad",   !!unidad],
+    ["ffPosicion", !!posicion],
+    ["ffKm",       km !== "" && Number(km) >= 0],
+    ["ffRtd",      rtd !== "" && Number(rtd) >= 0],
+  ];
+  let ok = true;
+  checks.forEach(([f, valid]) => {
+    document.getElementById(f).classList.toggle("invalid", !valid);
+    if(!valid) ok = false;
+  });
+  if(!ok) return;
+
+  // Éxito: el neumático pasa a estar INSTALADO → sale del Inventario.
+  // El historial conserva el periodo anterior (fechaRetiro/ultimaUnidad) y
+  // registra la nueva instalación (unidad/posición/km/rtd).
+  const t = TIRES.find(x => x.id === reinstId);
+  if(t){
+    t.status = "instalado";
+    t.reinstalacion = { unidad, posicion, km:Number(km), rtd:Number(rtd), fecha:new Date().toISOString().slice(0,10) };
+  }
+  const serie = t ? t.serie : "";
+  closeReinstalar();
+  renderCounts();
+  fillFilterOptions();
+  renderGrid();
+  renderRanking();
+  showToast(`<b>#${esc(serie)}</b> reinstalado en ${esc(unidad)} · ${esc(posicion)}`);
+}
+
+/* =========================================================================
+   TOAST
+   ========================================================================= */
+let toastTimer = null;
+function showToast(html){
+  const el = document.getElementById("toast");
+  document.getElementById("toastText").innerHTML = html;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3400);
+}
+
+/* Escape cierra cualquier modal abierto */
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ closeHistory(); closeReinstalar(); }
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+function init(){
+  renderCounts();
+  renderTabs();
+  fillFilterOptions();
+  renderGrid();
+  renderRanking();
+}
+init();
+</script>
+</body>
+</html>
