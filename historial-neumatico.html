@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RENOVA — Historial de Neumático</title>
+<!--
+  PANTALLA HISTORIAL DE NEUMÁTICO — vista de consulta (SOLO LECTURA).
+  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
+
+  Es una VISTA APARTE, referenciada por LINK desde Inspección y desde Rendimiento:
+  al hacer clic en el # Serie / Código de un neumático, esas pantallas navegan aquí
+  pasando el código en la URL:
+      historial-neumatico.html?serie=NEU-04533&from=rendimiento
+      historial-neumatico.html?serie=NEU-04533&from=inspeccion
+  Un solo historial, una sola lógica, referenciado desde ambos orígenes.
+
+  Fuente de datos: NO es una fuente nueva. Modela lo que en producción ya existe
+  (Instalaciones, Desinstalaciones, Inspecciones, Rendimiento calculado), indexado
+  por # Serie / Código. Todo se filtra por ese código.
+
+  Reglas respetadas:
+    · Km acumulado = misma fórmula que Rendimiento (km_previo_acumulado + Km Recorrido).
+    · RTD actual por inspección = MIN de los canales de remanente disponibles.
+    · Instalaciones e inspecciones ordenadas de más reciente a más antigua.
+    · Vista de SOLO LECTURA: sin gráficos nuevos, sin formularios, sin edición.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Paleta RENOVA (DESIGN.md) */
+    --screen-dark:#07111C;
+    --field-dark:#111E2E;
+    --navy-brand:#15233f;
+    --border-dark:#1B2D42;
+    --label-blue:#7AABCC;
+    --value-ice:#F0F8FF;
+    --ember-orange:#F06822;
+    --signal-yellow:#f4b821;
+    --verified-green:#1f9d6b;
+
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--screen-dark);
+    color:var(--value-ice);
+    font-family:var(--mono);
+    font-weight:700;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    padding-bottom:48px;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ───────────────── Header ───────────────── */
+  header{
+    background:var(--navy-brand);
+    padding:16px 16px 14px;
+    position:sticky;top:0;z-index:20;
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-inner{max-width:860px;margin:0 auto}
+  .brand .logo{
+    font-family:var(--display);font-size:30px;line-height:1;
+    letter-spacing:.06em;color:var(--value-ice);
+  }
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{
+    font-family:var(--display);font-size:18px;line-height:1;
+    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
+  }
+
+  main{max-width:860px;margin:0 auto;padding:16px}
+
+  /* Botón volver (según origen) */
+  .th-back{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--label-blue);background:var(--field-dark);
+    border:2px solid var(--border-dark);border-radius:10px;
+    padding:10px 14px;cursor:pointer;margin-bottom:16px;text-decoration:none;
+    transition:border-color .15s ease-out,color .15s ease-out,transform .12s ease-out;
+  }
+  .th-back:hover{color:var(--value-ice);border-color:#294263}
+  .th-back:active{transform:scale(.97)}
+  .th-back:focus-visible{outline:none;border-color:var(--ember-orange)}
+  .th-back svg{width:14px;height:14px}
+
+  .th-head{margin-bottom:4px}
+  .th-title{
+    font-family:var(--display);font-size:26px;letter-spacing:.1em;color:var(--value-ice);line-height:1;
+  }
+  .th-serie{
+    font-size:22px;font-weight:800;letter-spacing:.04em;color:var(--ember-orange);margin-top:8px;
+  }
+
+  .th-section{margin-top:22px}
+  .th-section-title{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:11px;
+  }
+
+  .th-card{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;padding:16px 18px;
+  }
+
+  /* Identidad — grilla de campos */
+  .th-idgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px}
+  .th-field .f-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue)}
+  .th-field .f-value{font-size:15px;font-weight:800;color:var(--value-ice);margin-top:6px}
+  .th-badge{
+    display:inline-block;font-size:13px;font-weight:800;letter-spacing:.04em;
+    padding:3px 11px;border-radius:6px;border:2px solid var(--border-dark);color:var(--value-ice);
+  }
+  .th-badge.estado{border-color:var(--signal-yellow);color:var(--signal-yellow)}
+  .th-badge.cond-instalado{border-color:var(--verified-green);color:var(--verified-green)}
+  .th-badge.cond-retirado,.th-badge.cond-desechado{border-color:var(--ember-orange);color:var(--ember-orange)}
+  .th-badge.cond-reten{border-color:var(--label-blue);color:var(--label-blue)}
+
+  /* Resumen rápido — mini stats */
+  .th-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .th-stat{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:10px;padding:12px 14px}
+  .th-stat .s-label{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue)}
+  .th-stat .s-value{font-size:19px;font-weight:800;color:var(--value-ice);margin-top:6px}
+  .th-stat .s-value small{font-size:11px;font-weight:700;color:var(--label-blue);margin-left:3px}
+  .th-stat .s-value.muted{font-size:12px;font-weight:800;color:var(--label-blue);letter-spacing:.04em}
+
+  /* Instalaciones */
+  .th-list{display:flex;flex-direction:column;gap:10px}
+  .th-inst{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;padding:13px 15px;
+  }
+  .th-inst .r-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .th-inst .r-plate{font-size:16px;font-weight:800;color:var(--value-ice);letter-spacing:.02em}
+  .th-inst .r-km{font-size:15px;font-weight:800;color:var(--value-ice)}
+  .th-inst .r-km small{font-size:10px;font-weight:700;color:var(--label-blue);margin-left:3px}
+  .th-inst .r-dates{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--label-blue);margin-top:7px}
+  .th-chip-actual{
+    font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--verified-green);
+    border:2px solid var(--verified-green);border-radius:6px;padding:2px 8px;
+  }
+
+  /* Inspecciones — cards apiladas (mobile-first); tabla compacta en desktop */
+  .th-insp{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;padding:13px 15px;
+  }
+  .th-insp .i-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:9px}
+  .th-insp .i-date{font-size:14px;font-weight:800;color:var(--value-ice)}
+  .th-insp .i-loc{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--label-blue)}
+  .th-metrics{display:flex;gap:20px;flex-wrap:wrap}
+  .th-metrics .im .im-label{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--label-blue)}
+  .th-metrics .im .im-value{font-size:16px;font-weight:800;color:var(--value-ice);margin-top:3px}
+  .th-metrics .im .im-value small{font-size:10px;color:var(--label-blue);margin-left:2px}
+  .th-obs{margin-top:10px;font-size:11px;font-weight:700;color:var(--signal-yellow);letter-spacing:.02em;line-height:1.4}
+
+  .th-empty{
+    border:2px dashed var(--border-dark);border-radius:12px;padding:26px 20px;text-align:center;
+    color:var(--label-blue);font-size:12px;font-weight:700;line-height:1.6;
+  }
+
+  footer{
+    max-width:860px;margin:28px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-inner">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">HISTORIAL DE NEUMÁTICO</div>
+    </div>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<footer>
+  Datos de demostración · Vista de consulta (solo lectura) · Historial por # Serie / Código.
+</footer>
+
+<script>
+/* =========================================================================
+   PARÁMETROS DE URL — la llave (serie/código) y el origen (from) llegan por
+   query string desde Inspección o Rendimiento.
+   ========================================================================= */
+const params = new URLSearchParams(location.search);
+const serie  = (params.get("serie") || params.get("codigo") || "").trim();
+const from   = (params.get("from") || "").toLowerCase();
+
+/* =========================================================================
+   DATASET MOCK — historial indexado por # Serie / Código. Modela datos que en
+   producción viven en Instalaciones, Desinstalaciones, Inspecciones e Inventario.
+   Cada entrada:
+     identidad: marca, diseno, medida, estado (N/R1/R2/R3), condicion
+     ubicacion: unidadActual, posActual   (null si no está instalado)
+     src:       fuente para Km acumulado (misma fórmula que Rendimiento) o null
+     instalaciones[]: {placa, desde, hasta(null=montado), km}
+     inspecciones[]:  {fecha, placa, posicion, rtd[canales], psi, obs}
+   Los códigos coinciden con los usados en Inspección y en Rendimiento.
+   ========================================================================= */
+const HISTORIAL = {
+  // B-118 · P1 — direccional nueva; una vida, varias inspecciones.
+  "NEU-04182": {
+    marca:"Michelin", diseno:"XZE2 (RIB HWY)", medida:"295/80R22.5", estado:"N", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P1",
+    src:{otd:16, rtdInstalacion:16, rtdActual:11, kmInstalacion:120000, kmActual:160000, rtdRetiro:4, kmPrevioAcumulado:0},
+    instalaciones:[
+      {placa:"B-118", desde:"2023-11-02", hasta:null, km:40000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P1", rtd:[7.2,6.9,6.5], psi:98,  obs:"Desgaste irregular en hombro"},
+      {fecha:"2024-04-15", placa:"B-118", posicion:"P1", rtd:[9.4,9.1,8.9], psi:104, obs:"Presión baja corregida"},
+      {fecha:"2024-01-08", placa:"B-118", posicion:"P1", rtd:[13.0,12.8,13.1], psi:118, obs:""},
+    ],
+  },
+  // B-118 · P2 — direccional R1.
+  "NEU-03911": {
+    marca:"Michelin", diseno:"XZE2 (RIB HWY)", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P2",
+    src:{otd:16, rtdInstalacion:16, rtdActual:9, kmInstalacion:120000, kmActual:162000, rtdRetiro:4, kmPrevioAcumulado:118000},
+    instalaciones:[
+      {placa:"B-118", desde:"2024-01-20", hasta:null,         km:42000},
+      {placa:"B-141", desde:"2022-05-11", hasta:"2023-10-30", km:118000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P2", rtd:[11.6,11.4,11.2], psi:106, obs:"Corte superficial en flanco (vigilar)"},
+      {fecha:"2024-05-02", placa:"B-118", posicion:"P2", rtd:[12.8,12.5,12.3], psi:108, obs:""},
+    ],
+  },
+  // B-118 · P3 — dual de tracción reencauchada (R1); estuvo antes en otra unidad.
+  "NEU-04533": {
+    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P3",
+    src:{otd:20, rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108000, rtdRetiro:6, kmPrevioAcumulado:140000},
+    instalaciones:[
+      {placa:"B-118", desde:"2024-02-18", hasta:null,          km:48000},
+      {placa:"B-090", desde:"2022-07-05", hasta:"2023-12-10",  km:140000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P3", rtd:[10.1,9.9,10.3,9.8], psi:108, obs:""},
+      {fecha:"2024-05-12", placa:"B-118", posicion:"P3", rtd:[11.4,11.0,11.6,10.9], psi:112, obs:"Desgaste parejo"},
+      {fecha:"2024-03-02", placa:"B-118", posicion:"P3", rtd:[13.0,12.7,13.2,12.9], psi:116, obs:""},
+      {fecha:"2023-10-20", placa:"B-090", posicion:"P5", rtd:[9.6,9.1,9.8,9.4], psi:108, obs:"Piedra en ranura (retirada)"},
+    ],
+  },
+  // B-118 · P4 — tracción R3, cerca del retiro.
+  "NEU-02748": {
+    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R3", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P4",
+    src:{otd:20, rtdInstalacion:20, rtdActual:4.1, kmInstalacion:0, kmActual:96000, rtdRetiro:6, kmPrevioAcumulado:320000},
+    instalaciones:[
+      {placa:"B-118", desde:"2023-08-01", hasta:null,          km:96000},
+      {placa:"B-118", desde:"2021-01-15", hasta:"2023-06-20",  km:224000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P4", rtd:[4.4,4.1,3.9,4.6], psi:101, obs:"Desgaste al centro · próximo a reencauche"},
+      {fecha:"2024-04-10", placa:"B-118", posicion:"P4", rtd:[6.0,5.7,5.5,6.2], psi:104, obs:""},
+    ],
+  },
+  // B-118 · P5 — tracción R1.
+  "NEU-04102": {
+    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P5",
+    src:{otd:20, rtdInstalacion:20, rtdActual:10.4, kmInstalacion:60000, kmActual:112000, rtdRetiro:6, kmPrevioAcumulado:150000},
+    instalaciones:[
+      {placa:"B-118", desde:"2024-01-05", hasta:null, km:52000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P5", rtd:[10.6,10.4,10.9,10.7], psi:116, obs:""},
+    ],
+  },
+  // B-118 · P6 — tracción R2.
+  "NEU-03650": {
+    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R2", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P6",
+    src:{otd:20, rtdInstalacion:20, rtdActual:6.9, kmInstalacion:0, kmActual:84000, rtdRetiro:6, kmPrevioAcumulado:260000},
+    instalaciones:[
+      {placa:"B-118", desde:"2023-09-12", hasta:null, km:84000},
+      {placa:"B-204", desde:"2022-02-01", hasta:"2023-07-15", km:176000},
+    ],
+    inspecciones:[
+      {fecha:"2024-07-01", placa:"B-118", posicion:"P6", rtd:[7.4,7.0,6.9,7.2], psi:104, obs:""},
+      {fecha:"2024-03-20", placa:"B-118", posicion:"P6", rtd:[9.1,8.8,8.6,9.0], psi:106, obs:""},
+    ],
+  },
+  // B-204 · P3 — tracción reencauchada 2 veces (R2).
+  "NEU-06220": {
+    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R2", condicion:"Instalado",
+    unidadActual:"B-204", posActual:"P3",
+    src:{otd:20, rtdInstalacion:20, rtdActual:11, kmInstalacion:0, kmActual:63000, rtdRetiro:6, kmPrevioAcumulado:150000},
+    instalaciones:[
+      {placa:"B-204", desde:"2024-01-15", hasta:null,         km:63000},
+      {placa:"B-204", desde:"2022-09-01", hasta:"2023-11-30", km:150000},
+    ],
+    inspecciones:[
+      {fecha:"2024-06-28", placa:"B-204", posicion:"P3", rtd:[11.0,10.6,11.2,10.8], psi:110, obs:"Desgaste de hombro leve"},
+      {fecha:"2024-04-05", placa:"B-204", posicion:"P3", rtd:[13.4,13.0,13.6,13.2], psi:112, obs:""},
+    ],
+  },
+  // B-118 · P7 — recién instalado, SIN inspecciones aún (demuestra estado vacío 2).
+  "NEU-05007": {
+    marca:"Michelin", diseno:"XZE2 (LIBRE)", medida:"295/80R22.5", estado:"N", condicion:"Instalado",
+    unidadActual:"B-118", posActual:"P7",
+    src:{otd:16, rtdInstalacion:16, rtdActual:16, kmInstalacion:116000, kmActual:116000, rtdRetiro:4, kmPrevioAcumulado:0},
+    instalaciones:[
+      {placa:"B-118", desde:"2024-06-30", hasta:null, km:0},
+    ],
+    inspecciones:[],
+  },
+  // Neumático en retén con inspecciones pero SIN instalación asociada (estado vacío 3).
+  "NEU-05108": {
+    marca:"Michelin", diseno:"XZE2 (LIBRE)", medida:"295/80R22.5", estado:"R1", condicion:"En retén",
+    unidadActual:null, posActual:null,
+    src:null,
+    instalaciones:[],
+    inspecciones:[
+      {fecha:"2024-06-15", placa:"—", posicion:"—", rtd:[8.0,7.7,7.9], psi:null, obs:"Inspección de retén · pendiente de montaje"},
+    ],
+  },
+};
+
+/* =========================================================================
+   LÓGICA — Km acumulado con la MISMA fórmula que Rendimiento.
+   ========================================================================= */
+function kmAcumulado(src){
+  if(!src) return null;
+  const ok = src.rtdInstalacion != null && src.kmInstalacion != null &&
+             src.kmActual != null && src.otd != null;
+  if(!ok) return null;
+  const kmRecorrido = src.kmActual - src.kmInstalacion;   // Km Actual − Km Instalación
+  return (src.kmPrevioAcumulado || 0) + kmRecorrido;       // previo + Km Recorrido
+}
+function minCanal(arr){
+  if(!Array.isArray(arr)) return null;
+  const vals = arr.filter(v => v != null);
+  return vals.length ? Math.min(...vals) : null;
+}
+
+/* ───────── Formato ───────── */
+const nf = new Intl.NumberFormat("es-PE");
+const fmtKm = v => nf.format(Math.round(v));
+const fmtMm = v => (Math.round(v*10)/10).toFixed(1);
+function fmtDate(iso){
+  if(!iso) return "—";
+  const p = String(iso).split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : String(iso);
+}
+function condClass(c){
+  const k = (c || "").toLowerCase();
+  if(k.includes("instalado")) return "cond-instalado";
+  if(k.includes("retén") || k.includes("reten")) return "cond-reten";
+  if(k.includes("desech")) return "cond-desechado";
+  if(k.includes("retir")) return "cond-retirado";
+  return "";
+}
+
+/* =========================================================================
+   NAVEGACIÓN DE VUELTA — según el origen (from). Si hay historial de
+   navegación, vuelve atrás; si se abrió directo, enlaza al origen.
+   ========================================================================= */
+function backLabel(){
+  return from === "inspeccion"  ? "Volver a Inspección"
+       : from === "rendimiento" ? "Volver a Rendimiento"
+       : "Volver";
+}
+function goBack(){
+  if(document.referrer && history.length > 1){ history.back(); return; }
+  const map = { rendimiento:"rendimiento.html", inspeccion:"UI/renova_dashboard_taller_v1.html" };
+  location.href = map[from] || "rendimiento.html";
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function render(){
+  const mount = document.getElementById("view");
+  const backBtn = `
+    <button class="th-back" type="button" onclick="goBack()">
+      <svg viewBox="0 0 20 12" fill="none"><path d="M8 2L2 6l6 4M2 6h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ${backLabel()}
+    </button>`;
+  const head = `
+    <div class="th-head">
+      <div class="th-title">Historial de Neumático</div>
+      <div class="th-serie num">${serie || "—"}</div>
+    </div>`;
+
+  const h = HISTORIAL[serie];
+
+  // Estado vacío global: la serie no existe / no se pasó código.
+  if(!h){
+    mount.innerHTML = backBtn + head +
+      `<div class="th-section"><div class="th-empty">No hay historial registrado para este neumático.</div></div>`;
+    return;
+  }
+
+  const instalaciones = (h.instalaciones || []).slice()
+    .sort((a,b) => String(b.desde||"").localeCompare(String(a.desde||"")));
+  const inspecciones  = (h.inspecciones || []).slice()
+    .sort((a,b) => String(b.fecha||"").localeCompare(String(a.fecha||"")));
+
+  // Resumen rápido.
+  const kmAcum   = kmAcumulado(h.src);
+  const lastInsp = inspecciones[0] || null;
+  const rtdMin   = lastInsp ? minCanal(lastInsp.rtd) : (h.src ? h.src.rtdActual : null);
+  const psi      = lastInsp ? lastInsp.psi : null;
+
+  const kmAcumStr = kmAcum != null
+    ? `<span class="s-value num">${fmtKm(kmAcum)}<small>km</small></span>`
+    : `<span class="s-value muted">Sin datos</span>`;
+  const rtdStr = rtdMin != null
+    ? `<span class="s-value num">${fmtMm(rtdMin)}<small>mm</small></span>`
+    : `<span class="s-value muted">Sin datos</span>`;
+  const psiStr = psi != null
+    ? `<span class="s-value num">${psi}<small>psi</small></span>`
+    : `<span class="s-value muted">Sin datos</span>`;
+
+  const identity = `
+    <div class="th-section">
+      <div class="th-section-title">Identidad</div>
+      <div class="th-card">
+        <div class="th-idgrid">
+          <div class="th-field"><div class="f-label">Serie / Código</div><div class="f-value num">${serie}</div></div>
+          <div class="th-field"><div class="f-label">Marca</div><div class="f-value">${h.marca || "—"}</div></div>
+          <div class="th-field"><div class="f-label">Diseño / Modelo</div><div class="f-value">${h.diseno || "—"}</div></div>
+          <div class="th-field"><div class="f-label">Medida</div><div class="f-value num">${h.medida || "—"}</div></div>
+          <div class="th-field"><div class="f-label">Estado actual</div><div class="f-value"><span class="th-badge estado">${h.estado || "—"}</span></div></div>
+          <div class="th-field"><div class="f-label">Condición actual</div><div class="f-value"><span class="th-badge ${condClass(h.condicion)}">${h.condicion || "—"}</span></div></div>
+        </div>
+      </div>
+    </div>`;
+
+  const resumen = `
+    <div class="th-section">
+      <div class="th-section-title">Resumen rápido</div>
+      <div class="th-summary">
+        <div class="th-stat"><div class="s-label">Km acumulado</div>${kmAcumStr}</div>
+        <div class="th-stat"><div class="s-label">Última inspección</div><span class="s-value num">${fmtDate(lastInsp && lastInsp.fecha)}</span></div>
+        <div class="th-stat"><div class="s-label">RTD actual (mín.)</div>${rtdStr}</div>
+        <div class="th-stat"><div class="s-label">PSI actual</div>${psiStr}</div>
+        <div class="th-stat"><div class="s-label">Unidad actual</div><span class="s-value">${h.unidadActual || "—"}</span></div>
+        <div class="th-stat"><div class="s-label">Posición actual</div><span class="s-value">${h.posActual || "—"}</span></div>
+      </div>
+    </div>`;
+
+  // Unidades donde estuvo instalado.
+  const instList = instalaciones.map(i => {
+    const hasta = i.hasta
+      ? fmtDate(i.hasta)
+      : `<span class="th-chip-actual">Instalado actualmente</span>`;
+    const km = i.km != null ? `${fmtKm(i.km)}<small>km</small>` : "—";
+    return `
+      <div class="th-inst">
+        <div class="r-top">
+          <span class="r-plate">${i.placa || "—"}</span>
+          <span class="r-km num">${km}</span>
+        </div>
+        <div class="r-dates">${fmtDate(i.desde)} → ${hasta}</div>
+      </div>`;
+  }).join("");
+  const instBlock = `
+    <div class="th-section">
+      <div class="th-section-title">Unidades donde estuvo instalado</div>
+      ${instalaciones.length
+        ? `<div class="th-list">${instList}</div>`
+        : `<div class="th-empty">Hay inspecciones registradas, pero no se encontró historial de instalación asociado.</div>`}
+    </div>`;
+
+  // Inspecciones pasadas — RTD = MIN de canales de remanente.
+  const inspList = inspecciones.map(ins => {
+    const rtd = minCanal(ins.rtd);
+    const obs = ins.obs ? `<div class="th-obs">${ins.obs}</div>` : "";
+    return `
+      <div class="th-insp">
+        <div class="i-top">
+          <span class="i-date num">${fmtDate(ins.fecha)}</span>
+          <span class="i-loc">${ins.placa || "—"} · ${ins.posicion || "—"}</span>
+        </div>
+        <div class="th-metrics">
+          <div class="im"><div class="im-label">RTD actual</div><div class="im-value num">${rtd != null ? fmtMm(rtd) : "—"}<small>mm</small></div></div>
+          <div class="im"><div class="im-label">PSI</div><div class="im-value num">${ins.psi != null ? ins.psi : "—"}<small>psi</small></div></div>
+        </div>
+        ${obs}
+      </div>`;
+  }).join("");
+  const inspBlock = `
+    <div class="th-section">
+      <div class="th-section-title">Inspecciones pasadas</div>
+      ${inspecciones.length
+        ? `<div class="th-list">${inspList}</div>`
+        : `<div class="th-empty">Este neumático existe en el sistema, pero aún no tiene inspecciones registradas.</div>`}
+    </div>`;
+
+  mount.innerHTML = backBtn + head + identity + resumen + instBlock + inspBlock;
+}
+
+render();
+</script>
+</body>
+</html>

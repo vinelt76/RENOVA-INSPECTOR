@@ -23,6 +23,9 @@
     · El verde/rojo del BALANCE del eje es un concepto propio de Rendimiento y
       NO reutiliza el semáforo de Inspección (retiro/presión/anomalías).
     · No hay 3D, isométricos, ni representación visual del eje: pills + barras simples.
+    · El # Serie / Código de la card es un LINK a la vista aparte
+      historial-neumatico.html?serie=…&from=rendimiento (no es un modal ni una
+      vista embebida: es una pantalla separada que se referencia).
 
   Fórmulas base (reutilizadas de "por neumático"):
     RTD Gastado   = RTD Instalación − RTD Actual
@@ -290,37 +293,6 @@
     padding:16px;font-size:12px;font-weight:700;color:var(--label-blue);line-height:1.5;
   }
 
-  /* ───────────────── Modal historial (placeholder) ───────────────── */
-  .scrim{
-    position:fixed;inset:0;background:rgba(3,8,14,.72);z-index:50;
-    display:none;align-items:flex-end;justify-content:center;
-  }
-  .scrim.open{display:flex}
-  @media (min-width:640px){.scrim{align-items:center}}
-  .modal{
-    width:100%;max-width:520px;background:var(--field-dark);
-    border:2px solid var(--border-dark);border-radius:16px 16px 0 0;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-    /* cinta de seguridad = filo superior del sheet (DESIGN.md §7) */
-    border-top:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
-  }
-  @media (min-width:640px){.modal{border-radius:16px}}
-  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 18px 14px}
-  .modal-head .mh-title{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue)}
-  .modal-head .mh-model{font-size:18px;font-weight:800;color:var(--value-ice);margin-top:6px}
-  .modal-head .mh-retread{font-size:11px;font-weight:800;color:var(--signal-yellow);margin-top:4px}
-  .modal-close{
-    background:transparent;border:none;color:var(--value-ice);cursor:pointer;
-    width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex:none;border-radius:8px;
-  }
-  .modal-close:hover{background:var(--navy-brand)}
-  .modal-body{padding:0 18px 22px}
-  .modal-placeholder{
-    border:2px dashed var(--border-dark);border-radius:12px;padding:26px 18px;text-align:center;
-    color:var(--label-blue);font-size:12px;font-weight:700;line-height:1.6;
-  }
-
   footer{
     max-width:1080px;margin:28px auto 0;padding:0 16px;
     font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
@@ -383,28 +355,6 @@
   <!-- Sección exclusiva del eje (solo en modo eje) -->
   <div id="analysisMount"></div>
 </main>
-
-<!-- Modal de historial (interacción preparada; contenido fuera de alcance) -->
-<div class="scrim" id="historyScrim" role="dialog" aria-modal="true" aria-labelledby="histTitle" onclick="if(event.target===this)closeHistory()">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="mh-title" id="histTitle">Historial del neumático</div>
-        <div class="mh-model" id="histModel">—</div>
-        <div class="mh-retread" id="histRetread"></div>
-      </div>
-      <button class="modal-close" type="button" aria-label="Cerrar historial" onclick="closeHistory()">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="modal-placeholder">
-        El historial detallado del neumático (instalaciones, reencauches, inspecciones)<br>
-        se diseñará en un alcance posterior.
-      </div>
-    </div>
-  </div>
-</div>
 
 <footer>
   Datos de demostración · Vista de consulta (solo lectura) para jefe de flota<br>
@@ -498,6 +448,19 @@ const UNITS = [
     },
   },
 ];
+
+/* =========================================================================
+   # SERIE / CÓDIGO — llave única del neumático (Inventario). Es la llave del
+   Historial: al hacer clic navega a la vista aparte historial-neumatico.html.
+   Mock; mapea unidad+posición → código (coincide con los códigos de Inspección).
+   ========================================================================= */
+const TIRE_SERIES = {
+  "B-118": {P1:"NEU-04182", P2:"NEU-03911", P3:"NEU-04533", P4:"NEU-02748",
+            P5:"NEU-04102", P6:"NEU-03650", P7:"NEU-05007", P8:"NEU-05108"},
+  "B-204": {P1:"NEU-06110", P2:"NEU-06111", P3:"NEU-06220", P4:"NEU-06221",
+            P5:"NEU-06322", P6:"NEU-06323"},
+};
+function serieOf(uId, pos){ return (TIRE_SERIES[uId] || {})[pos] || null; }
 
 /* =========================================================================
    CÁLCULO POR NEUMÁTICO — misma lógica base para ambos modos.
@@ -658,8 +621,9 @@ function renderCard(){
   if(!selectedPos){ mount.innerHTML = ""; return; }
   const raw = u.tires[selectedPos];
   const m = computeTire(raw);
+  const serie = serieOf(unitId, selectedPos);
 
-  // Bloque de identidad: Modelo + (si aplica) Reencauche. Clickeable → historial.
+  // Bloque de identidad: # Serie / Código (llave). Clickeable → historial (vista aparte).
   const retreadLine = (m.reencauche)
     ? `<div class="id-retread">Reencauche: ${m.reencauche.codigo} (${m.reencauche.ciclo})</div>`
     : ``;
@@ -687,14 +651,15 @@ function renderCard(){
 
   mount.innerHTML = `
     <div class="tire-card">
-      <button class="identity" type="button" onclick="openHistory('${selectedPos}')"
-              aria-label="Ver historial del neumático de la posición ${selectedPos}">
+      <button class="identity" type="button" onclick="goToHistory('${serie}')"
+              aria-label="Ver historial del neumático ${serie || selectedPos}">
         <div>
-          <div class="id-model">${m.modelo || "—"} · ${selectedPos}</div>
+          <div class="id-model num">${serie || "—"} · ${selectedPos}</div>
+          <div class="id-retread" style="color:var(--label-blue)">${m.modelo || "—"}</div>
           ${retreadLine}
         </div>
         <span class="id-hint">
-          Historial
+          Ver historial
           <svg viewBox="0 0 12 20" fill="none"><path d="M2 2l7 8-7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
       </button>
@@ -850,19 +815,12 @@ function selectPos(pos){
   renderAll();
 }
 
-/* Historial — interacción preparada; contenido fuera de alcance. */
-function openHistory(pos){
-  const u = currentUnit();
-  const m = computeTire(u.tires[pos]);
-  document.getElementById("histModel").textContent = `${m.modelo || "—"} · ${pos}`;
-  document.getElementById("histRetread").textContent =
-    m.reencauche ? `Reencauche: ${m.reencauche.codigo} (${m.reencauche.ciclo})` : "";
-  document.getElementById("historyScrim").classList.add("open");
+/* Historial — vista APARTE (historial-neumatico.html), referenciada por link.
+   Se navega pasando la # Serie / Código y el origen para el botón "Volver". */
+function goToHistory(serie){
+  if(!serie) return;
+  location.href = `historial-neumatico.html?serie=${encodeURIComponent(serie)}&from=rendimiento`;
 }
-function closeHistory(){
-  document.getElementById("historyScrim").classList.remove("open");
-}
-document.addEventListener("keydown", e => { if(e.key === "Escape") closeHistory(); });
 
 /* init */
 renderUnitOptions();
