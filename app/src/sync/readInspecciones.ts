@@ -1,10 +1,16 @@
 import { supabase } from './supabaseClient';
 
-// Lectura mínima — sin RLS/auth todavía (fuera de alcance de esta fase).
-// RUN6: corregido para leer el esquema REAL del proyecto demo
-// (v_inspection_dashboard_rows), no el borrador plate_number/inspection_items
-// que nunca existió en el servidor. Hoy ninguna pantalla de la app lo consume:
-// sirve para verificar el sync a mano y para una futura vista de inspecciones.
+// listInspeccionesPorPlaca usa get_unidad_preload() (RPC SECURITY DEFINER,
+// supabase/migrations/20260710120000_preload_unidad_rpc.sql) en vez de leer
+// v_inspection_dashboard_rows directo: desde que RLS quedó activa
+// (20260710090000_dashboard_public_rls.sql) esa vista solo es legible por
+// `authenticated` con profiles, y la app móvil todavía lee como `anon` sin
+// sesión (no tiene login de inspector — eso es tasks_opencode/task_14, aparte).
+// El RPC expone el mismo shape acotado a UNA placa de UNA empresa puntual.
+//
+// listInspeccionesRecientes SIGUE sin consumidores y SIGUE bloqueada por RLS
+// (trae "todas las inspecciones", no tiene un RPC acotado equivalente — no
+// se le hizo uno porque nada la usa hoy).
 
 export interface InspeccionDashboardRow {
   company_id: string;
@@ -55,14 +61,38 @@ export async function listInspeccionesRecientes(limit = 200): Promise<Inspeccion
   return data ?? [];
 }
 
-export async function listInspeccionesPorPlaca(plate: string): Promise<InspeccionDashboardRow[]> {
+/** Shape acotado que devuelve get_unidad_preload() — subconjunto de InspeccionDashboardRow. */
+export interface UnidadPreloadRow {
+  plate: string;
+  inspected_on: string;
+  odometer_km: number | null;
+  unit_photo_url: string | null;
+  position_number: number;
+  tire_code: string | null;
+  casing_code: string | null;
+  brand_name: string | null;
+  condition: string | null;
+  retread_design: string | null;
+  size_name: string | null;
+  rtd_a_mm: number | null;
+  rtd_b_mm: number | null;
+  rtd_c_mm: number | null;
+  rtd_d_mm: number | null;
+  pressure_psi: number | null;
+  valve_cap: string | null;
+  anomaly: string | null;
+}
+
+// Empresa fija — hoy este proyecto Supabase solo contiene el dataset MÓVIL
+// BUS (mismo criterio que pushInspeccion.ts / save_inspection).
+const COMPANY_NAME = 'MÓVIL BUS';
+
+export async function listInspeccionesPorPlaca(plate: string): Promise<UnidadPreloadRow[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('v_inspection_dashboard_rows')
-    .select('*')
-    .eq('plate', plate)
-    .order('inspected_on', { ascending: false })
-    .order('position_number', { ascending: true });
+  const { data, error } = await supabase.rpc('get_unidad_preload', {
+    p_company_name: COMPANY_NAME,
+    p_plate: plate,
+  });
   if (error) throw error;
   return data ?? [];
 }

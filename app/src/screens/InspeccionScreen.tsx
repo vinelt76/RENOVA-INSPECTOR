@@ -9,6 +9,7 @@ import { supabaseEnabled } from '../sync/supabaseClient';
 import { MONO, NAVY, ORANGE, YELLOW, GREEN, RED, SCREEN_DARK, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../db/schema';
 import FormBody from './FormBody';
+import catalogoFlota from '../db/seed_data/catalogo_flota.json';
 
 const empty = (): Record<string, string> => ({
   codigo: '', r1: '', r2: '', r3: '', r4: '',
@@ -29,6 +30,10 @@ export default function InspeccionScreen() {
   // snapshot de `data` de su render (lost update).
   const dataRef = useRef<Record<string, string>>(empty());
   const [store, setStore] = useState<Record<number, Record<string, string>>>({});
+  // Posiciones que el inspector ya visitó/vio en esta sesión — independiente de si
+  // quedaron completas. Habilita "cambiar de unidad" para poder probar el flujo
+  // sin llenar todos los campos obligatoriamente (ver commit de este cambio).
+  const [visitedPositions, setVisitedPositions] = useState<Set<number>>(new Set([1]));
   const [flash, setFlash] = useState(false);
   const [slideDir, setSlideDir] = useState<'up' | 'down' | null>(null);
   const [showSheet, setShowSheet] = useState(false);
@@ -41,13 +46,13 @@ export default function InspeccionScreen() {
   const [valvulas, setValvulas] = useState<CatValvula[]>([]);
   const [condiciones, setCondiciones] = useState<CatCondicion[]>([]);
   const [configPos, setConfigPos] = useState<CatConfiguracion[]>([]);
-  const [accordionExpanded, setAccordionExpanded] = useState(false);
 
   // Envío mínimo a Supabase (integración demo) — sin VITE_SUPABASE_URL/ANON_KEY
   // configuradas, supabaseEnabled es false y este estado nunca sale de 'idle'
   // (cero cambio de comportamiento respecto a hoy).
   const [syncState, setSyncState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [syncRevision, setSyncRevision] = useState(0);
 
   const r1Ref = useRef<HTMLInputElement>(null);
   const r2Ref = useRef<HTMLInputElement>(null);
@@ -63,7 +68,8 @@ export default function InspeccionScreen() {
         catalogoRepo.medidas(),
       ]);
       setMarcas(m); setAnomalias(a); setValvulas(v);
-      setReencauches(r); setCondiciones(c); setMedidas(med);
+      setReencauches(r); setCondiciones(c);
+      setMedidas(med.length ? med : (catalogoFlota.medidas as string[]).map(nombre => ({ id: nombre, nombre })));
 
       let tipoV = unidadTipoVehiculo;
       let configV = unidadConfig;
@@ -132,6 +138,9 @@ export default function InspeccionScreen() {
       };
     }
     setStore(newStore);
+    if (Object.keys(newStore).length > 0) {
+      setVisitedPositions(v => new Set([...v, ...Object.keys(newStore).map(Number)]));
+    }
     if (newStore[pos]) { setData(newStore[pos]); dataRef.current = newStore[pos]; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCabId]);
@@ -167,6 +176,7 @@ export default function InspeccionScreen() {
         r3: toNum(next.r3), r4: toNum(next.r4), presion: toNum(next.presion),
         tapa_valvula: next.tapaValvula || null, anomalia: next.anomalia || null,
       });
+      setSyncRevision(r => r + 1);
     }
   };
 
@@ -175,34 +185,16 @@ export default function InspeccionScreen() {
     const nextStore = { ...store, [pos]: dataRef.current };
     setStore(nextStore);
     setPos(n);
+    setVisitedPositions(v => v.has(n) ? v : new Set(v).add(n));
     const nextData = nextStore[n] || empty();
     dataRef.current = nextData;
     setData(nextData);
     if (focusR1) {
-      // El form remonta (key={pos}); esperar al remount para enfocar R1
-      setTimeout(() => { r1Ref.current?.focus(); r1Ref.current?.select(); }, 260);
+      // El form remonta (key={pos}); esperar al remount para enfocar R1.
+      // Aumentamos ligeramente el delay para evitar que compita con el resize del teclado.
+      setTimeout(() => { r1Ref.current?.focus(); r1Ref.current?.select(); }, 300);
     }
   }, [pos, store]);
-
-  // Auto-avance: el inspector cerró la medición (Enter/blur en presión con valor).
-  // Solo si la posición quedó completa y el acordeón no está en edición.
-  // Las flechas ‹ › siempre ganan (avance manual disponible en todo momento).
-  const handleMeasureDone = useCallback(() => {
-    if (accordionExpanded) return;
-    const d = dataRef.current;
-    const rtdOk = !!(d.r1 && d.r2 && d.r3 && (!requiresR4(pos) || d.r4));
-    if (!rtdOk || !d.presion) return;
-    const isComplete = (p: number) => {
-      const dd = p === pos ? dataRef.current : (store[p] || empty());
-      const ok = !!(dd.r1 && dd.r2 && dd.r3 && (!requiresR4(p) || dd.r4));
-      return ok && !!dd.presion;
-    };
-    const nextIncomplete = FILAS.find(f => f !== pos && !isComplete(f));
-    if (nextIncomplete !== undefined) {
-      setTimeout(() => switchPos(nextIncomplete, true), 180);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accordionExpanded, data, store, pos, configPos, switchPos]);
 
   const posIdx = FILAS.indexOf(pos);
   const prevPos = () => { if (posIdx > 0) switchPos(FILAS[posIdx - 1]); };
@@ -233,24 +225,32 @@ export default function InspeccionScreen() {
 
   // Reset del indicador al entrar a una inspección distinta.
   useEffect(() => { setSyncState('idle'); }, [activeCabId]);
+  useEffect(() => { setVisitedPositions(new Set([1])); }, [activeCabId]);
 
-  // Envío mínimo a Supabase: se dispara (con debounce) cuando TODAS las posiciones
-  // quedan completas — mismo momento en que aparece "BUSCAR OTRA UNIDAD →" abajo.
-  // Si el inspector corrige algo después, `store` cambia y se reintenta solo.
+  // Cambiar de unidad NO exige campos completos, solo haber recorrido todas las
+  // posiciones (permite probar el flujo sin llenar RTD/presión/anomalía/etc.).
+  // La validación de campos obligatorios queda reservada al guardado final.
+  const allPositionsViewed = TOTAL > 0 && FILAS.every(p => visitedPositions.has(p));
+  const canChangeUnit = allPositionsViewed;
+
+  // Envío a Supabase: se dispara (con debounce) después de cada guardado local.
+  // No exige completar todas las posiciones; así el HTML puede reflejar cambios
+  // parciales y correcciones durante la inspección.
   // No bloquea nada: el guardado local (SQLite, vía `commit`) ya ocurrió antes y
   // sigue siendo la fuente de verdad si esto falla.
   useEffect(() => {
     if (!supabaseEnabled || !activeCabId) return;
-    if (!(TOTAL > 0 && completas === TOTAL)) return;
+    if (syncRevision === 0) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
       setSyncState('sending');
       const res = await pushInspeccionToSupabase(activeCabId);
+      if (!res.ok) console.warn('Supabase sync error:', res.error ?? (res.skipped ? 'skipped' : 'unknown'));
       setSyncState(res.ok ? 'ok' : 'error');
     }, 1200);
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCabId, completas, TOTAL, store]);
+  }, [activeCabId, syncRevision]);
 
   const navBtn = (label: React.ReactNode, onClick: () => void, disabled: boolean) => (
     <button onClick={onClick} disabled={disabled} className="pressable" style={{
@@ -261,7 +261,7 @@ export default function InspeccionScreen() {
   );
 
   return (
-    <div className="screen-enter" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: SCREEN_DARK, fontFamily: MONO, overflow: 'clip' }}>
+    <div className="screen-enter" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: SCREEN_DARK, fontFamily: MONO, overflow: 'hidden' }}>
 
       {/* Header — solo identidad + salida (la navegación vive abajo, zona del pulgar) */}
       <div style={{ flexShrink: 0 }}>
@@ -308,7 +308,7 @@ export default function InspeccionScreen() {
       <div
         key={pos}
         className={slideDir ? `form-slide-${slideDir}` : ''}
-        style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+        style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
       >
         <FormBody
           data={data}
@@ -330,22 +330,13 @@ export default function InspeccionScreen() {
           onNewModelo={handleNewModelo}
           onNewMedida={handleNewMedida}
           onNewReencauche={handleNewReencauche}
-          onAccordionChange={setAccordionExpanded}
-          onMeasureDone={handleMeasureDone}
+          showBuscarOtra={canChangeUnit && posIdx === FILAS.length - 1}
+          onBuscarOtra={handleExit}
         />
       </div>
 
       {/* Barra de acción inferior — navegación de posición en zona del pulgar (DESIGN.md §7) */}
       <div style={{ flexShrink: 0, background: NAVY, padding: `8px 14px calc(8px + env(safe-area-inset-bottom, 0px))` }}>
-        {TOTAL > 0 && completas === TOTAL && (
-          <button
-            onClick={handleExit}
-            className="pressable chamfer"
-            style={{ width: '100%', background: YELLOW, color: NAVY, border: 'none', padding: 13, fontWeight: 800, fontSize: 14, letterSpacing: '0.04em', cursor: 'pointer', fontFamily: MONO, marginBottom: 8 }}
-          >
-            BUSCAR OTRA UNIDAD →
-          </button>
-        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {navBtn(
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11.5 3l-6 6 6 6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,

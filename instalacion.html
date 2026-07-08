@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>RENOVA - Instalaciones</title>
+<!-- Pantalla de instalación: solo datos reales del Excel cargados en Supabase. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
+<style>
+  :root{
+    --screen-dark:#07111C; --field-dark:#111E2E; --navy-brand:#15233f;
+    --border-dark:#1B2D42; --label-blue:#7AABCC; --value-ice:#F0F8FF;
+    --ember-orange:#F06822; --signal-yellow:#f4b821; --verified-green:#1f9d6b;
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--screen-dark); color:var(--value-ice);
+    font-family:var(--mono); font-weight:700; -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums; padding-bottom:42px;
+  }
+  header{
+    background:var(--navy-brand); padding:18px 16px 16px; position:sticky; top:0; z-index:20;
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .brand .logo{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.06em}
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{font-family:var(--display);font-size:19px;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
+  .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
+  .nav{display:flex;gap:8px;flex-wrap:wrap}
+  .nav a{
+    color:var(--label-blue); text-decoration:none; border:2px solid var(--border-dark);
+    background:var(--field-dark); border-radius:8px; padding:9px 12px;
+    font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  }
+  .nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
+  main{max-width:1280px;margin:0 auto;padding:16px}
+  .toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .selector{display:flex;flex-direction:column;gap:6px}
+  .selector label{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue)}
+  select{
+    appearance:none;-webkit-appearance:none;background:var(--field-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:800;font-size:13px;border:2px solid var(--border-dark);
+    border-radius:8px;padding:10px 38px 10px 12px;min-width:180px;
+  }
+  .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+  .metric{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;padding:14px}
+  .metric .k{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .metric .v{font-size:24px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice)}
+  .metric .s{font-size:10px;color:var(--label-blue);margin-top:6px;line-height:1.4}
+  .table-card{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;overflow:hidden}
+  .table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;background:var(--navy-brand);padding:13px 16px;border-bottom:2px solid var(--border-dark)}
+  .table-head h2{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .table-head .count{font-size:11px;color:var(--label-blue)}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:1040px}
+  th{
+    text-align:left;padding:10px 10px 8px;border-bottom:2px solid var(--border-dark);
+    color:var(--label-blue);font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
+  }
+  td{padding:10px;border-bottom:1px solid rgba(27,45,66,.65);font-size:12px;font-weight:700;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td.dim{color:var(--label-blue)}
+  .code{color:var(--ember-orange);font-weight:800}
+  .empty{border:2px dashed var(--border-dark);border-radius:12px;padding:18px;color:var(--label-blue);font-size:12px;line-height:1.5}
+  @media (max-width:780px){.summary{grid-template-columns:1fr 1fr}.head-row{align-items:flex-start}.nav{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>.</b></div>
+      <div class="screen-name">INSTALACIONES</div>
+      <div class="subtitle">Datos fuente del Excel · montaje por unidad y posición</div>
+    </div>
+    <nav class="nav" aria-label="Pantallas">
+      <a href="INSPECCIONES/INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+      <a class="active" href="instalacion.html">Instalación</a>
+      <a href="rendimiento.html">Rendimiento</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="selector">
+      <label for="unitSelect">Unidad</label>
+      <select id="unitSelect"></select>
+    </div>
+    <div class="selector">
+      <label for="positionSelect">Posición</label>
+      <select id="positionSelect"></select>
+    </div>
+  </div>
+
+  <section class="summary" id="summary"></section>
+
+  <section class="table-card">
+    <div class="table-head">
+      <h2>Instalaciones cargadas desde Excel</h2>
+      <div class="count" id="rowCount">0 filas</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Unidad</th><th>Pos</th><th>Código</th><th>Marca</th><th>Medida</th>
+            <th>Diseño actual</th><th>Cond.</th><th>Fecha instala</th><th>Km instala</th>
+            <th>RTD inicial</th><th>Precio</th><th>Últ. inspección</th><th>Km recorrido</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const EXCEL_PLATES = new Set(["2145","5021","5032","225","2134","2151","256"]);
+let INSTALLATIONS = [];
+let selectedUnit = "all";
+let selectedPosition = "all";
+const nf = new Intl.NumberFormat("es-PE");
+const money = new Intl.NumberFormat("es-PE", { style:"currency", currency:"USD" });
+const mm = v => v == null ? "—" : Number(v).toFixed(1) + " mm";
+const km = v => v == null ? "—" : nf.format(Math.round(Number(v))) + " km";
+const fdate = d => d ? d.split("-").reverse().join("/") : "—";
+
+function normalize(rows){
+  return rows
+    .filter(r => EXCEL_PLATES.has(String(r.plate)))
+    .map(r => ({
+      plate:String(r.plate),
+      position:Number(r.position_number),
+      casing_code:r.casing_code || "—",
+      brand_name:r.brand_name || "—",
+      size_name:r.size_name || "—",
+      condition:r.condition || "—",
+      retread_design:r.retread_design || r.model_name || "—",
+      installed_at:r.installed_at,
+      odometer_at_install:r.odometer_at_install,
+      rtd_at_install_mm:r.rtd_at_install_mm,
+      cost:r.cost,
+      currency:r.currency || "USD",
+      last_inspection_on:r.last_inspection_on,
+      km_run:r.km_run,
+    }))
+    .sort((a,b) => a.plate.localeCompare(b.plate, "es", {numeric:true}) || a.position - b.position);
+}
+
+function filtered(){
+  return INSTALLATIONS.filter(r =>
+    (selectedUnit === "all" || r.plate === selectedUnit) &&
+    (selectedPosition === "all" || String(r.position) === selectedPosition)
+  );
+}
+
+function renderSelectors(){
+  const units = [...new Set(INSTALLATIONS.map(r => r.plate))]
+    .sort((a,b) => a.localeCompare(b, "es", {numeric:true}));
+  document.getElementById("unitSelect").innerHTML =
+    `<option value="all">Todas</option>` + units.map(u => `<option value="${u}">${u}</option>`).join("");
+  document.getElementById("unitSelect").value = selectedUnit;
+
+  const positions = [...new Set(INSTALLATIONS.map(r => r.position))]
+    .sort((a,b) => a-b);
+  document.getElementById("positionSelect").innerHTML =
+    `<option value="all">Todas</option>` + positions.map(p => `<option value="${p}">P${p}</option>`).join("");
+  document.getElementById("positionSelect").value = selectedPosition;
+}
+
+function renderSummary(rows){
+  const units = new Set(rows.map(r => r.plate)).size;
+  const avgRtd = rows.length ? rows.reduce((s,r)=>s + Number(r.rtd_at_install_mm || 0),0) / rows.length : null;
+  const totalCost = rows.reduce((s,r)=>s + Number(r.cost || 0),0);
+  const dates = rows.map(r => r.installed_at).filter(Boolean).sort();
+  document.getElementById("summary").innerHTML = `
+    <div class="metric"><div class="k">Instalaciones</div><div class="v">${rows.length}</div><div class="s">Filas del Excel</div></div>
+    <div class="metric"><div class="k">Unidades</div><div class="v">${units}</div><div class="s">Vehículos con montaje</div></div>
+    <div class="metric"><div class="k">RTD inicial prom.</div><div class="v">${avgRtd == null ? "—" : avgRtd.toFixed(1)}</div><div class="s">mm</div></div>
+    <div class="metric"><div class="k">Rango fechas</div><div class="v" style="font-size:15px">${dates.length ? fdate(dates[0]) : "—"}</div><div class="s">${dates.length ? "hasta " + fdate(dates[dates.length-1]) : "sin dato"} · costo ${money.format(totalCost)}</div></div>
+  `;
+}
+
+function renderRows(rows){
+  document.getElementById("rowCount").textContent = `${rows.length} fila${rows.length === 1 ? "" : "s"}`;
+  if(!rows.length){
+    document.getElementById("rows").innerHTML =
+      `<tr><td colspan="13"><div class="empty">Sin instalaciones del Excel para este filtro.</div></td></tr>`;
+    return;
+  }
+  document.getElementById("rows").innerHTML = rows.map(r => `
+    <tr>
+      <td><b>${r.plate}</b></td>
+      <td>P${r.position}</td>
+      <td class="code">${r.casing_code}</td>
+      <td>${r.brand_name}</td>
+      <td>${r.size_name}</td>
+      <td>${r.retread_design}</td>
+      <td>${r.condition}</td>
+      <td class="dim">${fdate(r.installed_at)}</td>
+      <td class="dim">${km(r.odometer_at_install)}</td>
+      <td>${mm(r.rtd_at_install_mm)}</td>
+      <td>${r.cost == null ? "—" : money.format(Number(r.cost))}</td>
+      <td class="dim">${fdate(r.last_inspection_on)}</td>
+      <td>${km(r.km_run)}</td>
+    </tr>`).join("");
+}
+
+function render(){
+  renderSelectors();
+  const rows = filtered();
+  renderSummary(rows);
+  renderRows(rows);
+}
+
+function renderNoData(message){
+  INSTALLATIONS = [];
+  document.getElementById("unitSelect").innerHTML = `<option value="">Sin datos Excel</option>`;
+  document.getElementById("positionSelect").innerHTML = `<option value="">Sin datos Excel</option>`;
+  document.getElementById("summary").innerHTML = `<div class="empty" style="grid-column:1/-1">${message}</div>`;
+  document.getElementById("rowCount").textContent = "0 filas";
+  document.getElementById("rows").innerHTML = `<tr><td colspan="13"><div class="empty">${message}</div></td></tr>`;
+}
+
+async function load(){
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    renderNoData("Supabase no configurado. No se muestran datos locales.");
+    window.RenovaSupabase && RenovaSupabase.showBadge("empty");
+    return;
+  }
+  try{
+    const rows = await RenovaSupabase.fetchView("v_rendimiento_dashboard_rows", {
+      select:"company_name,plate,position_number,casing_code,brand_name,model_name,size_name,condition,retread_design,installed_at,odometer_at_install,rtd_at_install_mm,cost,currency,last_inspection_on,km_run",
+      order:"plate.asc,position_number.asc",
+      limit:"200",
+    });
+    INSTALLATIONS = normalize(rows);
+    if(!INSTALLATIONS.length) throw new Error("sin instalaciones del Excel");
+    render();
+    RenovaSupabase.showBadge("supabase", rows[0]?.company_name || "MÓVIL BUS");
+  }catch(err){
+    console.warn("Instalaciones: no se pudo cargar Supabase.", err);
+    renderNoData("No se pudieron cargar instalaciones del Excel desde Supabase.");
+    RenovaSupabase.showBadge("empty");
+  }
+}
+
+document.getElementById("unitSelect").addEventListener("change", e => {
+  selectedUnit = e.target.value || "all";
+  render();
+});
+document.getElementById("positionSelect").addEventListener("change", e => {
+  selectedPosition = e.target.value || "all";
+  render();
+});
+renderNoData("Cargando instalaciones del Excel desde Supabase...");
+onRenovaSupabaseReady(async () => {
+  await RenovaSupabase.requireAuth();
+  load();
+});
+</script>
+</body>
+</html>

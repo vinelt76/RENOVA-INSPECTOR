@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>RENOVA — Vista de Flota</title>
+<!--
+  PANTALLA NUEVA E INDEPENDIENTE — Vista de Flota (dashboard para jefes de flota).
+  Autocontenida: abrir directamente en el navegador. Datos reales desde Supabase/Excel.
+
+  NO modifica la app existente, ni la pantalla de inspección, ni el gemelo digital 3D.
+  Solo visualiza, en una fecha de inspección, la salud general de todas las unidades y
+  sirve de entrada hacia la inspección individual ya existente (openInspection()).
+
+  Regla de color EXCLUSIVA de esta pantalla (más simple que la de Inspección, priorizando
+  velocidad de lectura sobre muchas unidades):
+    · Anomalía causal de retiro            → CRÍTICO (naranja)
+    · RTD remanente < 4 mm                 → CRÍTICO (naranja)
+    · RTD remanente entre 4 mm y 8 mm      → OBSERVACIÓN (amarillo)
+    · RTD remanente > 8 mm y sin anomalía  → NORMAL (verde)
+  (Semáforo del negocio, DESIGN.md §8: el naranja ES la máxima severidad; no se usa rojo.)
+  El color de la unidad = el PEOR caso entre todos sus neumáticos.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<!-- Supabase: config pública (RLS protege por empresa) + adaptador con login.
+     Sin config o sin red, la pantalla no inventa datos. -->
+<script src="../supabase-config.public.js"></script>
+<script src="../renova-ready.js"></script>
+<script type="module" src="../supabase-demo.js"></script>
+<style>
+  :root{
+    /* Paleta RENOVA (DESIGN.md) */
+    --screen-dark:#07111C;
+    --field-dark:#111E2E;
+    --navy-brand:#15233f;
+    --border-dark:#1B2D42;
+    --label-blue:#7AABCC;
+    --value-ice:#F0F8FF;
+    --ember-orange:#F06822;
+    --signal-yellow:#f4b821;
+    --verified-green:#1f9d6b;
+
+    /* Semáforo del negocio (DESIGN.md §8): verde Normal · amarillo Observación · naranja Crítico.
+       El naranja ES la máxima severidad del sistema; no se introduce rojo. Máxima
+       separación de hue entre los 3 estados => lectura rápida sobre muchas unidades. */
+    --crit:#F06822;                    /* Crítico      = ember-orange */
+    --crit-bg:rgba(240,104,34,.14);
+    --warn:#f4b821;                    /* Observación  = signal-yellow */
+    --warn-bg:rgba(244,184,33,.14);
+    --normal:var(--verified-green);    /* Normal       = verified-green */
+
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--screen-dark);
+    color:var(--value-ice);
+    font-family:var(--mono);
+    font-weight:700;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    padding-bottom:40px;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ───────────────── Header ───────────────── */
+  header{
+    background:var(--navy-brand);
+    padding:18px 16px 16px;
+    position:sticky;top:0;z-index:20;
+    /* filo inferior = "cinta de seguridad" (DESIGN.md §7) */
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto;
+  }
+  .brand .logo{
+    font-family:var(--display);font-size:32px;line-height:1;
+    letter-spacing:.06em;color:var(--value-ice);
+  }
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{
+    font-family:var(--display);font-size:19px;line-height:1;
+    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
+  }
+  .brand .subtitle{
+    font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--label-blue);margin-top:8px;
+  }
+  .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+  .screen-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .screen-nav a{
+    color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
+    background:var(--field-dark);border-radius:8px;padding:10px 12px;
+    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
+  .date-picker{display:flex;flex-direction:column;gap:6px}
+  .date-picker label{
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);
+  }
+  .date-picker select{
+    appearance:none;-webkit-appearance:none;
+    background:var(--field-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;font-size:14px;
+    border:2px solid var(--border-dark);border-radius:8px;
+    padding:11px 40px 11px 14px;cursor:pointer;
+    transition:border-color .15s ease-out;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  .date-picker select:focus{outline:none;border-color:var(--ember-orange)}
+
+  /* ───────────────── Layout ───────────────── */
+  main{max-width:1200px;margin:0 auto;padding:16px}
+
+  /* ───────────────── KPIs: panel gráfico de flota ─────────────────
+     Reemplaza las 5 stat cards de texto por un panel único (total +
+     distribución + riesgo) — ver design-principle.md "Graphic-first
+     dashboard principle". Barra segmentada, nunca torta (DESIGN.md §8). */
+  .kpis{margin-bottom:22px}
+
+  @keyframes panelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .fleet-overview{
+    display:grid;grid-template-columns:200px 1fr 220px;gap:24px;align-items:center;
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;
+    padding:20px 24px;animation:panelIn .3s ease-out both;
+  }
+  .fo-total-value{font-size:44px;font-weight:800;line-height:1;color:var(--value-ice)}
+  .fo-total-label{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-top:8px;
+  }
+  .fo-total-sub{
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:4px;
+    text-transform:uppercase;
+  }
+
+  .fo-dist-label{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:10px;
+  }
+  .severity-bar{
+    display:flex;height:30px;border-radius:8px;overflow:hidden;
+    background:var(--screen-dark);border:2px solid var(--border-dark);
+  }
+  .sb-seg{height:100%;flex:0 0 0%;transition:flex-basis .7s cubic-bezier(.22,1,.36,1)}
+  .sb-seg.crit{background:var(--crit)}
+  .sb-seg.warn{background:var(--warn)}
+  .sb-seg.normal{background:var(--verified-green)}
+  .sb-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+  .sb-legend span{
+    display:flex;align-items:center;gap:6px;
+    font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .sb-legend b{color:var(--value-ice);font-size:12px}
+  .sb-legend .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .sb-legend .dot.crit{background:var(--crit)}
+  .sb-legend .dot.warn{background:var(--warn)}
+  .sb-legend .dot.normal{background:var(--verified-green)}
+
+  .fo-risk{display:flex;align-items:center;gap:14px;justify-content:flex-end}
+  .risk-ring{
+    --pct:0%;width:78px;height:78px;border-radius:50%;flex:none;position:relative;
+    background:conic-gradient(var(--crit) var(--pct),var(--border-dark) 0);
+  }
+  .risk-ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--field-dark)}
+  .risk-ring .rr-value{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:800;color:var(--value-ice);z-index:1;
+  }
+  .fo-risk-text{text-align:right}
+  .fo-risk-label{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .fo-risk-sub{font-size:10px;font-weight:700;color:var(--label-blue);margin-top:4px}
+
+  @media (max-width:760px){
+    .fleet-overview{grid-template-columns:1fr;text-align:left}
+    .fo-risk{justify-content:flex-start}
+  }
+
+  /* ───────────────── Sección ───────────────── */
+  .section-head{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;flex-wrap:wrap;margin-bottom:12px;
+  }
+  .section-head h2{
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue);
+  }
+
+  /* ───────────────── Grid de unidades ───────────────── */
+  .fleet-grid{
+    display:grid;gap:12px;
+    grid-template-columns:repeat(auto-fill,minmax(158px,1fr));
+  }
+  .unit-card{
+    background:var(--field-dark);
+    border:2px solid var(--border-dark);
+    border-radius:12px;
+    padding:12px 12px 11px;
+    cursor:pointer;
+    display:flex;flex-direction:column;gap:10px;
+    transition:transform .12s ease-out,border-color .15s ease-out,background .15s ease-out;
+    text-align:left;font-family:var(--mono);
+  }
+  .unit-card:hover{background:#132538}
+  .unit-card:focus-visible{outline:none;border-color:var(--value-ice)}
+  .unit-card.pressable:active{transform:scale(.97)}
+  .unit-card.status-critical{border-color:var(--crit);background:linear-gradient(180deg,var(--crit-bg),transparent 60%),var(--field-dark)}
+  .unit-card.status-warning{border-color:var(--warn);background:linear-gradient(180deg,var(--warn-bg),transparent 60%),var(--field-dark)}
+
+  .uc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .uc-plate{font-size:20px;font-weight:800;line-height:1;color:var(--value-ice);letter-spacing:.02em}
+  .uc-meta{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:5px;text-transform:uppercase}
+  .uc-dot{width:11px;height:11px;border-radius:50%;flex:none;margin-top:3px}
+  .status-critical .uc-dot{background:var(--crit);box-shadow:0 0 0 3px var(--crit-bg)}
+  .status-warning  .uc-dot{background:var(--warn);box-shadow:0 0 0 3px var(--warn-bg)}
+  .status-normal   .uc-dot{background:var(--verified-green);box-shadow:0 0 0 3px rgba(31,157,107,.15)}
+
+  /* Card de unidad simplificada — sin pills de neumático individual (ver
+     design-principle.md, Goal 2.4): solo placa, empresa, configuración y
+     un estado grande por color. */
+  .uc-config{
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);
+    text-transform:uppercase;
+  }
+  .uc-status{
+    margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);
+    font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .status-critical .uc-status{color:var(--crit)}
+  .status-warning  .uc-status{color:var(--warn)}
+  .status-normal   .uc-status{color:var(--verified-green)}
+
+  @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .unit-card{animation:cardIn .28s ease-out both}
+
+  .empty{
+    grid-column:1/-1;text-align:center;color:var(--label-blue);
+    font-size:12px;padding:40px 0;border:2px dashed var(--border-dark);border-radius:12px;
+  }
+
+  footer{
+    max-width:1200px;margin:24px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;
+  }
+
+  @media (max-width:520px){
+    .brand .logo{font-size:26px}
+    .header-tools{width:100%;justify-content:flex-start}
+    .screen-nav{width:100%}
+    .date-picker{width:100%}
+    .date-picker select{width:100%}
+    .uc-plate{font-size:18px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">VISTA DE FLOTA</div>
+      <div class="subtitle">Estado general de unidades inspeccionadas</div>
+    </div>
+    <div class="header-tools">
+      <nav class="screen-nav" aria-label="Pantallas">
+        <a class="active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+        <a href="../instalacion.html">Instalación</a>
+        <a href="../rendimiento.html">Rendimiento</a>
+      </nav>
+      <div class="date-picker">
+        <label for="dateSelect">Fecha de inspección</label>
+        <select id="dateSelect" aria-label="Fecha de inspección"></select>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- KPIs -->
+  <section class="kpis" id="kpis" aria-label="Resumen de flota"></section>
+
+  <!-- Grid -->
+  <div class="section-head">
+    <h2 id="gridTitle">Unidades inspeccionadas</h2>
+  </div>
+
+  <section class="fleet-grid" id="fleetGrid" aria-live="polite"></section>
+</main>
+
+<footer>Datos del Excel · Regla de color exclusiva de Vista de Flota (peor caso por unidad)</footer>
+
+<script>
+/* Dataset activo: SOLO datos reales desde Supabase/Excel. */
+let INSPECTIONS = {};
+
+/* =========================================================================
+   DATOS REALES (Supabase) — v_inspection_dashboard_rows.
+   La regla de color (tireStatus/calculateUnitStatus) NO cambia: sigue
+   siendo la del HTML. Cada fecha muestra las unidades inspeccionadas ESE día
+   (con datos reales suele ser 1–2 unidades por fecha — es la realidad del
+   Excel, no un bug). rtd = RTD MOVI (mínimo de canales) de esa inspección.
+   ========================================================================= */
+function buildInspectionsFromSupabase(rows){
+  const byDate = {};
+  const byInspection = new Map();
+  rows.forEach(r => {
+    if(!byInspection.has(r.inspection_id)) byInspection.set(r.inspection_id, []);
+    byInspection.get(r.inspection_id).push(r);
+  });
+  for(const g of byInspection.values()){
+    g.sort((a,b) => a.position_number - b.position_number);
+    const h = g[0];
+    if(!h.inspected_on) continue;
+    const unit = {
+      id: h.inspection_id,
+      plate: h.plate,
+      company: h.company_name || "—",
+      equipmentType: "Bus",
+      inspectionDate: h.inspected_on,
+      tires: g.map(r => ({
+        position: "P" + r.position_number,
+        rtd: r.rtd_movi_mm != null ? Number(r.rtd_movi_mm) : null,
+        withdrawalAnomaly: !!r.is_discard,
+        axle: r.axle_number ?? 0,
+        side: r.side === "Der" ? "R" : "L",
+      })),
+    };
+    (byDate[h.inspected_on] = byDate[h.inspected_on] || []).push(unit);
+  }
+  return byDate;
+}
+
+async function loadSupabaseFleet(){
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    renderNoData("Supabase no configurado. No se muestran datos locales.");
+    RenovaSupabase && RenovaSupabase.showBadge("empty");
+    return;
+  }
+  try{
+    const rows = await RenovaSupabase.fetchView("v_inspection_dashboard_rows",
+      { order: "inspected_on.desc,plate.asc,position_number.asc", limit: "800" });
+    const data = buildInspectionsFromSupabase(rows);
+    const dates = Object.keys(data).sort().reverse();
+    if(!dates.length) throw new Error("v_inspection_dashboard_rows sin filas");
+    INSPECTIONS = data;
+    selectedDate = dates[0];
+    renderDateOptions();
+    renderAll();
+    RenovaSupabase.showBadge("supabase", rows[0].company_name || "");
+  }catch(err){
+    console.warn("Inspecciones por fecha: Supabase no disponible.", err);
+    renderNoData("No se pudieron cargar los datos del Excel desde Supabase.");
+    RenovaSupabase.showBadge("empty");
+  }
+}
+
+/* =========================================================================
+   LÓGICA DE ESTADO  (regla EXCLUSIVA de Vista de Flota)
+   El color NUNCA se fija a mano en la unidad: sale de estas funciones.
+   ========================================================================= */
+
+// Estado de un neumático individual.
+function tireStatus(tire){
+  if(tire.withdrawalAnomaly) return "critical";   // causal de retiro → rojo
+  if(tire.rtd < 4)  return "critical";            // < 4 mm            → rojo
+  if(tire.rtd <= 8) return "warning";             // 4–8 mm            → naranja
+  return "normal";                                // > 8 mm            → normal
+}
+
+// Estado de la unidad = PEOR caso entre sus neumáticos.
+function calculateUnitStatus(unit){
+  let worst = "normal";
+  for(const t of unit.tires){
+    const s = tireStatus(t);
+    if(s === "critical") return "critical";       // no hay nada peor
+    if(s === "warning")  worst = "warning";
+  }
+  return worst;
+}
+
+// RTD remanente más bajo de la unidad (mm).
+function getWorstRTD(unit){
+  return unit.tires.reduce((min,t)=> t.rtd < min ? t.rtd : min, Infinity);
+}
+
+// PLACEHDER de navegación → abre la inspección YA EXISTENTE de la unidad.
+// No se crea inspección nueva ni se duplica el gemelo digital aquí.
+function openInspection(unitId){
+  const unit = currentUnits().find(u => u.id === unitId);
+  const qs = new URLSearchParams({
+    inspection_id: unitId,
+    plate: unit ? unit.plate : "",
+    date: unit ? unit.inspectionDate : selectedDate,
+  });
+  location.href = `Inspecciones por unidad.html?${qs.toString()}`;
+}
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+
+const STATUS_LABEL = { critical:"Crítica", warning:"Observación", normal:"Normal" };
+
+let selectedDate = null;
+function currentUnits(){ return INSPECTIONS[selectedDate] || []; }
+
+function formatDate(iso){
+  const meses = ["enero","febrero","marzo","abril","mayo","junio","julio",
+                 "agosto","septiembre","octubre","noviembre","diciembre"];
+  const [y,m,d] = iso.split("-").map(Number);
+  return `${d} ${meses[m-1]} ${y}`;
+}
+
+function renderDateOptions(){
+  const sel = document.getElementById("dateSelect");
+  const dates = Object.keys(INSPECTIONS).sort().reverse();
+  sel.innerHTML = dates.length
+    ? dates.map(iso => `<option value="${iso}">${formatDate(iso)}</option>`).join("")
+    : `<option value="">Sin datos Excel</option>`;
+  sel.value = selectedDate;
+}
+
+function renderNoData(message){
+  INSPECTIONS = {};
+  selectedDate = null;
+  renderDateOptions();
+  document.getElementById("kpis").innerHTML =
+    `<div class="fleet-overview"><div class="fo-total">
+      <div class="fo-total-value num">0</div>
+      <div class="fo-total-label">Unidades inspeccionadas</div>
+      <div class="fo-total-sub">${message}</div>
+    </div></div>`;
+  document.getElementById("gridTitle").textContent = "Unidades inspeccionadas · 0";
+  document.getElementById("fleetGrid").innerHTML =
+    `<div class="empty">${message}</div>`;
+}
+
+/* =========================================================================
+   ANIMACIÓN — utilidades mínimas (conteo ascendente, crecimiento de barras
+   y anillo de riesgo). Respetan prefers-reduced-motion: en ese caso el
+   valor final se aplica de inmediato, sin pasos intermedios.
+   ========================================================================= */
+const REDUCED_MOTION = window.matchMedia &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function animateCount(el, to, opts={}){
+  if(!el) return;
+  const { duration = 600, format = v => Math.round(v).toString() } = opts;
+  if(REDUCED_MOTION){ el.textContent = format(to); return; }
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = format(to * eased);
+    if(p < 1) requestAnimationFrame(tick); else el.textContent = format(to);
+  }
+  requestAnimationFrame(tick);
+}
+
+// Crece una barra desde 0 hasta `pct`% sobre la propiedad CSS indicada
+// (width para barras normales, flexBasis para segmentos de un flex).
+function growFill(el, pct, prop="width"){
+  if(!el) return;
+  if(REDUCED_MOTION){ el.style[prop] = pct + "%"; return; }
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{ el.style[prop] = pct + "%"; }));
+}
+
+function animateRing(el, toPct, duration=700){
+  if(!el) return;
+  if(REDUCED_MOTION){ el.style.setProperty("--pct", toPct + "%"); return; }
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.style.setProperty("--pct", (toPct * eased) + "%");
+    if(p < 1) requestAnimationFrame(tick); else el.style.setProperty("--pct", toPct + "%");
+  }
+  requestAnimationFrame(tick);
+}
+
+// Panel único: total (número) + distribución de severidad (barra segmentada,
+// nunca torta — DESIGN.md §8) + riesgo de flota (anillo). Sustituye las 5
+// stat cards de texto por gráficos compactos (design-principle.md, Goal 2.1).
+function renderKpis(){
+  const units = currentUnits();
+  const total = units.length;
+  let crit=0, warn=0, normal=0;
+  units.forEach(u=>{
+    const s = calculateUnitStatus(u);
+    if(s==="critical") crit++; else if(s==="warning") warn++; else normal++;
+  });
+  const atRisk = crit + warn;
+  const riskPct = total ? Math.round((atRisk/total)*100) : 0;
+  const critPct = total ? (crit/total)*100 : 0;
+  const warnPct = total ? (warn/total)*100 : 0;
+  const normalPct = total ? (normal/total)*100 : 0;
+
+  document.getElementById("kpis").innerHTML = `
+    <div class="fleet-overview">
+      <div class="fo-total">
+        <div class="fo-total-value num" id="foTotalValue">0</div>
+        <div class="fo-total-label">Unidades inspeccionadas</div>
+        <div class="fo-total-sub">${formatDate(selectedDate)}</div>
+      </div>
+      <div class="fo-dist">
+        <div class="fo-dist-label">Distribución por severidad</div>
+        <div class="severity-bar" role="img"
+             aria-label="${crit} críticas, ${warn} en observación, ${normal} normales, de ${total} unidades">
+          <span class="sb-seg crit" id="segCrit"></span>
+          <span class="sb-seg warn" id="segWarn"></span>
+          <span class="sb-seg normal" id="segNormal"></span>
+        </div>
+        <div class="sb-legend">
+          <span><span class="dot crit"></span>Críticas <b class="num">${crit}</b></span>
+          <span><span class="dot warn"></span>Observación <b class="num">${warn}</b></span>
+          <span><span class="dot normal"></span>Normales <b class="num">${normal}</b></span>
+        </div>
+      </div>
+      <div class="fo-risk">
+        <div class="risk-ring" id="riskRing"><span class="rr-value num" id="riskRingValue">0%</span></div>
+        <div class="fo-risk-text">
+          <div class="fo-risk-label">Riesgo de flota</div>
+          <div class="fo-risk-sub">${atRisk} de ${total} unidades</div>
+        </div>
+      </div>
+    </div>`;
+
+  animateCount(document.getElementById("foTotalValue"), total, {duration:500});
+  animateCount(document.getElementById("riskRingValue"), riskPct, {duration:700, format:v=>Math.round(v)+"%"});
+  growFill(document.getElementById("segCrit"), critPct, "flexBasis");
+  growFill(document.getElementById("segWarn"), warnPct, "flexBasis");
+  growFill(document.getElementById("segNormal"), normalPct, "flexBasis");
+  animateRing(document.getElementById("riskRing"), riskPct, 700);
+}
+
+function renderGrid(){
+  const grid = document.getElementById("fleetGrid");
+  const units = currentUnits();
+  document.getElementById("gridTitle").textContent =
+    `Unidades inspeccionadas · ${units.length}`;
+
+  if(!units.length){
+    grid.innerHTML = `<div class="empty">Sin unidades inspeccionadas en esta fecha.</div>`;
+    return;
+  }
+
+  // Orden: críticas primero, luego observación, luego normales; dentro, por RTD ascendente.
+  const rank = {critical:0, warning:1, normal:2};
+  const sorted = [...units].sort((a,b)=>{
+    const ra = rank[calculateUnitStatus(a)], rb = rank[calculateUnitStatus(b)];
+    return ra !== rb ? ra - rb : getWorstRTD(a) - getWorstRTD(b);
+  });
+
+  // Card simplificada (design-principle.md, Goal 2.4): solo placa, empresa,
+  // configuración y un estado grande por color — sin pills de neumático.
+  grid.innerHTML = sorted.map((u,idx)=>{
+    const status = calculateUnitStatus(u);
+    const delay = Math.min(idx * 18, 260);
+    return `<button class="unit-card pressable status-${status}"
+              style="animation-delay:${delay}ms"
+              onclick="openInspection('${u.id}')"
+              aria-label="Unidad ${u.plate}, estado ${STATUS_LABEL[status]}. Abrir inspección.">
+      <div class="uc-top">
+        <div>
+          <div class="uc-plate">${u.plate}</div>
+          <div class="uc-meta">${u.company}</div>
+        </div>
+        <span class="uc-dot"></span>
+      </div>
+      <div class="uc-config">${u.equipmentType}</div>
+      <div class="uc-status">${STATUS_LABEL[status]}</div>
+    </button>`;
+  }).join("");
+}
+
+function renderAll(){ renderKpis(); renderGrid(); }
+
+// init — solo datos reales desde Supabase/Excel.
+// El listener del select se registra UNA sola vez.
+document.getElementById("dateSelect").addEventListener("change", e => {
+  selectedDate = e.target.value; renderAll();
+});
+renderNoData("Cargando datos del Excel desde Supabase...");
+onRenovaSupabaseReady(async () => {
+  await RenovaSupabase.requireAuth();
+  loadSupabaseFleet();
+});
+</script>
+</body>
+</html>

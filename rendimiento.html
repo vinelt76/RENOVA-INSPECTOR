@@ -7,7 +7,7 @@
 <title>RENOVA — Rendimiento</title>
 <!--
   PANTALLA RENDIMIENTO — vista de consulta para el JEFE DE FLOTA.
-  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
+  Autocontenida: abrir directamente en el navegador. Datos reales desde Supabase/Excel.
 
   Un solo flujo jerárquico, SIN modos alternos:
     Rendimiento → Eje → Posición / Neumático
@@ -48,10 +48,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-<!-- Supabase (demo): config local gitignoreada + adaptador de lectura. Si falta
-     el archivo local o la red falla, la pantalla sigue 100% con datos mock. -->
-<script src="supabase-config.local.js"></script>
-<script src="supabase-demo.js"></script>
+<!-- Supabase: config pública (RLS protege por empresa) + adaptador de lectura
+     con login. Si falta la config o la red falla, no se inventan datos. -->
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
 <style>
   :root{
     /* Paleta RENOVA (DESIGN.md) */
@@ -118,6 +119,14 @@
     font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
     color:var(--label-blue);margin-top:8px;
   }
+  .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+  .screen-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .screen-nav a{
+    color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
+    background:var(--field-dark);border-radius:8px;padding:10px 12px;
+    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
   .unit-picker{display:flex;flex-direction:column;gap:6px}
   .unit-picker label{
     font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
@@ -368,9 +377,16 @@
       <div class="screen-name">RENDIMIENTO</div>
       <div class="subtitle">Rendimiento → Eje → Posición</div>
     </div>
-    <div class="unit-picker">
-      <label for="unitSelect">Unidad</label>
-      <select id="unitSelect" aria-label="Seleccionar unidad"></select>
+    <div class="header-tools">
+      <nav class="screen-nav" aria-label="Pantallas">
+        <a href="INSPECCIONES/INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+        <a href="instalacion.html">Instalación</a>
+        <a class="active" href="rendimiento.html">Rendimiento</a>
+      </nav>
+      <div class="unit-picker">
+        <label for="unitSelect">Unidad</label>
+        <select id="unitSelect" aria-label="Seleccionar unidad"></select>
+      </div>
     </div>
   </div>
 </header>
@@ -396,7 +412,7 @@
 </main>
 
 <footer>
-  Datos de demostración · Vista de consulta (solo lectura) para jefe de flota<br>
+  Datos del Excel · Vista de consulta (solo lectura) para jefe de flota<br>
   El balance de eje es una métrica propia de Rendimiento, distinta de las alertas de Inspección.
 </footer>
 
@@ -409,111 +425,18 @@
    ========================================================================= */
 const AXLE_BALANCE_THRESHOLD_PERCENT = 15;
 
-/* =========================================================================
-   DATASET MOCK
-   Cada posición trae SOLO datos fuente; las métricas derivadas se calculan en
-   computeTire(). "rtdActual"/"kmActual" son fuente (Inspección) y NO se muestran:
-   la card expone únicamente resultados calculados.
-     reencauche: null (nuevo) | { codigo, ciclo }
-   ========================================================================= */
-const MOCK_UNITS = [
-  {
-    id:"B-118", plate:"B-118", label:"B-118 · Bus 2-4-2",
-    config:"2-4-2",
-    // Orden de ejes tal como aparecen en la unidad. "lado" viene del catálogo de
-    // configuración (Izq/Der) — se usa para el balance izquierda/derecha del eje.
-    axles:[
-      {key:"direccional", name:"Dirección", positions:[{pos:"P1",lado:"Izq"},{pos:"P2",lado:"Der"}]},
-      {key:"traccion",    name:"Tracción",  positions:[{pos:"P3",lado:"Izq"},{pos:"P4",lado:"Izq"},{pos:"P5",lado:"Der"},{pos:"P6",lado:"Der"}]},
-      {key:"libre",       name:"Libre",     positions:[{pos:"P7",lado:"Izq"},{pos:"P8",lado:"Der"}]},
-    ],
-    tires:{
-      // Dirección — desbalance marcado (P1 rinde ~28% más que P2).
-      P1:{modelo:"295/80R22.5 XZE2", reencauche:null,
-          rtdInstalacion:16, rtdActual:11, kmInstalacion:120000, kmActual:160000,
-          otd:16, rtdRetiro:4, costo:340, kmPrevioAcumulado:0},
-      P2:{modelo:"295/80R22.5 XZE2", reencauche:null,
-          rtdInstalacion:16, rtdActual:9,  kmInstalacion:120000, kmActual:162000,
-          otd:16, rtdRetiro:4, costo:340, kmPrevioAcumulado:0},
-      // Tracción — dual reencauchada, eje balanceado (~2%).
-      P3:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
-          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108000,
-          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
-      P4:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
-          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108600,
-          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
-      P5:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
-          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:107400,
-          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
-      P6:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"NZA2AW", ciclo:"R1"},
-          rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108000,
-          otd:20, rtdRetiro:6, costo:185, kmPrevioAcumulado:140000},
-      // Libre — P8 aún sin RTD Actual: demuestra "Sin datos suficientes" y su
-      // exclusión del promedio (queda 1 posición válida → sin veredicto de balance).
-      P7:{modelo:"295/80R22.5 XZE2", reencauche:null,
-          rtdInstalacion:16, rtdActual:10, kmInstalacion:80000, kmActual:116000,
-          otd:16, rtdRetiro:4, costo:330, kmPrevioAcumulado:0},
-      P8:{modelo:"295/80R22.5 XZE2", reencauche:null,
-          rtdInstalacion:16, rtdActual:null, kmInstalacion:80000, kmActual:null,
-          otd:16, rtdRetiro:4, costo:330, kmPrevioAcumulado:0},
-    },
-  },
-  {
-    id:"B-204", plate:"B-204", label:"B-204 · Bus 2-4",
-    config:"2-4",
-    axles:[
-      {key:"direccional", name:"Dirección", positions:[{pos:"P1",lado:"Izq"},{pos:"P2",lado:"Der"}]},
-      {key:"traccion",    name:"Tracción",  positions:[{pos:"P3",lado:"Izq"},{pos:"P4",lado:"Izq"},{pos:"P5",lado:"Der"},{pos:"P6",lado:"Der"}]},
-    ],
-    tires:{
-      P1:{modelo:"295/80R22.5 XZE2", reencauche:null,
-          rtdInstalacion:16, rtdActual:10, kmInstalacion:0, kmActual:54000,
-          otd:16, rtdRetiro:4, costo:345, kmPrevioAcumulado:0},
-      P2:{modelo:"295/80R22.5 XZE2", reencauche:null,
-          rtdInstalacion:16, rtdActual:10.2, kmInstalacion:0, kmActual:53200,
-          otd:16, rtdRetiro:4, costo:345, kmPrevioAcumulado:0},
-      // Tracción — el lado Izq (P3/P4) se desgasta más rápido que el Der (P5/P6).
-      P3:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
-          rtdInstalacion:20, rtdActual:11, kmInstalacion:0, kmActual:63000,
-          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:210000},
-      P4:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
-          rtdInstalacion:20, rtdActual:11.2, kmInstalacion:0, kmActual:63000,
-          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:205000},
-      P5:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
-          rtdInstalacion:20, rtdActual:13, kmInstalacion:0, kmActual:62500,
-          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:208000},
-      P6:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
-          rtdInstalacion:20, rtdActual:13.2, kmInstalacion:0, kmActual:62500,
-          otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:206000},
-    },
-  },
-];
+/* Dataset activo: SOLO datos reales desde Supabase/Excel. */
+let UNITS = [];
 
-/* Dataset activo: arranca con el mock y, si Supabase responde, se reemplaza
-   por los datos reales (loadSupabaseData). El mock NUNCA se borra: es el
-   fallback si no hay config o no hay red. */
-let UNITS = MOCK_UNITS;
-
-/* =========================================================================
-   # SERIE / CÓDIGO — llave única del neumático (Inventario). Es la llave del
-   Historial: al hacer clic navega a la vista aparte historial-neumatico.html.
-   Mock; mapea unidad+posición → código (coincide con los códigos de Inspección).
-   ========================================================================= */
-const TIRE_SERIES = {
-  "B-118": {P1:"NEU-04182", P2:"NEU-03911", P3:"NEU-04533", P4:"NEU-02748",
-            P5:"NEU-04102", P6:"NEU-03650", P7:"NEU-05007", P8:"NEU-05108"},
-  "B-204": {P1:"NEU-06110", P2:"NEU-06111", P3:"NEU-06220", P4:"NEU-06221",
-            P5:"NEU-06322", P6:"NEU-06323"},
-};
 function serieOf(uId, pos){
   const u = UNITS.find(x => x.id === uId);
   if(u && u.series && u.series[pos]) return u.series[pos];   // datos reales (Supabase)
-  return (TIRE_SERIES[uId] || {})[pos] || null;              // mock
+  return null;
 }
 
 /* =========================================================================
    DATOS REALES (Supabase) — v_rendimiento_dashboard_rows.
-   Mapea las filas de la vista al MISMO modelo que el mock: los cálculos de
+   Mapea las filas de la vista al modelo de cálculo del HTML: los cálculos de
    computeTire()/computeAxle() no cambian (la lógica de negocio del HTML se
    conserva; la vista trae además las métricas ya derivadas en SQL, que se
    usan solo como referencia en el panel de datos fuente).
@@ -574,7 +497,8 @@ function buildUnitsFromSupabase(rows){
 
 async function loadSupabaseData(){
   if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
-    RenovaSupabase && RenovaSupabase.showBadge("mock");
+    renderNoData("Supabase no configurado. No se muestran datos locales.");
+    RenovaSupabase && RenovaSupabase.showBadge("empty");
     return;
   }
   try{
@@ -589,8 +513,9 @@ async function loadSupabaseData(){
     renderAll();
     RenovaSupabase.showBadge("supabase", rows[0].company_name || "");
   }catch(err){
-    console.warn("Rendimiento: Supabase no disponible, sigo con mock.", err);
-    RenovaSupabase.showBadge("mock", "fallback");
+    console.warn("Rendimiento: Supabase no disponible.", err);
+    renderNoData("No se pudieron cargar los datos del Excel desde Supabase.");
+    RenovaSupabase.showBadge("empty");
   }
 }
 
@@ -717,12 +642,15 @@ const fmtCost= v => "$ " + v.toFixed(4);
 /* =========================================================================
    ESTADO DE UI — un solo flujo: eje seleccionado → posición seleccionada.
    ========================================================================= */
-let unitId = UNITS[0].id;
+let unitId = null;
 let axleKey = null;             // eje seleccionado
 let selectedPos = null;         // posición seleccionada dentro del eje
 
 function currentUnit(){ return UNITS.find(u => u.id === unitId); }
-function currentAxle(){ return currentUnit().axles.find(a => a.key === axleKey) || null; }
+function currentAxle(){
+  const u = currentUnit();
+  return u ? (u.axles.find(a => a.key === axleKey) || null) : null;
+}
 
 // Posiciones visibles en las pills: solo las del eje seleccionado.
 function visiblePositions(){
@@ -735,13 +663,16 @@ function visiblePositions(){
    ========================================================================= */
 function renderUnitOptions(){
   const sel = document.getElementById("unitSelect");
-  sel.innerHTML = UNITS.map(u => `<option value="${u.id}">${u.label}</option>`).join("");
-  sel.value = unitId;
+  sel.innerHTML = UNITS.length
+    ? UNITS.map(u => `<option value="${u.id}">${u.label}</option>`).join("")
+    : `<option value="">Sin datos Excel</option>`;
+  sel.value = unitId || "";
 }
 
 function renderAxleTabs(){
   const wrap = document.getElementById("axleTabs");
   const u = currentUnit();
+  if(!u){ wrap.innerHTML = ""; return; }
   wrap.innerHTML = u.axles.map(a => {
     const sel = a.key === axleKey;
     return `<button class="axle-tab" role="tab" aria-selected="${sel}"
@@ -789,8 +720,8 @@ function srcRow(label, value, unit){
 
 /* Panel "Datos fuente": expone la evidencia detrás del cálculo — instalación
    (tire_installations / tire_life_cycles / tire_casings) y última inspección
-   (inspections / inspection_measurements). Con datos reales usa la fila de
-   v_rendimiento_dashboard_rows; con mock muestra lo que el mock modela. */
+   (inspections / inspection_measurements). Usa exclusivamente la fila de
+   v_rendimiento_dashboard_rows. */
 function sourcePanel(u, pos, raw){
   const f = (u.fuente || {})[pos] || null;
   const fdate = d => d ? d.split("-").reverse().join("/") : null;
@@ -824,24 +755,8 @@ function sourcePanel(u, pos, raw){
       ${srcRow("Anomalía", f.anomaly)}
       ${srcRow("Inspector", f.inspector_name)}`;
   } else {
-    // Mock: solo existen los campos fuente que el mock modela.
-    inst = `
-      ${srcRow("Código casco", serieOf(u.id, pos))}
-      ${srcRow("Ciclo de vida", raw && raw.reencauche ? raw.reencauche.ciclo : (raw ? "N" : null))}
-      ${srcRow("Km instalación", raw && raw.kmInstalacion != null ? fmtKm(raw.kmInstalacion) : null, "km")}
-      ${srcRow("RTD instalación", raw && raw.rtdInstalacion != null ? fmtMm(raw.rtdInstalacion) : null, "mm")}
-      ${srcRow("OTD", raw && raw.otd != null ? fmtMm(raw.otd) : null, "mm")}
-      ${srcRow("Costo", raw && raw.costo != null ? "$ " + raw.costo.toFixed(2) : null)}
-      ${srcRow("Fecha instalación", null)}
-      ${srcRow("Marca", null)}`;
-    insp = `
-      ${srcRow("Km inspección", raw && raw.kmActual != null ? fmtKm(raw.kmActual) : null, "km")}
-      ${srcRow("RTD actual", raw && raw.rtdActual != null ? fmtMm(raw.rtdActual) : null, "mm")}
-      ${srcRow("Fecha inspección", null)}
-      ${srcRow("RTD A/B/C/D", null)}
-      ${srcRow("Presión", null)}
-      ${srcRow("Anomalía", null)}
-      ${srcRow("Inspector", null)}`;
+    inst = `${srcRow("Código casco", null)}${srcRow("Fecha instalación", null)}`;
+    insp = `${srcRow("Fecha inspección", null)}${srcRow("RTD MOVI (mín.)", null)}`;
   }
   return `
     <details class="source-panel">
@@ -1086,10 +1001,24 @@ function renderSummary(){
 }
 
 function renderAll(){
+  if(!UNITS.length){
+    renderNoData("Cargando datos del Excel desde Supabase...");
+    return;
+  }
   renderAxleTabs();
   renderPills();
   renderCard();
   renderSummary();
+}
+
+function renderNoData(message){
+  renderUnitOptions();
+  document.getElementById("axleTabs").innerHTML = "";
+  document.getElementById("posPills").innerHTML = "";
+  document.getElementById("summaryMount").innerHTML =
+    `<section class="summary-card"><div class="empty">${message}</div></section>`;
+  document.getElementById("cardMount").innerHTML =
+    `<section class="tire-card"><div class="empty">${message}</div></section>`;
 }
 
 /* =========================================================================
@@ -1097,6 +1026,7 @@ function renderAll(){
    ========================================================================= */
 function initSelectionForUnit(){
   const u = currentUnit();
+  if(!u){ axleKey = null; selectedPos = null; return; }
   // primer eje + primera posición del eje
   axleKey = u.axles[0].key;
   selectedPos = currentAxle().positions[0].pos;
@@ -1121,15 +1051,15 @@ function goToHistory(serie){
   location.href = `historial-neumatico.html?serie=${encodeURIComponent(serie)}&from=rendimiento`;
 }
 
-/* init — mock al instante (sin pantalla en blanco); Supabase pisa el dataset
-   cuando responde. El listener del select se registra UNA vez. */
+/* init — solo datos reales desde Supabase/Excel. */
 document.getElementById("unitSelect").addEventListener("change", e => {
   unitId = e.target.value; initSelectionForUnit(); renderAll();
 });
-renderUnitOptions();
-initSelectionForUnit();
-renderAll();
-loadSupabaseData();
+renderNoData("Cargando datos del Excel desde Supabase...");
+onRenovaSupabaseReady(async () => {
+  await RenovaSupabase.requireAuth();
+  loadSupabaseData();
+});
 </script>
 </body>
 </html>

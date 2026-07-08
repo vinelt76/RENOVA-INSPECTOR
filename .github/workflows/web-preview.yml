@@ -43,6 +43,17 @@ jobs:
           # base URL para GitHub Pages: /RENOVA-INSPECTOR/
           VITE_BASE: /RENOVA-INSPECTOR/
 
+      - name: Agregar dashboards HTML al sitio publicado
+        # Los 4 dashboards de solo lectura (protegidos por RLS + login,
+        # ver supabase/migrations/20260710090000_dashboard_public_rls.sql)
+        # se copian junto al build de la SPA, sin chocar rutas: la SPA sigue
+        # sirviendo index.html/assets/ en la raíz, los HTML sueltos son
+        # archivos nuevos que no existían ahí.
+        run: |
+          cp rendimiento.html instalacion.html supabase-demo.js supabase-config.public.js renova-ready.js app/dist/
+          mkdir -p "app/dist/INSPECCIONES"
+          cp "INSPECCIONES/INSPECCIONES POR FECHA.html" "INSPECCIONES/Inspecciones por unidad.html" "app/dist/INSPECCIONES/"
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

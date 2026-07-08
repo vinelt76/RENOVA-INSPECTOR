@@ -3,7 +3,7 @@ import type { SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { buildSeedRows } from './seed_rows';
 
 // Incrementar para forzar re-siembra (cuando cambian los datos del seed).
-const SEED_VERSION = 4;
+const SEED_VERSION = 5;
 
 async function getSeedVersion(db: SQLiteDBConnection): Promise<number> {
   const res = await db.query(`SELECT value FROM app_meta WHERE key = 'seed_version'`);

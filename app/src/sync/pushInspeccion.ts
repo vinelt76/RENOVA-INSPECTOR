@@ -1,7 +1,6 @@
 import { supabase } from './supabaseClient';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
-import { empresaRepo } from '../db/repos/empresaRepo';
 
 // Umbrales de referencia — HOY constantes de código (deuda documentada en
 // inspeccionRepo.ts y en la auditoría Excel×App §10.4), NO vienen todavía de una
@@ -31,17 +30,18 @@ export async function pushInspeccionToSupabase(cabeceraId: string): Promise<Push
   try {
     const cabecera = await inspeccionRepo.getCabecera(cabeceraId);
     if (!cabecera) return { ok: false, error: 'Cabecera no encontrada localmente' };
+    if (cabecera.empresa_id !== 'movil') return { ok: false, skipped: true, error: 'Solo MOVIL BUS sincroniza con este Supabase' };
 
     const unidad = await unidadRepo.getByNumero(cabecera.empresa_id, cabecera.numero_unidad);
-    const empresa = await empresaRepo.getById(cabecera.empresa_id);
     const neumaticos = await inspeccionRepo.listNeumaticos(cabeceraId);
 
     const payload = {
       // UUID generado en el dispositivo → save_inspection lo usa como id de la
       // cabecera en Supabase: reintentar el mismo push NUNCA duplica filas.
       local_id: cabecera.id,
-      // El server resuelve company_id por nombre (fallback: única empresa demo).
-      company_name: empresa?.nombre ?? null,
+      // El server resuelve company_id por nombre. Este proyecto Supabase contiene
+      // solo el dataset MOVIL BUS cargado desde el Excel/PDF.
+      company_name: 'MÓVIL BUS',
       plate_number: cabecera.numero_unidad,
       inspection_date: cabecera.fecha,
       odometer_km: cabecera.km_odometro,

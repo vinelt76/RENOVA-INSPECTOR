@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.renova.inspector',
@@ -18,6 +19,9 @@ const config: CapacitorConfig = {
     },
     Camera: {
       permissions: ['camera', 'photos'],
+    },
+    Keyboard: {
+      resize: KeyboardResize.Body,
     },
   },
 };

@@ -5,6 +5,7 @@ import { unidadRepo } from '../db/repos/unidadRepo';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { localDate } from '../db/sqlite';
+import { preloadUnidadFromSupabase } from '../sync/preloadUnidadFromSupabase';
 import { BEBAS, MONO, NAVY, ORANGE, YELLOW, SCREEN_DARK, FIELD_DARK, LABEL_BLUE, BORDER_DARK, VALUE_COLOR } from '../theme';
 import type { Unidad, CatConfiguracion } from '../db/schema';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -44,6 +45,7 @@ export default function UnidadScreen() {
   const [fotoUnidad, setFotoUnidad] = useState<string | null>(null);
   const [recientes, setRecientes] = useState<Unidad[]>([]);
   const [focusedField, setFocusedField] = useState<'search' | 'odometro' | null>(null);
+  const [loadingSupabase, setLoadingSupabase] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const latestQuery = useRef('');
@@ -67,7 +69,7 @@ export default function UnidadScreen() {
   const q = query.trim();
   const showResult = q.length >= 1;
   const match = sugerencias.length === 1 && sugerencias[0].numero === q ? sugerencias[0] : null;
-  const noExiste = showResult && !match && sugerencias.length === 0;
+  const noExiste = showResult && !loadingSupabase && !match && sugerencias.length === 0;
 
   const kmPrev = match ? (ultimaInsp?.odometro ?? 0) : 0;
   const kmActual = parseInt(odometro || '0', 10);
@@ -84,6 +86,7 @@ export default function UnidadScreen() {
     setOdometro('');
     setConfig('');
     setUltimaInsp(null);
+    setLoadingSupabase(false);
     if (clean.length >= 1 && empresaId) {
       const results = await unidadRepo.search(empresaId, clean);
       if (latestQuery.current !== clean) return; // resultado obsoleto
@@ -92,6 +95,23 @@ export default function UnidadScreen() {
       if (exacto) {
         await selectUnidad(exacto);
         if (latestQuery.current !== clean) return; // usuario siguió escribiendo
+      } else if (results.length === 0 && clean.length >= 2) {
+        setLoadingSupabase(true);
+        try {
+          const loaded = await preloadUnidadFromSupabase(empresaId, clean);
+          if (latestQuery.current !== clean) return;
+          if (loaded) {
+            const refreshed = await unidadRepo.search(empresaId, clean);
+            if (latestQuery.current !== clean) return;
+            setSugerencias(refreshed);
+            const imported = refreshed.find(u => u.numero === clean);
+            if (imported) await selectUnidad(imported);
+          } else {
+            setShowSugerencias(true);
+          }
+        } finally {
+          if (latestQuery.current === clean) setLoadingSupabase(false);
+        }
       } else {
         setShowSugerencias(true);
       }
@@ -260,11 +280,11 @@ export default function UnidadScreen() {
           <button onClick={handleBack} aria-label="Volver" className="pressable" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.9)', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: BEBAS, fontSize: 34, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>RENOVA</div>
             <div style={{ fontFamily: BEBAS, fontSize: 19, color: LABEL_BLUE, letterSpacing: '0.1em', lineHeight: 1, marginTop: -4 }}>INSPECTOR</div>
           </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600 }}>{empresa?.nombre ?? ''}</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '30%' }}>{empresa?.nombre ?? ''}</div>
         </div>
         <div className="hazard-edge" />
       </div>
@@ -273,7 +293,7 @@ export default function UnidadScreen() {
 
         <div style={{ fontSize: 11, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 10, flexShrink: 0 }}>UNIDAD</div>
 
-        <div style={{ border: `2px solid ${focusedField === 'search' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', flexShrink: 0, position: 'relative' }}>
+        <div style={{ border: `2px solid ${focusedField === 'search' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
           <SearchIcon active={!!match} />
           <input
             ref={inputRef}
@@ -285,10 +305,10 @@ export default function UnidadScreen() {
             autoCorrect="off"
             placeholder="N.º de unidad"
             className="dark-input"
-            style={{ flex: 1, border: 'none', outline: 'none', padding: '16px 0', fontSize: 20, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em' }}
+            style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', padding: '16px 0', fontSize: 20, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em' }}
           />
           {query && (
-            <button onClick={reset} aria-label="Borrar" style={{ background: 'none', border: 'none', color: LABEL_BLUE, fontSize: 16, cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <button onClick={reset} aria-label="Borrar" style={{ background: 'none', border: 'none', color: LABEL_BLUE, fontSize: 16, cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
           )}
           {showSugerencias && sugerencias.length > 0 && (
             <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: -2, right: -2, background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`, borderRadius: 12, overflow: 'hidden', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
@@ -315,11 +335,11 @@ export default function UnidadScreen() {
                   key={u.numero}
                   onClick={() => selectUnidad(u)}
                   className="pressable"
-                  style={{ width: '100%', background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`, borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: MONO, textAlign: 'left' }}
+                  style={{ width: '100%', background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`, borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: MONO, textAlign: 'left', overflow: 'hidden' }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: 18, color: VALUE_COLOR, letterSpacing: '0.04em' }}>{u.numero}</div>
-                    <div style={{ fontSize: 11, color: LABEL_BLUE, marginTop: 2 }}>{u.configuracion} · {u.ultima_fecha ? fmtFecha(u.ultima_fecha) : ''}</div>
+                    <div style={{ fontWeight: 800, fontSize: 18, color: VALUE_COLOR, letterSpacing: '0.04em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.numero}</div>
+                    <div style={{ fontSize: 11, color: LABEL_BLUE, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.configuracion} · {u.ultima_fecha ? fmtFecha(u.ultima_fecha) : ''}</div>
                   </div>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                     <path d="M6 3l5 5-5 5" stroke={BORDER_DARK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -338,36 +358,43 @@ export default function UnidadScreen() {
           </div>
         )}
 
+        {loadingSupabase && (
+          <div style={{ marginTop: 14, border: `2px solid ${BORDER_DARK}`, borderRadius: 12, background: FIELD_DARK, padding: '12px 14px', color: LABEL_BLUE, fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', flexShrink: 0 }}>
+            CARGANDO DATOS DEL EXCEL / SUPABASE…
+          </div>
+        )}
+
         {match && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 20 }}>
-            <div style={{ background: NAVY, borderRadius: 16, padding: '20px 22px', flexShrink: 0 }}>
+            <div style={{ background: NAVY, borderRadius: 16, padding: '20px 22px', flexShrink: 0, overflow: 'hidden' }}>
               <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', marginBottom: 8 }}>ÚLTIMA INSPECCIÓN</div>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: 24, lineHeight: 1.1, letterSpacing: '-0.01em' }}>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: 24, lineHeight: 1.1, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {ultimaInsp ? fmtFecha(ultimaInsp.fecha) : 'Sin inspecciones previas'}
               </div>
               {ultimaInsp && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' }}>ODÓMETRO</span>
-                  <span style={{ color: YELLOW, fontWeight: 800, fontSize: 14 }}>{fmtKm(ultimaInsp.odometro)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, overflow: 'hidden' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', flexShrink: 0 }}>ODÓMETRO</span>
+                  <span style={{ color: YELLOW, fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fmtKm(ultimaInsp.odometro)}</span>
                 </div>
               )}
             </div>
 
             <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 8 }}>ODÓMETRO ACTUAL</div>
-              <div style={{ border: `2px solid ${focusedField === 'odometro' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s' }}>
+              <div style={{ border: `2px solid ${focusedField === 'odometro' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', overflow: 'hidden' }}>
                 <input
                   value={odometro}
                   onChange={e => setOdometro(e.target.value.replace(/[^0-9]/g, ''))}
                   onFocus={() => setFocusedField('odometro')}
                   onBlur={() => setFocusedField(null)}
+                  type="text"
                   inputMode="numeric"
                   placeholder="0"
                   autoFocus
                   className="dark-input"
-                  style={{ flex: 1, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' as const }}
+                  style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' as const }}
                 />
-                <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>km</span>
+                <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>km</span>
               </div>
               {kmBajo && (
                 <div style={{ fontSize: 11, color: ORANGE, fontWeight: 700, marginTop: 7, paddingLeft: 4 }}>
@@ -382,28 +409,29 @@ export default function UnidadScreen() {
 
         {noExiste && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
-            <div style={{ border: `2px dashed ${ORANGE}`, borderRadius: 16, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ border: `2px dashed ${ORANGE}`, borderRadius: 16, padding: '16px 20px', display: 'flex', gap: 14, alignItems: 'center', flexShrink: 0, overflow: 'hidden' }}>
               <div style={{ width: 40, height: 40, borderRadius: 11, background: ORANGE, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 800, fontSize: 24, color: '#fff', lineHeight: 1 }}>+</div>
-              <div>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ color: ORANGE, fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', marginBottom: 3 }}>UNIDAD NUEVA</div>
-                <div style={{ color: VALUE_COLOR, fontWeight: 800, fontSize: 15 }}>Unidad {q}</div>
+                <div style={{ color: VALUE_COLOR, fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Unidad {q}</div>
               </div>
             </div>
 
             <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 8 }}>ODÓMETRO INICIAL</div>
-              <div style={{ border: `2px solid ${focusedField === 'odometro' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s' }}>
+              <div style={{ border: `2px solid ${focusedField === 'odometro' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', overflow: 'hidden' }}>
                 <input
                   value={odometro}
                   onChange={e => setOdometro(e.target.value.replace(/[^0-9]/g, ''))}
                   onFocus={() => setFocusedField('odometro')}
                   onBlur={() => setFocusedField(null)}
+                  type="text"
                   inputMode="numeric"
                   placeholder="0"
                   className="dark-input"
-                  style={{ flex: 1, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' as const }}
+                  style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', padding: '14px 0', fontSize: 24, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' as const }}
                 />
-                <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>km</span>
+                <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>km</span>
               </div>
             </div>
 
@@ -427,12 +455,12 @@ export default function UnidadScreen() {
                     <button
                       key={c.notacion}
                       onClick={() => setConfig(c.notacion)}
-                      style={{ ...selectStyle(sel) }}
+                      style={{ ...selectStyle(sel), overflow: 'hidden' }}
                     >
                       <span style={{ fontSize: 18, fontWeight: 900, color: sel ? ORANGE : VALUE_COLOR, letterSpacing: '0.04em', flexShrink: 0, width: 64 }}>{c.notacion}</span>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 800, fontSize: 13, color: VALUE_COLOR }}>{c.count} llantas</div>
-                        <div style={{ fontSize: 11, color: LABEL_BLUE, marginTop: 2 }}>{c.tipoVehiculo}</div>
+                        <div style={{ fontSize: 11, color: LABEL_BLUE, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.tipoVehiculo}</div>
                       </div>
                       {sel && <span style={{ color: ORANGE, fontWeight: 800, fontSize: 16, flexShrink: 0 }}>✓</span>}
                     </button>

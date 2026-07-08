@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MONO, NAVY, LABEL_BLUE, BORDER_DARK, FIELD_DARK, VALUE_COLOR, ORANGE } from '../theme';
 
 const labelStyle = {
@@ -20,8 +21,6 @@ interface Props {
   inputStyle?: React.CSSProperties;
 }
 
-import React from 'react';
-
 export default function AutocompleteField({
   label, value, onChange, options, placeholder = 'Buscar…',
   disabled = false, allowNew = false, onNew, filterMode = 'includes',
@@ -29,6 +28,7 @@ export default function AutocompleteField({
 }: Props) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
+  const [menuRect, setMenuRect] = useState({ left: 0, top: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setQuery(value); }, [value]);
@@ -45,6 +45,22 @@ export default function AutocompleteField({
 
   const exactMatch = options.some(o => o.toLowerCase() === q.toLowerCase());
   const showAddNew = allowNew && q.length > 0 && !exactMatch;
+
+  useEffect(() => {
+    if (!open) return;
+    const updateRect = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuRect({ left: rect.left, top: rect.bottom + 4, width: rect.width });
+    };
+    updateRect();
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, true);
+    return () => {
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect, true);
+    };
+  }, [open, query, filtered.length]);
 
   const select = (opt: string) => {
     setQuery(opt);
@@ -82,18 +98,18 @@ export default function AutocompleteField({
 
   const filled = !!value;
   const borderColor = disabled ? BORDER_DARK : open ? ORANGE : BORDER_DARK;
-  void filled; // usado solo para el botón ×
   const showDropdown = open && !disabled && (filtered.length > 0 || showAddNew);
 
   return (
-    <div style={{ width: '100%' }} ref={containerRef}>
+    <div style={{ width: '100%', boxSizing: 'border-box' }} ref={containerRef}>
       {label && <label style={labelStyle}>{label}</label>}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', width: '100%' }}>
         <div style={{
           display: 'flex', alignItems: 'center',
           border: `2px solid ${borderColor}`, borderRadius: 6,
           background: disabled ? 'rgba(28,46,80,0.4)' : FIELD_DARK,
           transition: 'border-color 0.15s',
+          width: '100%', boxSizing: 'border-box', overflow: 'hidden'
         }}>
           <input
             className="dark-input"
@@ -104,7 +120,7 @@ export default function AutocompleteField({
             disabled={disabled}
             placeholder={placeholder}
             style={{
-              flex: 1, border: 'none', outline: 'none', background: 'transparent',
+              flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
               padding: '11px 12px', fontSize: 13, fontWeight: 700,
               color: disabled ? BORDER_DARK : VALUE_COLOR, fontFamily: MONO,
               cursor: disabled ? 'not-allowed' : 'text',
@@ -114,23 +130,22 @@ export default function AutocompleteField({
           {filled && !disabled && (
             <button
               onMouseDown={e => { e.preventDefault(); setQuery(''); onChange(''); setOpen(false); }}
-              style={{ background: 'none', border: 'none', padding: '0 10px', color: LABEL_BLUE, fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', padding: '0 10px', color: LABEL_BLUE, fontSize: 16, cursor: 'pointer', lineHeight: 1, flexShrink: 0 }}
             >×</button>
           )}
         </div>
 
-        {showDropdown && (
+        {showDropdown && createPortal(
           <div style={{
-            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
+            position: 'fixed', top: menuRect.top, left: menuRect.left, width: menuRect.width, zIndex: 9999,
             background: NAVY, borderRadius: 6,
             marginTop: 4, maxHeight: 220, overflowY: 'auto',
-            boxShadow: '0 8px 24px rgba(21,35,63,0.28)',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.45)', border: `1px solid ${BORDER_DARK}`,
           }}>
             {filtered.map(opt => (
               <button
                 key={opt}
-                onMouseDown={e => { e.preventDefault(); select(opt); }}
-                onTouchEnd={e => { e.preventDefault(); select(opt); }}
+                onPointerDown={e => { e.preventDefault(); select(opt); }}
                 style={{
                   width: '100%', textAlign: 'left',
                   background: opt === value ? 'rgba(255,255,255,0.15)' : 'transparent',
@@ -142,8 +157,7 @@ export default function AutocompleteField({
             ))}
             {showAddNew && (
               <button
-                onMouseDown={e => { e.preventDefault(); handleNew(); }}
-                onTouchEnd={e => { e.preventDefault(); handleNew(); }}
+                onPointerDown={e => { e.preventDefault(); handleNew(); }}
                 style={{
                   width: '100%', textAlign: 'left', background: 'transparent',
                   border: 'none', padding: '10px 14px', fontSize: 13, fontWeight: 700,
@@ -152,7 +166,8 @@ export default function AutocompleteField({
                 }}
               >＋ Agregar "{query.trim()}"</button>
             )}
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
