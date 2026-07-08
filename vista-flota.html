@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>RENOVA — Vista de Flota</title>
 <!--
   PANTALLA NUEVA E INDEPENDIENTE — Vista de Flota (dashboard para jefes de flota).
@@ -24,6 +25,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<!-- Supabase (demo): config local gitignoreada + adaptador. Sin config o sin
+     red, la pantalla sigue 100% con el mock generado. -->
+<script src="supabase-config.local.js"></script>
+<script src="supabase-demo.js"></script>
 <style>
   :root{
     /* Paleta RENOVA (DESIGN.md) */
@@ -374,12 +379,75 @@ function buildInspection(dateISO, seed, count){
   return units;
 }
 
-// Varias fechas de inspección para comparar días.
-const INSPECTIONS = {
+// Varias fechas de inspección para comparar días (MOCK — solo fallback).
+const MOCK_INSPECTIONS = {
   "2025-12-16": buildInspection("2025-12-16", 20251216, 32),
   "2025-11-18": buildInspection("2025-11-18", 20251118, 28),
   "2025-10-21": buildInspection("2025-10-21", 20251021, 24),
 };
+
+/* Dataset activo: arranca con el mock; si Supabase responde se reemplaza por
+   los datos reales (loadSupabaseFleet). El mock NUNCA se borra: es el fallback. */
+let INSPECTIONS = MOCK_INSPECTIONS;
+
+/* =========================================================================
+   DATOS REALES (Supabase) — v_inspection_dashboard_rows → mismo modelo que el
+   mock. La regla de color (tireStatus/calculateUnitStatus) NO cambia: sigue
+   siendo la del HTML. Cada fecha muestra las unidades inspeccionadas ESE día
+   (con datos reales suele ser 1–2 unidades por fecha — es la realidad del
+   Excel, no un bug). rtd = RTD MOVI (mínimo de canales) de esa inspección.
+   ========================================================================= */
+function buildInspectionsFromSupabase(rows){
+  const byDate = {};
+  const byInspection = new Map();
+  rows.forEach(r => {
+    if(!byInspection.has(r.inspection_id)) byInspection.set(r.inspection_id, []);
+    byInspection.get(r.inspection_id).push(r);
+  });
+  for(const g of byInspection.values()){
+    g.sort((a,b) => a.position_number - b.position_number);
+    const h = g[0];
+    if(!h.inspected_on) continue;
+    const unit = {
+      id: h.inspection_id,
+      plate: h.plate,
+      company: h.company_name || "—",
+      equipmentType: "Bus",
+      inspectionDate: h.inspected_on,
+      tires: g.map(r => ({
+        position: "P" + r.position_number,
+        rtd: r.rtd_movi_mm != null ? Number(r.rtd_movi_mm) : null,
+        withdrawalAnomaly: !!r.is_discard,
+        axle: r.axle_number ?? 0,
+        side: r.side === "Der" ? "R" : "L",
+      })),
+    };
+    (byDate[h.inspected_on] = byDate[h.inspected_on] || []).push(unit);
+  }
+  return byDate;
+}
+
+async function loadSupabaseFleet(){
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    RenovaSupabase && RenovaSupabase.showBadge("mock");
+    return;
+  }
+  try{
+    const rows = await RenovaSupabase.fetchView("v_inspection_dashboard_rows",
+      { order: "inspected_on.desc,plate.asc,position_number.asc", limit: "800" });
+    const data = buildInspectionsFromSupabase(rows);
+    const dates = Object.keys(data).sort().reverse();
+    if(!dates.length) throw new Error("v_inspection_dashboard_rows sin filas");
+    INSPECTIONS = data;
+    selectedDate = dates[0];
+    renderDateOptions();
+    renderAll();
+    RenovaSupabase.showBadge("supabase", rows[0].company_name || "");
+  }catch(err){
+    console.warn("Vista de flota: Supabase no disponible, sigo con mock.", err);
+    RenovaSupabase.showBadge("mock", "fallback");
+  }
+}
 
 /* =========================================================================
    LÓGICA DE ESTADO  (regla EXCLUSIVA de Vista de Flota)
@@ -443,7 +511,6 @@ function renderDateOptions(){
     .sort().reverse()
     .map(iso => `<option value="${iso}">${formatDate(iso)}</option>`).join("");
   sel.value = selectedDate;
-  sel.addEventListener("change", e => { selectedDate = e.target.value; renderAll(); });
 }
 
 /* =========================================================================
@@ -586,9 +653,14 @@ function renderGrid(){
 
 function renderAll(){ renderKpis(); renderGrid(); }
 
-// init
+// init — mock al instante; Supabase pisa el dataset cuando responde.
+// El listener del select se registra UNA sola vez.
+document.getElementById("dateSelect").addEventListener("change", e => {
+  selectedDate = e.target.value; renderAll();
+});
 renderDateOptions();
 renderAll();
+loadSupabaseFleet();
 </script>
 </body>
 </html>

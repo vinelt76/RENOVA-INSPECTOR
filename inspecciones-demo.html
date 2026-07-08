@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>RENOVA — Inspecciones (demo)</title>
+<!--
+  PANTALLA INSPECCIONES (DEMO) — vista de consulta de inspecciones registradas.
+  Lee v_inspection_dashboard_rows de Supabase (datos reales CIVA + lo que sincronice
+  la app). Si Supabase no está configurado o falla, cae a un mock mínimo.
+
+  · Datos FUENTE por posición: RTD A–D, RTD MOVI, presión, válvula, anomalía.
+  · ESTADO RTD viene calculado server-side (fn_rtd_state, umbrales por empresa).
+  · Código no visible (N/V): se muestra "N/V" en gris — NUNCA se almacena como
+    código real (tire_code NULL en la base).
+  · Posiciones 1 y 2: fuera del alcance del rendimiento actual; acá se listan
+    solo si la inspección las midió (no se inventan filas).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="supabase-config.local.js"></script>
+<script src="supabase-demo.js"></script>
+<style>
+  :root{
+    --screen-dark:#07111C; --field-dark:#111E2E; --navy-brand:#15233f;
+    --border-dark:#1B2D42; --label-blue:#7AABCC; --value-ice:#F0F8FF;
+    --ember-orange:#F06822; --signal-yellow:#f4b821; --verified-green:#1f9d6b;
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--screen-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;padding-bottom:48px;
+  }
+  header{
+    background:var(--navy-brand);padding:18px 16px 16px;position:sticky;top:0;z-index:20;
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:1280px;margin:0 auto}
+  .brand .logo{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.06em}
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{font-family:var(--display);font-size:19px;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
+  .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
+  main{max-width:1280px;margin:0 auto;padding:16px}
+
+  .insp-card{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;
+    margin-bottom:16px;overflow:hidden;
+  }
+  .insp-head{
+    display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;
+    background:var(--navy-brand);border-bottom:2px solid var(--border-dark);padding:13px 18px;
+  }
+  .insp-head .ih-plate{font-size:18px;font-weight:800;letter-spacing:.04em}
+  .insp-head .ih-meta{font-size:11px;font-weight:700;color:var(--label-blue);letter-spacing:.04em}
+  .insp-head .ih-meta b{color:var(--value-ice)}
+  .table-wrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:760px}
+  th{
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--label-blue);text-align:left;padding:10px 10px 8px;border-bottom:2px solid var(--border-dark);
+    white-space:nowrap;
+  }
+  td{
+    font-size:12px;font-weight:700;padding:9px 10px;border-bottom:1px solid rgba(27,45,66,.6);
+    white-space:nowrap;
+  }
+  tr:last-child td{border-bottom:none}
+  td.dim{color:var(--label-blue)}
+  td.nv{color:var(--label-blue);font-style:italic}
+  .state{
+    display:inline-block;border:2px solid var(--border-dark);border-radius:6px;
+    padding:2px 8px;font-size:10px;font-weight:800;letter-spacing:.04em;
+  }
+  .state.ok{border-color:var(--verified-green);color:var(--verified-green)}
+  .state.warn{border-color:var(--signal-yellow);color:var(--signal-yellow)}
+  .state.crit{border-color:var(--ember-orange);color:var(--ember-orange)}
+  .state.na{color:var(--label-blue)}
+  .note{
+    margin:14px 0;border:2px dashed var(--border-dark);border-radius:12px;
+    padding:16px;font-size:12px;color:var(--label-blue);line-height:1.5;
+  }
+  footer{
+    max-width:1280px;margin:28px auto 0;padding:0 16px;text-align:center;
+    font-size:10px;letter-spacing:.06em;color:var(--border-dark);line-height:1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">INSPECCIONES</div>
+      <div class="subtitle">Registro por unidad · datos fuente por posición</div>
+    </div>
+  </div>
+</header>
+
+<main id="mount">
+  <div class="note">Cargando inspecciones…</div>
+</main>
+
+<footer>
+  Vista de consulta (solo lectura) · La inspección sincronizada desde la app aparece aquí<br>
+  ESTADO RTD calculado con umbrales configurables por empresa (nunca hardcodeados)
+</footer>
+
+<script>
+"use strict";
+/* ── MOCK mínimo — SOLO fallback si Supabase no responde ─────────────────── */
+const MOCK_ROWS = [
+  {plate:"B-118", inspected_on:"2026-07-01", odometer_km:160000, inspection_id:"mock-1",
+   position_number:3, tire_code:"NEU-04533", casing_code:"NEU-04533", code_status:"valid",
+   rtd_a_mm:12, rtd_b_mm:12, rtd_c_mm:12, rtd_d_mm:12, rtd_movi_mm:12, rtd_state:"Normal",
+   pressure_psi:118, pressure_state:"Normal", valve_cap:"OK", anomaly:null, is_discard:false, inspector_name:null},
+  {plate:"B-118", inspected_on:"2026-07-01", odometer_km:160000, inspection_id:"mock-1",
+   position_number:4, tire_code:null, casing_code:null, code_status:"not_visible",
+   rtd_a_mm:11, rtd_b_mm:11.5, rtd_c_mm:11, rtd_d_mm:null, rtd_movi_mm:11, rtd_state:"Normal",
+   pressure_psi:null, pressure_state:"Sin Medir", valve_cap:null, anomaly:"Desgaste irregular", is_discard:false, inspector_name:null},
+  {plate:"B-118", inspected_on:"2026-07-01", odometer_km:160000, inspection_id:"mock-1",
+   position_number:5, tire_code:"NEU-04102", casing_code:"NEU-04102", code_status:"valid",
+   rtd_a_mm:5, rtd_b_mm:5, rtd_c_mm:4, rtd_d_mm:null, rtd_movi_mm:4, rtd_state:"Para Reencauche",
+   pressure_psi:96, pressure_state:"Baja Presión", valve_cap:"FALTA", anomaly:null, is_discard:false, inspector_name:null},
+];
+
+const nf = new Intl.NumberFormat("es-PE");
+const fdate = d => d ? d.split("-").reverse().join("/") : "sin dato";
+const mm = v => (v === null || v === undefined) ? "—" : Number(v).toFixed(1);
+
+function stateChip(s){
+  if(!s) return `<span class="state na">sin dato</span>`;
+  const cls = s === "Normal" ? "ok" : s === "Próximo a Reencauche" ? "warn" : "crit";
+  return `<span class="state ${cls}">${s}</span>`;
+}
+
+function codeCell(r){
+  if(r.tire_code) return `<td>${r.tire_code}</td>`;
+  if(r.code_status === "not_visible" || (!r.tire_code && !r.casing_code))
+    return `<td class="nv">N/V</td>`;   // código no visible: JAMÁS se guarda como código real
+  return `<td class="dim">${r.casing_code || "sin dato"}</td>`;
+}
+
+function render(rows, source){
+  const mount = document.getElementById("mount");
+  if(!rows.length){
+    mount.innerHTML = `<div class="note">No hay inspecciones registradas todavía.</div>`;
+    return;
+  }
+  // Agrupar por inspección; más recientes primero.
+  const groups = new Map();
+  rows.forEach(r => {
+    if(!groups.has(r.inspection_id)) groups.set(r.inspection_id, []);
+    groups.get(r.inspection_id).push(r);
+  });
+  const cards = [...groups.values()]
+    .sort((a,b) => (b[0].inspected_on||"").localeCompare(a[0].inspected_on||"") || a[0].plate.localeCompare(b[0].plate))
+    .map(g => {
+      g.sort((a,b) => a.position_number - b.position_number);
+      const h = g[0];
+      const rows_ = g.map(r => `
+        <tr>
+          <td><b>P${r.position_number}</b></td>
+          ${codeCell(r)}
+          <td class="dim">${[mm(r.rtd_a_mm),mm(r.rtd_b_mm),mm(r.rtd_c_mm),mm(r.rtd_d_mm)].join(" / ")}</td>
+          <td><b>${mm(r.rtd_movi_mm)}</b></td>
+          <td>${stateChip(r.rtd_state)}</td>
+          <td class="dim">${r.pressure_psi != null ? Number(r.pressure_psi).toFixed(0)+" psi" : "sin dato"}</td>
+          <td class="dim">${r.pressure_state || "sin dato"}</td>
+          <td class="dim">${r.valve_cap || "sin dato"}</td>
+          <td class="dim">${r.anomaly || "—"}</td>
+          <td class="dim">${r.is_discard ? "DESECHO" : "—"}</td>
+        </tr>`).join("");
+      return `
+      <div class="insp-card">
+        <div class="insp-head">
+          <span class="ih-plate">${h.plate}</span>
+          <span class="ih-meta">Fecha <b>${fdate(h.inspected_on)}</b></span>
+          <span class="ih-meta">Odómetro <b>${h.odometer_km != null ? nf.format(h.odometer_km)+" km" : "sin dato"}</b></span>
+          <span class="ih-meta">Posiciones <b>${g.length}</b></span>
+          <span class="ih-meta">Inspector <b>${h.inspector_name || "sin dato"}</b></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Pos</th><th>Código</th><th>RTD A/B/C/D (mm)</th><th>RTD MOVI</th>
+              <th>Estado RTD</th><th>Presión</th><th>Estado presión</th><th>Válvula</th>
+              <th>Anomalía</th><th>Desecho</th>
+            </tr></thead>
+            <tbody>${rows_}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }).join("");
+  mount.innerHTML = cards;
+  RenovaSupabase.showBadge(source, source === "supabase" ? (rows[0].company_name || "") : "fallback");
+}
+
+async function init(){
+  if(window.RenovaSupabase && RenovaSupabase.enabled){
+    try{
+      const rows = await RenovaSupabase.fetchView("v_inspection_dashboard_rows",
+        { order: "inspected_on.desc,plate.asc,position_number.asc", limit: "400" });
+      if(rows.length){ render(rows, "supabase"); return; }
+    }catch(err){
+      console.warn("Inspecciones: Supabase no disponible, sigo con mock.", err);
+    }
+  }
+  render(MOCK_ROWS, "mock");
+}
+init();
+</script>
+</body>
+</html>

@@ -30,3 +30,6 @@ docs/archive/
 Thumbs.db
 *.zip
 node_modules/
+
+# ── Supabase (dashboards HTML demo) — credenciales locales, jamás al repo ──
+supabase-config.local.js

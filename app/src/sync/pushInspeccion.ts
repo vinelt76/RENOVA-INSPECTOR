@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
+import { empresaRepo } from '../db/repos/empresaRepo';
 
 // Umbrales de referencia — HOY constantes de código (deuda documentada en
 // inspeccionRepo.ts y en la auditoría Excel×App §10.4), NO vienen todavía de una
@@ -32,9 +33,15 @@ export async function pushInspeccionToSupabase(cabeceraId: string): Promise<Push
     if (!cabecera) return { ok: false, error: 'Cabecera no encontrada localmente' };
 
     const unidad = await unidadRepo.getByNumero(cabecera.empresa_id, cabecera.numero_unidad);
+    const empresa = await empresaRepo.getById(cabecera.empresa_id);
     const neumaticos = await inspeccionRepo.listNeumaticos(cabeceraId);
 
     const payload = {
+      // UUID generado en el dispositivo → save_inspection lo usa como id de la
+      // cabecera en Supabase: reintentar el mismo push NUNCA duplica filas.
+      local_id: cabecera.id,
+      // El server resuelve company_id por nombre (fallback: única empresa demo).
+      company_name: empresa?.nombre ?? null,
       plate_number: cabecera.numero_unidad,
       inspection_date: cabecera.fecha,
       odometer_km: cabecera.km_odometro,

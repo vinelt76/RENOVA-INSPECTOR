@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>RENOVA — Rendimiento</title>
 <!--
   PANTALLA RENDIMIENTO — vista de consulta para el JEFE DE FLOTA.
@@ -47,6 +48,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<!-- Supabase (demo): config local gitignoreada + adaptador de lectura. Si falta
+     el archivo local o la red falla, la pantalla sigue 100% con datos mock. -->
+<script src="supabase-config.local.js"></script>
+<script src="supabase-demo.js"></script>
 <style>
   :root{
     /* Paleta RENOVA (DESIGN.md) */
@@ -312,6 +317,29 @@
     padding:16px;font-size:12px;font-weight:700;color:var(--label-blue);line-height:1.5;
   }
 
+  /* ── Datos fuente (instalación + última inspección) — panel plegable ── */
+  .source-panel{border-top:2px solid var(--border-dark)}
+  .source-panel summary{
+    list-style:none;cursor:pointer;padding:12px 18px;
+    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);display:flex;align-items:center;gap:8px;
+    transition:background .15s ease-out;
+  }
+  .source-panel summary::-webkit-details-marker{display:none}
+  .source-panel summary:hover{background:#132538}
+  .source-panel summary::after{content:"▾";margin-left:auto;color:var(--label-blue)}
+  .source-panel[open] summary::after{content:"▴"}
+  .source-panel .source-cols{
+    display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid rgba(27,45,66,.6);
+  }
+  .source-panel .source-col{padding:12px 18px 16px}
+  .source-panel .source-col+.source-col{border-left:2px solid var(--border-dark)}
+  .source-panel .metric .m-value{font-size:13px}
+  @media (max-width:560px){
+    .source-panel .source-cols{grid-template-columns:1fr}
+    .source-panel .source-col+.source-col{border-left:none;border-top:2px solid var(--border-dark)}
+  }
+
   footer{
     max-width:1280px;margin:28px auto 0;padding:0 16px;
     font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
@@ -388,7 +416,7 @@ const AXLE_BALANCE_THRESHOLD_PERCENT = 15;
    la card expone únicamente resultados calculados.
      reencauche: null (nuevo) | { codigo, ciclo }
    ========================================================================= */
-const UNITS = [
+const MOCK_UNITS = [
   {
     id:"B-118", plate:"B-118", label:"B-118 · Bus 2-4-2",
     config:"2-4-2",
@@ -461,6 +489,11 @@ const UNITS = [
   },
 ];
 
+/* Dataset activo: arranca con el mock y, si Supabase responde, se reemplaza
+   por los datos reales (loadSupabaseData). El mock NUNCA se borra: es el
+   fallback si no hay config o no hay red. */
+let UNITS = MOCK_UNITS;
+
 /* =========================================================================
    # SERIE / CÓDIGO — llave única del neumático (Inventario). Es la llave del
    Historial: al hacer clic navega a la vista aparte historial-neumatico.html.
@@ -472,7 +505,94 @@ const TIRE_SERIES = {
   "B-204": {P1:"NEU-06110", P2:"NEU-06111", P3:"NEU-06220", P4:"NEU-06221",
             P5:"NEU-06322", P6:"NEU-06323"},
 };
-function serieOf(uId, pos){ return (TIRE_SERIES[uId] || {})[pos] || null; }
+function serieOf(uId, pos){
+  const u = UNITS.find(x => x.id === uId);
+  if(u && u.series && u.series[pos]) return u.series[pos];   // datos reales (Supabase)
+  return (TIRE_SERIES[uId] || {})[pos] || null;              // mock
+}
+
+/* =========================================================================
+   DATOS REALES (Supabase) — v_rendimiento_dashboard_rows.
+   Mapea las filas de la vista al MISMO modelo que el mock: los cálculos de
+   computeTire()/computeAxle() no cambian (la lógica de negocio del HTML se
+   conserva; la vista trae además las métricas ya derivadas en SQL, que se
+   usan solo como referencia en el panel de datos fuente).
+   Solo aparecen ejes/posiciones CON datos de rendimiento: las posiciones
+   1 y 2 (Dirección) están fuera del alcance actual de rendimiento por
+   diseño — el Excel real no las evalúa. No se inventan filas para ellas.
+   ========================================================================= */
+const AXLE_KEY_BY_TYPE = { "Direccional":"direccional", "Tracción":"traccion", "Libre":"libre" };
+const num = v => (v === null || v === undefined || v === "") ? null : Number(v);
+
+function buildUnitsFromSupabase(rows){
+  const byPlate = new Map();
+  rows.forEach(r => {
+    if(!byPlate.has(r.plate)) byPlate.set(r.plate, []);
+    byPlate.get(r.plate).push(r);
+  });
+  const units = [];
+  for(const [plate, rws] of byPlate){
+    rws.sort((a,b) => a.position_number - b.position_number);
+    const axMap = new Map();   // axle_number → {key,name,positions}
+    const tires = {}, fuente = {}, series = {};
+    for(const r of rws){
+      const axNum = r.axle_number ?? 99;
+      const axName = r.axle_type || ("Eje " + axNum);
+      if(!axMap.has(axNum)){
+        axMap.set(axNum, { key: AXLE_KEY_BY_TYPE[axName] || ("eje" + axNum), name: axName, positions: [] });
+      }
+      const pos = "P" + r.position_number;
+      axMap.get(axNum).positions.push({ pos, lado: r.side || "Izq" });
+      tires[pos] = {
+        modelo: [r.size_name, r.model_name].filter(Boolean).join(" ") || null,
+        reencauche: (r.condition && r.condition !== "N")
+          ? { codigo: r.retread_design || "—", ciclo: r.condition } : null,
+        rtdInstalacion: num(r.rtd_at_install_mm),
+        rtdActual:      num(r.current_rtd_mm),
+        kmInstalacion:  num(r.odometer_at_install),
+        kmActual:       num(r.current_odometer_km),
+        otd:            num(r.otd_mm),
+        rtdRetiro:      num(r.rtd_removal_mm),   // umbral por empresa (rtd_thresholds) — nunca hardcodeado
+        costo:          num(r.cost),
+        // Km Acumulado del casco = previo + recorrido de esta instalación
+        kmPrevioAcumulado: Math.max(0, (num(r.casing_km_accumulated) || 0) - (num(r.km_run) || 0)),
+      };
+      fuente[pos] = r;                       // fila completa → panel de datos fuente
+      series[pos] = r.casing_code || null;   // código real del casco (o null si N/V)
+    }
+    units.push({
+      id: plate, plate,
+      label: `${plate} · ${rws[0].company_name || "Bus"}`,
+      config: null,
+      axles: [...axMap.entries()].sort((a,b) => a[0]-b[0]).map(e => e[1]),
+      tires, fuente, series,
+    });
+  }
+  units.sort((a,b) => a.plate.localeCompare(b.plate, "es", {numeric:true}));
+  return units;
+}
+
+async function loadSupabaseData(){
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    RenovaSupabase && RenovaSupabase.showBadge("mock");
+    return;
+  }
+  try{
+    const rows = await RenovaSupabase.fetchView("v_rendimiento_dashboard_rows",
+      { order: "plate.asc,position_number.asc" });
+    const units = buildUnitsFromSupabase(rows);
+    if(!units.length) throw new Error("v_rendimiento_dashboard_rows sin filas");
+    UNITS = units;
+    unitId = UNITS[0].id;
+    renderUnitOptions();
+    initSelectionForUnit();
+    renderAll();
+    RenovaSupabase.showBadge("supabase", rows[0].company_name || "");
+  }catch(err){
+    console.warn("Rendimiento: Supabase no disponible, sigo con mock.", err);
+    RenovaSupabase.showBadge("mock", "fallback");
+  }
+}
 
 /* =========================================================================
    CÁLCULO POR NEUMÁTICO — misma lógica base para ambos modos.
@@ -617,7 +737,6 @@ function renderUnitOptions(){
   const sel = document.getElementById("unitSelect");
   sel.innerHTML = UNITS.map(u => `<option value="${u.id}">${u.label}</option>`).join("");
   sel.value = unitId;
-  sel.addEventListener("change", e => { unitId = e.target.value; initSelectionForUnit(); renderAll(); });
 }
 
 function renderAxleTabs(){
@@ -654,6 +773,90 @@ function metricRow(label, value, unit){
   const u = unit ? `<span class="m-unit">${unit}</span>` : "";
   return `<div class="metric"><span class="m-label">${label}</span>
     <span class="m-value num">${value}${u}</span></div>`;
+}
+
+// Fila de DATO FUENTE: lo que no existe se dice explícitamente ("sin dato"),
+// jamás se inventa un valor.
+function srcRow(label, value, unit){
+  if(value === null || value === undefined || value === ""){
+    return `<div class="metric"><span class="m-label">${label}</span>
+      <span class="m-value empty">sin dato</span></div>`;
+  }
+  const u = unit ? `<span class="m-unit">${unit}</span>` : "";
+  return `<div class="metric"><span class="m-label">${label}</span>
+    <span class="m-value num">${value}${u}</span></div>`;
+}
+
+/* Panel "Datos fuente": expone la evidencia detrás del cálculo — instalación
+   (tire_installations / tire_life_cycles / tire_casings) y última inspección
+   (inspections / inspection_measurements). Con datos reales usa la fila de
+   v_rendimiento_dashboard_rows; con mock muestra lo que el mock modela. */
+function sourcePanel(u, pos, raw){
+  const f = (u.fuente || {})[pos] || null;
+  const fdate = d => d ? d.split("-").reverse().join("/") : null;
+  let inst, insp;
+  if(f){
+    const codeLabel = f.casing_code
+      || (f.code_status === "not_visible" ? "N/V (no visible)"
+        : f.code_status === "pending_review" ? "En revisión" : null);
+    inst = `
+      ${srcRow("Código casco", codeLabel)}
+      ${srcRow("Ciclo de vida", f.condition)}
+      ${srcRow("Diseño actual", f.retread_design || f.model_name)}
+      ${srcRow("Marca", f.brand_name)}
+      ${srcRow("Medida", f.size_name)}
+      ${srcRow("Fecha instalación", fdate(f.installed_at))}
+      ${srcRow("Km instalación", f.odometer_at_install != null ? fmtKm(f.odometer_at_install) : null, "km")}
+      ${srcRow("RTD instalación", f.rtd_at_install_mm != null ? fmtMm(Number(f.rtd_at_install_mm)) : null, "mm")}
+      ${srcRow("OTD", f.otd_mm != null ? fmtMm(Number(f.otd_mm)) : null, "mm")}
+      ${srcRow("Costo", f.cost != null ? "$ " + Number(f.cost).toFixed(2) : null)}`;
+    const rtds = ["rtd_a_mm","rtd_b_mm","rtd_c_mm","rtd_d_mm"]
+      .map(k => f[k] != null ? fmtMm(Number(f[k])) : "—").join(" / ");
+    insp = `
+      ${srcRow("Fecha inspección", fdate(f.last_inspection_on))}
+      ${srcRow("Km inspección", f.last_inspection_odometer_km != null ? fmtKm(f.last_inspection_odometer_km) : null, "km")}
+      ${srcRow("RTD A/B/C/D", (f.rtd_a_mm != null || f.rtd_b_mm != null) ? rtds : null, "mm")}
+      ${srcRow("RTD MOVI (mín.)", f.last_rtd_movi_mm != null ? fmtMm(Number(f.last_rtd_movi_mm)) : null, "mm")}
+      ${srcRow("Estado RTD", f.last_rtd_state)}
+      ${srcRow("Presión", f.pressure_psi != null ? Number(f.pressure_psi).toFixed(0) : null, "psi")}
+      ${srcRow("Estado presión", f.pressure_state)}
+      ${srcRow("Tapa válvula", f.valve_cap)}
+      ${srcRow("Anomalía", f.anomaly)}
+      ${srcRow("Inspector", f.inspector_name)}`;
+  } else {
+    // Mock: solo existen los campos fuente que el mock modela.
+    inst = `
+      ${srcRow("Código casco", serieOf(u.id, pos))}
+      ${srcRow("Ciclo de vida", raw && raw.reencauche ? raw.reencauche.ciclo : (raw ? "N" : null))}
+      ${srcRow("Km instalación", raw && raw.kmInstalacion != null ? fmtKm(raw.kmInstalacion) : null, "km")}
+      ${srcRow("RTD instalación", raw && raw.rtdInstalacion != null ? fmtMm(raw.rtdInstalacion) : null, "mm")}
+      ${srcRow("OTD", raw && raw.otd != null ? fmtMm(raw.otd) : null, "mm")}
+      ${srcRow("Costo", raw && raw.costo != null ? "$ " + raw.costo.toFixed(2) : null)}
+      ${srcRow("Fecha instalación", null)}
+      ${srcRow("Marca", null)}`;
+    insp = `
+      ${srcRow("Km inspección", raw && raw.kmActual != null ? fmtKm(raw.kmActual) : null, "km")}
+      ${srcRow("RTD actual", raw && raw.rtdActual != null ? fmtMm(raw.rtdActual) : null, "mm")}
+      ${srcRow("Fecha inspección", null)}
+      ${srcRow("RTD A/B/C/D", null)}
+      ${srcRow("Presión", null)}
+      ${srcRow("Anomalía", null)}
+      ${srcRow("Inspector", null)}`;
+  }
+  return `
+    <details class="source-panel">
+      <summary>Datos fuente · instalación e inspección</summary>
+      <div class="source-cols">
+        <div class="source-col">
+          <div class="col-title">Instalación (fuente)</div>
+          ${inst}
+        </div>
+        <div class="source-col">
+          <div class="col-title">Última inspección (fuente)</div>
+          ${insp}
+        </div>
+      </div>
+    </details>`;
 }
 
 function renderCard(){
@@ -714,6 +917,7 @@ function renderCard(){
           ${right}
         </div>
       </div>
+      ${sourcePanel(u, selectedPos, raw)}
     </div>`;
 }
 
@@ -917,10 +1121,15 @@ function goToHistory(serie){
   location.href = `historial-neumatico.html?serie=${encodeURIComponent(serie)}&from=rendimiento`;
 }
 
-/* init */
+/* init — mock al instante (sin pantalla en blanco); Supabase pisa el dataset
+   cuando responde. El listener del select se registra UNA vez. */
+document.getElementById("unitSelect").addEventListener("change", e => {
+  unitId = e.target.value; initSelectionForUnit(); renderAll();
+});
 renderUnitOptions();
 initSelectionForUnit();
 renderAll();
+loadSupabaseData();
 </script>
 </body>
 </html>
