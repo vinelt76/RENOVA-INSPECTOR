@@ -20,6 +20,7 @@
     "@capacitor/core": "^8.4.1",
     "@fontsource/bebas-neue": "^5.2.7",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@supabase/supabase-js": "^2.110.1",
     "jeep-sqlite": "^2.8.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
