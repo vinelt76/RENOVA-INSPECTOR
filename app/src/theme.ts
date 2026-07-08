@@ -5,6 +5,7 @@ export const NAVY   = '#15233f';
 export const ORANGE = '#F06822';
 export const YELLOW = '#f4b821';
 export const GREEN  = '#1f9d6b';
+export const RED     = '#E5484D'; // solo estados de error (p.ej. envío a Supabase fallido)
 
 // Sistema dark (DESIGN.md)
 export const SCREEN_DARK = '#07111C'; // fondo de pantalla

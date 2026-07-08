@@ -4,7 +4,9 @@ import { useApp } from '../state/useApp';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
-import { MONO, NAVY, ORANGE, YELLOW, GREEN, SCREEN_DARK, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
+import { pushInspeccionToSupabase } from '../sync/pushInspeccion';
+import { supabaseEnabled } from '../sync/supabaseClient';
+import { MONO, NAVY, ORANGE, YELLOW, GREEN, RED, SCREEN_DARK, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../db/schema';
 import FormBody from './FormBody';
 
@@ -40,6 +42,12 @@ export default function InspeccionScreen() {
   const [condiciones, setCondiciones] = useState<CatCondicion[]>([]);
   const [configPos, setConfigPos] = useState<CatConfiguracion[]>([]);
   const [accordionExpanded, setAccordionExpanded] = useState(false);
+
+  // Envío mínimo a Supabase (integración demo) — sin VITE_SUPABASE_URL/ANON_KEY
+  // configuradas, supabaseEnabled es false y este estado nunca sale de 'idle'
+  // (cero cambio de comportamiento respecto a hoy).
+  const [syncState, setSyncState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const r1Ref = useRef<HTMLInputElement>(null);
   const r2Ref = useRef<HTMLInputElement>(null);
@@ -223,6 +231,27 @@ export default function InspeccionScreen() {
 
   const completas = FILAS.filter(p => posStatus(p) === 'completa').length;
 
+  // Reset del indicador al entrar a una inspección distinta.
+  useEffect(() => { setSyncState('idle'); }, [activeCabId]);
+
+  // Envío mínimo a Supabase: se dispara (con debounce) cuando TODAS las posiciones
+  // quedan completas — mismo momento en que aparece "BUSCAR OTRA UNIDAD →" abajo.
+  // Si el inspector corrige algo después, `store` cambia y se reintenta solo.
+  // No bloquea nada: el guardado local (SQLite, vía `commit`) ya ocurrió antes y
+  // sigue siendo la fuente de verdad si esto falla.
+  useEffect(() => {
+    if (!supabaseEnabled || !activeCabId) return;
+    if (!(TOTAL > 0 && completas === TOTAL)) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(async () => {
+      setSyncState('sending');
+      const res = await pushInspeccionToSupabase(activeCabId);
+      setSyncState(res.ok ? 'ok' : 'error');
+    }, 1200);
+    return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCabId, completas, TOTAL, store]);
+
   const navBtn = (label: React.ReactNode, onClick: () => void, disabled: boolean) => (
     <button onClick={onClick} disabled={disabled} className="pressable" style={{
       background: 'none', border: 'none', color: disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.9)',
@@ -255,11 +284,20 @@ export default function InspeccionScreen() {
             </div>
           </div>
 
-          {/* Tick de guardado — feedback de autosave */}
+          {/* Tick de guardado — feedback de autosave local (SQLite) */}
           {flash && (
             <div className="tick-in" aria-label="Guardado" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: 'rgba(244,184,33,0.14)', borderRadius: 6, padding: '4px 8px' }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5L4.5 9L10 3" stroke={YELLOW} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, letterSpacing: '0.06em' }}>GUARDADO</span>
+            </div>
+          )}
+
+          {/* Estado de envío a Supabase — solo visible si la integración está configurada (.env) */}
+          {supabaseEnabled && syncState !== 'idle' && (
+            <div aria-label="Estado de sincronización" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: syncState === 'error' ? 'rgba(229,72,77,0.16)' : 'rgba(31,157,107,0.16)', borderRadius: 6, padding: '4px 8px' }}>
+              <span style={{ color: syncState === 'sending' ? LABEL_BLUE : syncState === 'ok' ? GREEN : RED, fontWeight: 800, fontSize: 9, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                {syncState === 'sending' ? 'ENVIANDO A SUPABASE…' : syncState === 'ok' ? '☁ SINCRONIZADO' : '⚠ ERROR DE ENVÍO'}
+              </span>
             </div>
           )}
         </div>
