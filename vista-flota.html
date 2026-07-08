@@ -109,34 +109,73 @@
   /* ───────────────── Layout ───────────────── */
   main{max-width:1200px;margin:0 auto;padding:16px}
 
-  /* ───────────────── KPIs ───────────────── */
-  .kpis{
-    display:grid;gap:10px;
-    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-    margin-bottom:22px;
+  /* ───────────────── KPIs: panel gráfico de flota ─────────────────
+     Reemplaza las 5 stat cards de texto por un panel único (total +
+     distribución + riesgo) — ver design-principle.md "Graphic-first
+     dashboard principle". Barra segmentada, nunca torta (DESIGN.md §8). */
+  .kpis{margin-bottom:22px}
+
+  @keyframes panelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .fleet-overview{
+    display:grid;grid-template-columns:200px 1fr 220px;gap:24px;align-items:center;
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;
+    padding:20px 24px;animation:panelIn .3s ease-out both;
   }
-  .stat{
-    background:var(--field-dark);
-    border:2px solid var(--border-dark);
-    padding:14px 16px;
-    /* chaflán industrial 8px (DESIGN.md §7) */
-    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
-  }
-  .stat .k-label{
+  .fo-total-value{font-size:44px;font-weight:800;line-height:1;color:var(--value-ice)}
+  .fo-total-label{
     font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-    color:var(--label-blue);
+    color:var(--label-blue);margin-top:8px;
   }
-  .stat .k-value{
-    font-size:30px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice);
-  }
-  .stat.crit .k-value{color:var(--crit)}
-  .stat.warn .k-value{color:var(--warn)}
-  .stat.ok   .k-value{color:var(--verified-green)}
-  .stat .k-sub{
-    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:6px;
+  .fo-total-sub{
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:4px;
+    text-transform:uppercase;
   }
 
-  /* ───────────────── Sección + leyenda ───────────────── */
+  .fo-dist-label{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:10px;
+  }
+  .severity-bar{
+    display:flex;height:30px;border-radius:8px;overflow:hidden;
+    background:var(--screen-dark);border:2px solid var(--border-dark);
+  }
+  .sb-seg{height:100%;flex:0 0 0%;transition:flex-basis .7s cubic-bezier(.22,1,.36,1)}
+  .sb-seg.crit{background:var(--crit)}
+  .sb-seg.warn{background:var(--warn)}
+  .sb-seg.normal{background:var(--verified-green)}
+  .sb-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+  .sb-legend span{
+    display:flex;align-items:center;gap:6px;
+    font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .sb-legend b{color:var(--value-ice);font-size:12px}
+  .sb-legend .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .sb-legend .dot.crit{background:var(--crit)}
+  .sb-legend .dot.warn{background:var(--warn)}
+  .sb-legend .dot.normal{background:var(--verified-green)}
+
+  .fo-risk{display:flex;align-items:center;gap:14px;justify-content:flex-end}
+  .risk-ring{
+    --pct:0%;width:78px;height:78px;border-radius:50%;flex:none;position:relative;
+    background:conic-gradient(var(--crit) var(--pct),var(--border-dark) 0);
+  }
+  .risk-ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--field-dark)}
+  .risk-ring .rr-value{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:800;color:var(--value-ice);z-index:1;
+  }
+  .fo-risk-text{text-align:right}
+  .fo-risk-label{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue);
+  }
+  .fo-risk-sub{font-size:10px;font-weight:700;color:var(--label-blue);margin-top:4px}
+
+  @media (max-width:760px){
+    .fleet-overview{grid-template-columns:1fr;text-align:left}
+    .fo-risk{justify-content:flex-start}
+  }
+
+  /* ───────────────── Sección ───────────────── */
   .section-head{
     display:flex;align-items:center;justify-content:space-between;
     gap:12px;flex-wrap:wrap;margin-bottom:12px;
@@ -144,15 +183,6 @@
   .section-head h2{
     font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue);
   }
-  .legend{display:flex;gap:14px;flex-wrap:wrap}
-  .legend-item{
-    display:flex;align-items:center;gap:7px;
-    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--label-blue);
-  }
-  .swatch{width:12px;height:12px;border-radius:3px;border:2px solid}
-  .swatch.crit{background:var(--crit-bg);border-color:var(--crit)}
-  .swatch.warn{background:var(--warn-bg);border-color:var(--warn)}
-  .swatch.normal{background:rgba(31,157,107,.16);border-color:var(--verified-green)}
 
   /* ───────────────── Grid de unidades ───────────────── */
   .fleet-grid{
@@ -183,35 +213,23 @@
   .status-warning  .uc-dot{background:var(--warn);box-shadow:0 0 0 3px var(--warn-bg)}
   .status-normal   .uc-dot{background:var(--verified-green);box-shadow:0 0 0 3px rgba(31,157,107,.15)}
 
-  /* Esquema plano (vista superior simple) — NO 3D */
-  .schematic{
-    display:flex;flex-direction:column;gap:6px;
-    padding:9px 8px;background:var(--screen-dark);
-    border:2px solid var(--border-dark);border-radius:8px;
+  /* Card de unidad simplificada — sin pills de neumático individual (ver
+     design-principle.md, Goal 2.4): solo placa, empresa, configuración y
+     un estado grande por color. */
+  .uc-config{
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);
+    text-transform:uppercase;
   }
-  .axle-row{display:grid;grid-template-columns:1fr 22px 1fr;align-items:center;gap:6px}
-  .axle-side{display:flex;gap:4px}
-  .axle-side.left{justify-content:flex-end}
-  .axle-side.right{justify-content:flex-start}
-  .spine{height:4px;border-radius:2px;background:var(--border-dark)}
-  .tire{
-    width:15px;height:9px;border-radius:2px;background:var(--border-dark);
-    border:1px solid rgba(255,255,255,.06);
+  .uc-status{
+    margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);
+    font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
   }
-  .tire.t-critical{background:var(--crit)}
-  .tire.t-warning{background:var(--warn)}
-  .tire.t-normal{background:var(--verified-green)}
+  .status-critical .uc-status{color:var(--crit)}
+  .status-warning  .uc-status{color:var(--warn)}
+  .status-normal   .uc-status{color:var(--verified-green)}
 
-  .uc-foot{display:flex;align-items:center;justify-content:space-between;gap:6px}
-  .badge{
-    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-    padding:3px 7px;border-radius:4px;
-  }
-  .badge.critical{background:var(--crit-bg);color:var(--crit)}
-  .badge.warning{background:var(--warn-bg);color:var(--warn)}
-  .badge.normal{background:transparent;color:var(--verified-green);border:1px solid rgba(31,157,107,.42)}
-  .uc-worst{font-size:10px;font-weight:800;color:var(--label-blue)}
-  .uc-worst b{color:var(--value-ice);font-size:12px}
+  @keyframes cardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .unit-card{animation:cardIn .28s ease-out both}
 
   .empty{
     grid-column:1/-1;text-align:center;color:var(--label-blue);
@@ -257,11 +275,6 @@
   <!-- Grid -->
   <div class="section-head">
     <h2 id="gridTitle">Unidades inspeccionadas</h2>
-    <div class="legend" aria-label="Leyenda de colores">
-      <span class="legend-item"><span class="swatch crit"></span>Crítica &lt; 4 mm / retiro</span>
-      <span class="legend-item"><span class="swatch warn"></span>Observación 4–8 mm</span>
-      <span class="legend-item"><span class="swatch normal"></span>Normal &gt; 8 mm</span>
-    </div>
   </div>
 
   <section class="fleet-grid" id="fleetGrid" aria-live="polite"></section>
@@ -397,13 +410,6 @@ function getWorstRTD(unit){
   return unit.tires.reduce((min,t)=> t.rtd < min ? t.rtd : min, Infinity);
 }
 
-function countCriticalTires(unit){
-  return unit.tires.filter(t => tireStatus(t) === "critical").length;
-}
-function countWarningTires(unit){
-  return unit.tires.filter(t => tireStatus(t) === "warning").length;
-}
-
 // PLACEHDER de navegación → abre la inspección YA EXISTENTE de la unidad.
 // No se crea inspección nueva ni se duplica el gemelo digital aquí.
 function openInspection(unitId){
@@ -440,6 +446,52 @@ function renderDateOptions(){
   sel.addEventListener("change", e => { selectedDate = e.target.value; renderAll(); });
 }
 
+/* =========================================================================
+   ANIMACIÓN — utilidades mínimas (conteo ascendente, crecimiento de barras
+   y anillo de riesgo). Respetan prefers-reduced-motion: en ese caso el
+   valor final se aplica de inmediato, sin pasos intermedios.
+   ========================================================================= */
+const REDUCED_MOTION = window.matchMedia &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function animateCount(el, to, opts={}){
+  if(!el) return;
+  const { duration = 600, format = v => Math.round(v).toString() } = opts;
+  if(REDUCED_MOTION){ el.textContent = format(to); return; }
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = format(to * eased);
+    if(p < 1) requestAnimationFrame(tick); else el.textContent = format(to);
+  }
+  requestAnimationFrame(tick);
+}
+
+// Crece una barra desde 0 hasta `pct`% sobre la propiedad CSS indicada
+// (width para barras normales, flexBasis para segmentos de un flex).
+function growFill(el, pct, prop="width"){
+  if(!el) return;
+  if(REDUCED_MOTION){ el.style[prop] = pct + "%"; return; }
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{ el.style[prop] = pct + "%"; }));
+}
+
+function animateRing(el, toPct, duration=700){
+  if(!el) return;
+  if(REDUCED_MOTION){ el.style.setProperty("--pct", toPct + "%"); return; }
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.style.setProperty("--pct", (toPct * eased) + "%");
+    if(p < 1) requestAnimationFrame(tick); else el.style.setProperty("--pct", toPct + "%");
+  }
+  requestAnimationFrame(tick);
+}
+
+// Panel único: total (número) + distribución de severidad (barra segmentada,
+// nunca torta — DESIGN.md §8) + riesgo de flota (anillo). Sustituye las 5
+// stat cards de texto por gráficos compactos (design-principle.md, Goal 2.1).
 function renderKpis(){
   const units = currentUnits();
   const total = units.length;
@@ -450,38 +502,46 @@ function renderKpis(){
   });
   const atRisk = crit + warn;
   const riskPct = total ? Math.round((atRisk/total)*100) : 0;
+  const critPct = total ? (crit/total)*100 : 0;
+  const warnPct = total ? (warn/total)*100 : 0;
+  const normalPct = total ? (normal/total)*100 : 0;
 
-  const cards = [
-    {label:"Unidades inspeccionadas", value:total, cls:"", sub:formatDate(selectedDate)},
-    {label:"Críticas", value:crit, cls:"crit", sub:"&lt; 4 mm o retiro"},
-    {label:"En observación", value:warn, cls:"warn", sub:"4 – 8 mm"},
-    {label:"Normales", value:normal, cls:"ok", sub:"&gt; 8 mm"},
-    {label:"% flota en riesgo", value:riskPct+"%", cls:"crit", sub:atRisk+" de "+total+" unidades"},
-  ];
-  document.getElementById("kpis").innerHTML = cards.map(c => `
-    <div class="stat ${c.cls}">
-      <div class="k-label">${c.label}</div>
-      <div class="k-value num">${c.value}</div>
-      <div class="k-sub">${c.sub}</div>
-    </div>`).join("");
-}
-
-// Esquema plano (vista superior): filas por eje, neumáticos izq/der coloreados.
-function renderSchematic(unit){
-  const byAxle = {};
-  unit.tires.forEach(t=>{
-    (byAxle[t.axle] = byAxle[t.axle] || {L:[],R:[]})[t.side].push(t);
-  });
-  const rows = Object.keys(byAxle).sort((a,b)=>a-b).map(ax=>{
-    const {L,R} = byAxle[ax];
-    const pill = t => `<span class="tire t-${tireStatus(t)}"></span>`;
-    return `<div class="axle-row">
-      <span class="axle-side left">${L.map(pill).join("")}</span>
-      <span class="spine"></span>
-      <span class="axle-side right">${R.map(pill).join("")}</span>
+  document.getElementById("kpis").innerHTML = `
+    <div class="fleet-overview">
+      <div class="fo-total">
+        <div class="fo-total-value num" id="foTotalValue">0</div>
+        <div class="fo-total-label">Unidades inspeccionadas</div>
+        <div class="fo-total-sub">${formatDate(selectedDate)}</div>
+      </div>
+      <div class="fo-dist">
+        <div class="fo-dist-label">Distribución por severidad</div>
+        <div class="severity-bar" role="img"
+             aria-label="${crit} críticas, ${warn} en observación, ${normal} normales, de ${total} unidades">
+          <span class="sb-seg crit" id="segCrit"></span>
+          <span class="sb-seg warn" id="segWarn"></span>
+          <span class="sb-seg normal" id="segNormal"></span>
+        </div>
+        <div class="sb-legend">
+          <span><span class="dot crit"></span>Críticas <b class="num">${crit}</b></span>
+          <span><span class="dot warn"></span>Observación <b class="num">${warn}</b></span>
+          <span><span class="dot normal"></span>Normales <b class="num">${normal}</b></span>
+        </div>
+      </div>
+      <div class="fo-risk">
+        <div class="risk-ring" id="riskRing"><span class="rr-value num" id="riskRingValue">0%</span></div>
+        <div class="fo-risk-text">
+          <div class="fo-risk-label">Riesgo de flota</div>
+          <div class="fo-risk-sub">${atRisk} de ${total} unidades</div>
+        </div>
+      </div>
     </div>`;
-  }).join("");
-  return `<div class="schematic" aria-hidden="true">${rows}</div>`;
+
+  animateCount(document.getElementById("foTotalValue"), total, {duration:500});
+  animateCount(document.getElementById("riskRingValue"), riskPct, {duration:700, format:v=>Math.round(v)+"%"});
+  growFill(document.getElementById("segCrit"), critPct, "flexBasis");
+  growFill(document.getElementById("segWarn"), warnPct, "flexBasis");
+  growFill(document.getElementById("segNormal"), normalPct, "flexBasis");
+  animateRing(document.getElementById("riskRing"), riskPct, 700);
 }
 
 function renderGrid(){
@@ -502,30 +562,24 @@ function renderGrid(){
     return ra !== rb ? ra - rb : getWorstRTD(a) - getWorstRTD(b);
   });
 
-  grid.innerHTML = sorted.map(u=>{
+  // Card simplificada (design-principle.md, Goal 2.4): solo placa, empresa,
+  // configuración y un estado grande por color — sin pills de neumático.
+  grid.innerHTML = sorted.map((u,idx)=>{
     const status = calculateUnitStatus(u);
-    const worst = getWorstRTD(u);
-    const nCrit = countCriticalTires(u), nWarn = countWarningTires(u);
-    let footRight;
-    if(nCrit) footRight = `<span class="uc-worst">${nCrit} llanta${nCrit>1?"s":""} crít.</span>`;
-    else if(nWarn) footRight = `<span class="uc-worst">${nWarn} en obs.</span>`;
-    else footRight = `<span class="uc-worst">RTD mín <b>${worst.toFixed(1)}</b></span>`;
-
+    const delay = Math.min(idx * 18, 260);
     return `<button class="unit-card pressable status-${status}"
+              style="animation-delay:${delay}ms"
               onclick="openInspection('${u.id}')"
               aria-label="Unidad ${u.plate}, estado ${STATUS_LABEL[status]}. Abrir inspección.">
       <div class="uc-top">
         <div>
           <div class="uc-plate">${u.plate}</div>
-          <div class="uc-meta">${u.company} · ${u.equipmentType}</div>
+          <div class="uc-meta">${u.company}</div>
         </div>
         <span class="uc-dot"></span>
       </div>
-      ${renderSchematic(u)}
-      <div class="uc-foot">
-        <span class="badge ${status}">${STATUS_LABEL[status]}</span>
-        ${footRight}
-      </div>
+      <div class="uc-config">${u.equipmentType}</div>
+      <div class="uc-status">${STATUS_LABEL[status]}</div>
     </button>`;
   }).join("");
 }
