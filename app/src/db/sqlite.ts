@@ -45,6 +45,12 @@ async function initWebStore(): Promise<void> {
   defineCustomElements(window);
   if (!document.querySelector('jeep-sqlite')) {
     const el = document.createElement('jeep-sqlite');
+    // El default interno de <jeep-sqlite> es wasmPath="/assets" (absoluto
+    // desde la raíz del dominio) — rompe bajo un base no-raíz (GitHub Pages:
+    // /RENOVA-INSPECTOR/assets/), pide sql-wasm.wasm en la raíz, recibe el
+    // 404 HTML de Pages y falla el wasm streaming compile ("unsupported
+    // MIME type text/html"). BASE_URL ya incluye la barra final.
+    el.setAttribute('wasmPath', `${import.meta.env.BASE_URL}assets`);
     document.body.appendChild(el);
   }
   await customElements.whenDefined('jeep-sqlite');

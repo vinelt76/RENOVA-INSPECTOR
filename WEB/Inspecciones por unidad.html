@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RENOVA — Panel de Taller</title>
 <!-- Dashboard web para jefes de taller. Solo lee datos reales desde Supabase/Excel. -->
-<script src="../supabase-config.public.js"></script>
-<script src="../renova-ready.js"></script>
-<script type="module" src="../supabase-demo.js"></script>
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
 </head>
 <body>
 <style>
@@ -458,8 +458,8 @@ main{flex:1;display:flex;min-height:0}
     </div>
     <div class="hdr-right">
       <a class="chip active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
-      <a class="chip" href="../instalacion.html">Instalación</a>
-      <a class="chip" href="../rendimiento.html">Rendimiento</a>
+      <a class="chip" href="instalacion.html">Instalación</a>
+      <a class="chip" href="rendimiento.html">Rendimiento</a>
       <div class="chip" id="source-chip"><span class="dot y"></span>CARGANDO · <span class="ice">EXCEL</span></div>
       <div class="chip"><span class="ice">JT</span>· JEFE DE TALLER</div>
     </div>
@@ -1019,12 +1019,12 @@ function drawConnector(){
 window.addEventListener('resize', drawConnector);
 
 /* ================= LINK AL HISTORIAL DEL NEUMÁTICO =================
-   El # Código navega a la vista APARTE historial-neumatico.html (en la raíz del
-   repo; esta pantalla vive en UI/, de ahí el ../), pasando el código y el origen. */
+   El # Código navega a la vista APARTE historial-neumatico.html, en la misma
+   carpeta WEB/, pasando el código y el origen. */
 function goToTireHistory(){
   const code = POSICIONES[selected] && POSICIONES[selected].codigo;
   if(!code) return;
-  location.href = `../historial-neumatico.html?serie=${encodeURIComponent(code)}&from=inspeccion`;
+  location.href = `historial-neumatico.html?serie=${encodeURIComponent(code)}&from=inspeccion`;
 }
 document.getElementById('id-codigo').addEventListener('click', goToTireHistory);
 document.getElementById('id-codigo').addEventListener('keydown', e=>{
