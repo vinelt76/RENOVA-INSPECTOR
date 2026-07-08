@@ -98,7 +98,7 @@
   }
   .head-row{
     display:flex;align-items:flex-end;justify-content:space-between;
-    gap:16px;flex-wrap:wrap;max-width:1080px;margin:0 auto;
+    gap:16px;flex-wrap:wrap;max-width:1280px;margin:0 auto;
   }
   .brand .logo{
     font-family:var(--display);font-size:32px;line-height:1;
@@ -131,7 +131,7 @@
   .unit-picker select:focus{outline:none;border-color:var(--ember-orange)}
 
   /* ───────────────── Layout ───────────────── */
-  main{max-width:1080px;margin:0 auto;padding:16px}
+  main{max-width:1280px;margin:0 auto;padding:16px}
 
   /* ───────────────── Selector de eje (tabs) ───────────────── */
   .selector-block{margin-bottom:16px}
@@ -172,9 +172,11 @@
   .pos-pill:focus-visible{outline:none;border-color:var(--value-ice)}
 
   /* ───────────────── Card individual (compartida) ───────────────── */
+  @keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   .tire-card{
     background:var(--field-dark);border:2px solid var(--border-dark);
     border-radius:14px;padding:0;margin-top:18px;overflow:hidden;
+    animation:fadeSlideIn .25s ease-out both;
   }
   /* Bloque de identidad — clickeable (abre historial). Solo ESTE bloque. */
   .identity{
@@ -211,7 +213,7 @@
   .metric .m-value.empty{color:var(--label-blue);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
 
   /* ───────────────── Sección exclusiva del eje ───────────────── */
-  .axle-analysis{margin-top:20px}
+  .axle-analysis{margin-top:20px;animation:fadeSlideIn .25s ease-out both}
   .analysis-head{
     font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
     color:var(--label-blue);margin-bottom:12px;
@@ -219,7 +221,10 @@
   }
   .analysis-head .ah-axle{color:var(--value-ice)}
 
-  .avg-kpis{display:grid;gap:10px;grid-template-columns:1fr 1fr;margin-bottom:16px}
+  .avg-kpis{
+    display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    margin-bottom:16px;
+  }
   .avg-stat{
     background:var(--field-dark);border:2px solid var(--border-dark);padding:14px 16px;
     clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
@@ -228,18 +233,36 @@
   .avg-stat .a-value{font-size:28px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice)}
   .avg-stat .a-value .a-unit{font-size:12px;font-weight:700;color:var(--label-blue);margin-left:4px}
   .avg-stat .a-sub{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:7px}
+  /* Relleno visual bajo el valor — posición del promedio dentro del rango
+     del eje (min–max), o escala absoluta 0–100% para % de Consumo. Color
+     neutro "acero" (--bar-steel): no es un estado de Inspección ni de
+     balance, es contexto de rendimiento (ver design-principle.md). */
+  .a-fill-track{height:6px;background:var(--screen-dark);border-radius:3px;margin-top:10px;overflow:hidden}
+  .a-fill{display:block;height:100%;width:0%;background:var(--bar-steel);border-radius:3px;
+    transition:width .6s cubic-bezier(.22,1,.36,1)}
 
-  /* Mejor / peor posición del eje */
-  .bw-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-  .bw-card{
+  /* Mejor vs. peor posición del eje — panel único de comparación (no cards
+     duplicadas junto al gráfico por posición de más abajo). */
+  .bw-panel{
     background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
-    padding:12px 14px;
+    padding:14px 16px;margin-bottom:16px;
   }
-  .bw-card.best{border-color:var(--balance-ok)}
-  .bw-card.worst{border-color:var(--signal-yellow)}
-  .bw-card .bw-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
-  .bw-card .bw-pos{font-size:20px;font-weight:800;color:var(--value-ice);margin-top:6px}
-  .bw-card .bw-value{font-size:11px;font-weight:700;color:var(--label-blue);margin-top:4px}
+  .bw-panel-title{
+    font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:12px;
+  }
+  .bwc-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;padding:5px 0}
+  .bwc-pos{font-size:13px;font-weight:800;color:var(--value-ice)}
+  .bwc-track{height:14px;background:var(--screen-dark);border-radius:4px;overflow:hidden}
+  .bwc-fill{display:block;height:100%;width:0%;border-radius:4px;transition:width .6s cubic-bezier(.22,1,.36,1)}
+  .bwc-row.best .bwc-fill{background:var(--balance-ok)}
+  .bwc-row.worst .bwc-fill{background:var(--signal-yellow)}
+  .bwc-val{font-size:13px;font-weight:800;color:var(--value-ice);white-space:nowrap}
+  .bwc-delta{
+    margin-top:8px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);
+    text-transform:uppercase;
+  }
+  .bwc-delta b{color:var(--value-ice);font-size:13px}
 
   /* Gráfico de barras posición vs posición (horizontal, mobile-first) */
   .chart{
@@ -255,8 +278,8 @@
   .bar-row .bar-pos{font-size:13px;font-weight:800;color:var(--value-ice)}
   .bar-track{height:16px;background:var(--screen-dark);border-radius:4px;overflow:hidden}
   .bar-fill{
-    display:block;height:100%;background:var(--bar-steel);border-radius:4px;min-width:2px;
-    transition:width .3s cubic-bezier(.22,1,.36,1);
+    display:block;height:100%;width:0%;background:var(--bar-steel);border-radius:4px;
+    transition:width .6s cubic-bezier(.22,1,.36,1);
   }
   .bar-fill.is-min{background:var(--signal-yellow)}   /* posición de menor rendimiento */
   .bar-val{font-size:13px;font-weight:800;color:var(--value-ice);white-space:nowrap}
@@ -290,7 +313,7 @@
   }
 
   footer{
-    max-width:1080px;margin:28px auto 0;padding:0 16px;
+    max-width:1280px;margin:28px auto 0;padding:0 16px;
     font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
   }
 
@@ -301,7 +324,6 @@
     .card-cols{grid-template-columns:1fr}
     .card-col+.card-col{border-left:none;border-top:2px solid var(--border-dark)}
     .avg-kpis{grid-template-columns:1fr}
-    .bw-row{grid-template-columns:1fr}
     .balance{flex-wrap:wrap}
   }
   @media (prefers-reduced-motion:reduce){
@@ -526,6 +548,43 @@ function computeAxle(unit, axle){
 }
 
 /* =========================================================================
+   ANIMACIÓN — utilidades mínimas (conteo ascendente, crecimiento de barras).
+   Respetan prefers-reduced-motion: el valor final se aplica de inmediato,
+   sin pasos intermedios, cuando el usuario lo pide.
+   ========================================================================= */
+const REDUCED_MOTION = window.matchMedia &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function animateCount(el, to, opts={}){
+  if(!el) return;
+  const { duration = 550, format = v => Math.round(v).toString() } = opts;
+  if(REDUCED_MOTION){ el.textContent = format(to); return; }
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = format(to * eased);
+    if(p < 1) requestAnimationFrame(tick); else el.textContent = format(to);
+  }
+  requestAnimationFrame(tick);
+}
+
+function growFill(el, pct){
+  if(!el) return;
+  if(REDUCED_MOTION){ el.style.width = pct + "%"; return; }
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{ el.style.width = pct + "%"; }));
+}
+
+// Posición relativa de `value` dentro de [min,max] de `values` (0–100).
+// Si todas las posiciones válidas son iguales (o hay una sola), la barra
+// queda llena — no hay "peor" con quien compararla.
+function rangePct(value, values){
+  const min = Math.min(...values), max = Math.max(...values);
+  if(max === min) return 100;
+  return ((value - min) / (max - min)) * 100;
+}
+
+/* =========================================================================
    FORMATO
    ========================================================================= */
 const nf = new Intl.NumberFormat("es-PE");
@@ -669,45 +728,76 @@ function renderSummary(){
   const plural = n>1 ? "es" : "";
 
   // KPIs del eje — mostrar solo si hay al menos una posición válida.
-  const kpis = (agg.avgKmMm != null) ? `
+  // Km Proyectado y Km/mm llevan un relleno bajo el valor: dónde cae el
+  // promedio entre la peor y la mejor posición del eje. % Consumo usa
+  // escala absoluta 0–100% (banda de rodamiento consumida). Km Acumulado
+  // es un total, sin rango natural con el que compararlo — queda como
+  // número animado.
+  let kpis;
+  if(agg.avgKmMm != null){
+    const kmMmValues = agg.valids.map(r=>r.m.kmMm);
+    const kmProyValues = agg.valids.map(r=>r.m.kmProyectado);
+    kpis = `
     <div class="avg-kpis">
       <div class="avg-stat">
         <div class="a-label">Km Acumulado</div>
-        <div class="a-value num">${fmtKm(agg.totalKmAcumulado)}<span class="a-unit">km</span></div>
+        <div class="a-value"><span class="num" id="avKmAcum">0</span><span class="a-unit">km</span></div>
         <div class="a-sub">Total del eje · ${n} posición${plural}</div>
       </div>
       <div class="avg-stat">
         <div class="a-label">Km Proyectado promedio</div>
-        <div class="a-value num">${fmtKm(agg.avgKmProyectado)}<span class="a-unit">km</span></div>
+        <div class="a-value"><span class="num" id="avKmProy">0</span><span class="a-unit">km</span></div>
         <div class="a-sub">Promedio de ${n} posición${plural}</div>
+        <div class="a-fill-track" title="Posición del promedio entre la peor y la mejor proyección del eje">
+          <span class="a-fill" id="avKmProyFill"></span>
+        </div>
       </div>
       <div class="avg-stat">
         <div class="a-label">Km/mm promedio</div>
-        <div class="a-value num">${fmtKmMm(agg.avgKmMm)}<span class="a-unit">km/mm</span></div>
+        <div class="a-value"><span class="num" id="avKmMm">0</span><span class="a-unit">km/mm</span></div>
         <div class="a-sub">Promedio de ${n} posición${plural}</div>
+        <div class="a-fill-track" title="Posición del promedio entre la peor y la mejor posición del eje">
+          <span class="a-fill" id="avKmMmFill"></span>
+        </div>
       </div>
       <div class="avg-stat">
         <div class="a-label">% Consumo promedio</div>
-        <div class="a-value num">${fmtPct(agg.avgPct)}<span class="a-unit">%</span></div>
+        <div class="a-value"><span class="num" id="avPct">0</span><span class="a-unit">%</span></div>
         <div class="a-sub">Promedio de ${n} posición${plural}</div>
+        <div class="a-fill-track" title="% de la banda de rodamiento consumida en promedio">
+          <span class="a-fill" id="avPctFill"></span>
+        </div>
       </div>
-    </div>` : `
-    <div class="note">Sin datos suficientes en este eje para calcular promedios.</div>`;
+    </div>`;
+  } else {
+    kpis = `<div class="note">Sin datos suficientes en este eje para calcular promedios.</div>`;
+  }
 
-  // Mejor / peor posición del eje (por Km/mm).
-  const bw = (agg.bestPos && agg.bestPos !== agg.worstPos) ? `
-    <div class="bw-row">
-      <div class="bw-card best">
-        <div class="bw-label">Mejor posición</div>
-        <div class="bw-pos">${agg.bestPos}</div>
-        <div class="bw-value num">${fmtKmMm(agg.rows.find(r=>r.pos===agg.bestPos).m.kmMm)} km/mm</div>
+  // Mejor vs. peor posición del eje (por Km/mm) — un solo panel de
+  // comparación (no cards duplicadas junto al gráfico por posición de
+  // más abajo, que ya marca la posición más floja con `.is-min`).
+  let bw = "", bwWorstPct = null;
+  if(agg.bestPos && agg.bestPos !== agg.worstPos){
+    const bestVal = agg.rows.find(r=>r.pos===agg.bestPos).m.kmMm;
+    const worstVal = agg.rows.find(r=>r.pos===agg.worstPos).m.kmMm;
+    bwWorstPct = bestVal > 0 ? (worstVal / bestVal) * 100 : 0;
+    const deltaPct = bestVal > 0 ? ((bestVal - worstVal) / bestVal) * 100 : 0;
+    bw = `
+    <div class="bw-panel">
+      <div class="bw-panel-title">Mejor vs. peor posición · Km/mm</div>
+      <div class="bwc-row best">
+        <span class="bwc-pos">${agg.bestPos}</span>
+        <span class="bwc-track"><span class="bwc-fill" id="bwcBestFill"></span></span>
+        <span class="bwc-val num">${fmtKmMm(bestVal)}</span>
       </div>
-      <div class="bw-card worst">
-        <div class="bw-label">Peor posición</div>
-        <div class="bw-pos">${agg.worstPos}</div>
-        <div class="bw-value num">${fmtKmMm(agg.rows.find(r=>r.pos===agg.worstPos).m.kmMm)} km/mm</div>
+      <div class="bwc-row worst">
+        <span class="bwc-pos">${agg.worstPos}</span>
+        <span class="bwc-track"><span class="bwc-fill" id="bwcWorstFill"></span></span>
+        <span class="bwc-val num">${fmtKmMm(worstVal)}</span>
       </div>
-    </div>` : ``;
+      <div class="bwc-delta">Diferencia <b class="num">${fmtPct(deltaPct)}%</b></div>
+    </div>`;
+  }
 
   // Gráfico posición vs posición (Km/mm) — todas las posiciones del eje.
   const maxKmMm = agg.valids.length ? Math.max(...agg.valids.map(r=>r.m.kmMm)) : 1;
@@ -723,7 +813,7 @@ function renderSummary(){
     const isWorst = r.pos === agg.worstPos && agg.valids.length >= 2;
     return `<div class="bar-row">
       <span class="bar-pos">${r.pos}</span>
-      <span class="bar-track"><span class="bar-fill ${isWorst?"is-min":""}" style="width:${pct}%"></span></span>
+      <span class="bar-track"><span class="bar-fill ${isWorst?"is-min":""}" data-pct="${pct}"></span></span>
       <span class="bar-val num">${fmtKmMm(r.m.kmMm)}<span class="bv-unit">km/mm</span></span>
     </div>`;
   }).join("");
@@ -769,6 +859,26 @@ function renderSummary(){
       ${bw}
       ${chartBlock}
     </div>`;
+
+  // Animaciones: números ascendentes + barras que crecen desde 0.
+  if(agg.avgKmMm != null){
+    const kmMmValues = agg.valids.map(r=>r.m.kmMm);
+    const kmProyValues = agg.valids.map(r=>r.m.kmProyectado);
+    animateCount(document.getElementById("avKmAcum"), agg.totalKmAcumulado, {format:fmtKm});
+    animateCount(document.getElementById("avKmProy"), agg.avgKmProyectado, {format:fmtKm});
+    animateCount(document.getElementById("avKmMm"), agg.avgKmMm, {format:fmtKmMm});
+    animateCount(document.getElementById("avPct"), agg.avgPct, {format:fmtPct});
+    growFill(document.getElementById("avKmProyFill"), rangePct(agg.avgKmProyectado, kmProyValues));
+    growFill(document.getElementById("avKmMmFill"), rangePct(agg.avgKmMm, kmMmValues));
+    growFill(document.getElementById("avPctFill"), Math.min(100, agg.avgPct));
+  }
+  if(bwWorstPct != null){
+    growFill(document.getElementById("bwcBestFill"), 100);
+    growFill(document.getElementById("bwcWorstFill"), bwWorstPct);
+  }
+  mount.querySelectorAll(".bar-fill[data-pct]").forEach(el=>{
+    growFill(el, parseFloat(el.dataset.pct));
+  });
 }
 
 function renderAll(){
