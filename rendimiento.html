@@ -8,26 +8,27 @@
   PANTALLA RENDIMIENTO — vista de consulta para el JEFE DE FLOTA.
   Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
 
-  Un solo componente con DOS estados, alternados por el switch superior:
-    · "Ver por neumático" → pills de todas las posiciones + card individual.
-    · "Ver por eje"       → selector de eje + pills filtradas + card individual
-                            + sección exclusiva de análisis del eje.
-  Estado ACTIVO por defecto: "Ver por eje".
+  Un solo flujo jerárquico, SIN modos alternos:
+    Rendimiento → Eje → Posición / Neumático
+    1. Seleccionar eje (Dirección / Tracción / Libre, según configuración del vehículo).
+    2. Revisar el resumen del eje (promedios, mejor/peor posición, balance Izq/Der).
+    3. Seleccionar una posición del eje.
+    4. Revisar el detalle del neumático de esa posición.
 
   Reglas que respeta este prototipo:
     · Solo muestra datos DERIVADOS/calculados. Nada de datos crudos del inspector
       (no se muestra RTD Actual, Km Actual, presión, etc.).
-    · La card individual es LA MISMA en ambos modos (no se duplica).
     · Las métricas por eje se calculan agregando las métricas por neumático:
-      primero cada posición, luego el promedio/diferencia del eje.
-    · El verde/rojo del BALANCE del eje es un concepto propio de Rendimiento y
-      NO reutiliza el semáforo de Inspección (retiro/presión/anomalías).
+      primero cada posición, luego el promedio/total del eje.
+    · El balance del eje compara el promedio de Km/mm entre el lado Izq y el lado
+      Der (según `lado` del catálogo de configuración). Es un concepto propio de
+      Rendimiento y NO reutiliza el semáforo de Inspección (retiro/presión/anomalías).
     · No hay 3D, isométricos, ni representación visual del eje: pills + barras simples.
     · El # Serie / Código de la card es un LINK a la vista aparte
       historial-neumatico.html?serie=…&from=rendimiento (no es un modal ni una
       vista embebida: es una pantalla separada que se referencia).
 
-  Fórmulas base (reutilizadas de "por neumático"):
+  Fórmulas por neumático:
     RTD Gastado   = RTD Instalación − RTD Actual
     % de Consumo  = RTD Gastado / OTD
     Km Recorrido  = Km Actual − Km Instalación
@@ -35,11 +36,13 @@
     Km Proyectado = Km/mm × (OTD − RTD Retiro recomendado)
     Costo/Km      = Costo $ / Km Recorrido
     Km Acumulado  = km_previo_acumulado + Km Recorrido
-  Agregados del eje:
-    Km/mm promedio      = promedio(Km/mm de las posiciones con datos válidos)
-    % de Consumo prom.  = promedio(% de Consumo de las posiciones con datos válidos)
-    Diferencia          = |A − B| / promedio(A,B) × 100      (eje de 2 posiciones)
-                        = (máx − mín) / promedio × 100       (>2 posiciones)
+  Agregados del eje (sobre posiciones con datos válidos):
+    Km Acumulado (total)   = suma(Km Acumulado)
+    Km Proyectado promedio = promedio(Km Proyectado)
+    Km/mm promedio         = promedio(Km/mm)
+    % de Consumo promedio  = promedio(% de Consumo)
+    Mejor / peor posición  = máximo / mínimo Km/mm
+    Diferencia Izq/Der     = |prom(Izq) − prom(Der)| / promedio(Izq,Der) × 100
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,25 +132,6 @@
 
   /* ───────────────── Layout ───────────────── */
   main{max-width:1080px;margin:0 auto;padding:16px}
-
-  /* ───────────────── Switch de modo (segmented) ───────────────── */
-  .mode-switch{
-    display:inline-flex;gap:4px;padding:4px;margin-bottom:18px;
-    background:var(--field-dark);
-    border:2px solid var(--border-dark);border-radius:12px;
-  }
-  .mode-btn{
-    font-family:var(--mono);font-weight:800;font-size:11px;
-    letter-spacing:.1em;text-transform:uppercase;
-    color:var(--label-blue);background:transparent;border:none;cursor:pointer;
-    padding:11px 18px;border-radius:8px;
-    transition:background .15s ease-out,color .15s ease-out,transform .12s ease-out;
-  }
-  .mode-btn:active{transform:scale(.97)}
-  .mode-btn[aria-pressed="true"]{
-    background:var(--ember-orange);color:#fff;   /* activo = naranja sólido */
-  }
-  .mode-btn:focus-visible{outline:2px solid var(--value-ice);outline-offset:2px}
 
   /* ───────────────── Selector de eje (tabs) ───────────────── */
   .selector-block{margin-bottom:16px}
@@ -245,6 +229,18 @@
   .avg-stat .a-value .a-unit{font-size:12px;font-weight:700;color:var(--label-blue);margin-left:4px}
   .avg-stat .a-sub{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:7px}
 
+  /* Mejor / peor posición del eje */
+  .bw-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .bw-card{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
+    padding:12px 14px;
+  }
+  .bw-card.best{border-color:var(--balance-ok)}
+  .bw-card.worst{border-color:var(--signal-yellow)}
+  .bw-card .bw-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .bw-card .bw-pos{font-size:20px;font-weight:800;color:var(--value-ice);margin-top:6px}
+  .bw-card .bw-value{font-size:11px;font-weight:700;color:var(--label-blue);margin-top:4px}
+
   /* Gráfico de barras posición vs posición (horizontal, mobile-first) */
   .chart{
     background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
@@ -305,8 +301,7 @@
     .card-cols{grid-template-columns:1fr}
     .card-col+.card-col{border-left:none;border-top:2px solid var(--border-dark)}
     .avg-kpis{grid-template-columns:1fr}
-    .mode-switch{width:100%}
-    .mode-btn{flex:1}
+    .bw-row{grid-template-columns:1fr}
     .balance{flex-wrap:wrap}
   }
   @media (prefers-reduced-motion:reduce){
@@ -321,7 +316,7 @@
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">RENDIMIENTO</div>
-      <div class="subtitle">Consulta de rendimiento por neumático y por eje</div>
+      <div class="subtitle">Rendimiento → Eje → Posición</div>
     </div>
     <div class="unit-picker">
       <label for="unitSelect">Unidad</label>
@@ -331,29 +326,23 @@
 </header>
 
 <main>
-  <!-- Switch de modo -->
-  <div class="mode-switch" role="group" aria-label="Modo de vista">
-    <button class="mode-btn" id="modeTire"  type="button" aria-pressed="false" onclick="setMode('tire')">Ver por neumático</button>
-    <button class="mode-btn" id="modeAxle"  type="button" aria-pressed="true"  onclick="setMode('axle')">Ver por eje</button>
-  </div>
-
-  <!-- Selector de eje (solo en modo eje) -->
-  <div class="selector-block" id="axleBlock">
+  <!-- 1. Seleccionar eje -->
+  <div class="selector-block">
     <div class="selector-label">Eje</div>
     <div class="axle-tabs" id="axleTabs" role="tablist" aria-label="Seleccionar eje"></div>
   </div>
 
-  <!-- Pills de posición -->
+  <!-- 2. Resumen del eje -->
+  <div id="summaryMount"></div>
+
+  <!-- 3. Seleccionar posición dentro del eje -->
   <div class="selector-block">
-    <div class="selector-label" id="posLabel">Posición</div>
+    <div class="selector-label">Posición del eje</div>
     <div class="pos-pills" id="posPills" role="tablist" aria-label="Seleccionar posición"></div>
   </div>
 
-  <!-- Card individual (compartida entre modos) -->
+  <!-- 4. Detalle del neumático seleccionado -->
   <div id="cardMount"></div>
-
-  <!-- Sección exclusiva del eje (solo en modo eje) -->
-  <div id="analysisMount"></div>
 </main>
 
 <footer>
@@ -381,11 +370,12 @@ const UNITS = [
   {
     id:"B-118", plate:"B-118", label:"B-118 · Bus 2-4-2",
     config:"2-4-2",
-    // Orden de ejes tal como aparecen en la unidad.
+    // Orden de ejes tal como aparecen en la unidad. "lado" viene del catálogo de
+    // configuración (Izq/Der) — se usa para el balance izquierda/derecha del eje.
     axles:[
-      {key:"direccional", name:"Dirección", positions:["P1","P2"]},
-      {key:"traccion",    name:"Tracción",  positions:["P3","P4","P5","P6"]},
-      {key:"libre",       name:"Libre",     positions:["P7","P8"]},
+      {key:"direccional", name:"Dirección", positions:[{pos:"P1",lado:"Izq"},{pos:"P2",lado:"Der"}]},
+      {key:"traccion",    name:"Tracción",  positions:[{pos:"P3",lado:"Izq"},{pos:"P4",lado:"Izq"},{pos:"P5",lado:"Der"},{pos:"P6",lado:"Der"}]},
+      {key:"libre",       name:"Libre",     positions:[{pos:"P7",lado:"Izq"},{pos:"P8",lado:"Der"}]},
     ],
     tires:{
       // Dirección — desbalance marcado (P1 rinde ~28% más que P2).
@@ -422,8 +412,8 @@ const UNITS = [
     id:"B-204", plate:"B-204", label:"B-204 · Bus 2-4",
     config:"2-4",
     axles:[
-      {key:"direccional", name:"Dirección", positions:["P1","P2"]},
-      {key:"traccion",    name:"Tracción",  positions:["P3","P4","P5","P6"]},
+      {key:"direccional", name:"Dirección", positions:[{pos:"P1",lado:"Izq"},{pos:"P2",lado:"Der"}]},
+      {key:"traccion",    name:"Tracción",  positions:[{pos:"P3",lado:"Izq"},{pos:"P4",lado:"Izq"},{pos:"P5",lado:"Der"},{pos:"P6",lado:"Der"}]},
     ],
     tires:{
       P1:{modelo:"295/80R22.5 XZE2", reencauche:null,
@@ -432,15 +422,15 @@ const UNITS = [
       P2:{modelo:"295/80R22.5 XZE2", reencauche:null,
           rtdInstalacion:16, rtdActual:10.2, kmInstalacion:0, kmActual:53200,
           otd:16, rtdRetiro:4, costo:345, kmPrevioAcumulado:0},
-      // Tracción — un lado se desgasta más rápido (P3/P5 vs P4/P6).
+      // Tracción — el lado Izq (P3/P4) se desgasta más rápido que el Der (P5/P6).
       P3:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
           rtdInstalacion:20, rtdActual:11, kmInstalacion:0, kmActual:63000,
           otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:210000},
       P4:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
-          rtdInstalacion:20, rtdActual:13, kmInstalacion:0, kmActual:63000,
+          rtdInstalacion:20, rtdActual:11.2, kmInstalacion:0, kmActual:63000,
           otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:205000},
       P5:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
-          rtdInstalacion:20, rtdActual:11.2, kmInstalacion:0, kmActual:62500,
+          rtdInstalacion:20, rtdActual:13, kmInstalacion:0, kmActual:62500,
           otd:20, rtdRetiro:6, costo:170, kmPrevioAcumulado:208000},
       P6:{modelo:"295/80R22.5 XDN2", reencauche:{codigo:"BZ9L", ciclo:"R2"},
           rtdInstalacion:20, rtdActual:13.2, kmInstalacion:0, kmActual:62500,
@@ -500,30 +490,38 @@ function computeTire(t){
    AGREGADO DEL EJE — se calcula SOBRE las métricas ya derivadas por posición.
    Excluye posiciones sin datos válidos.
    ========================================================================= */
+function mean(arr){ return arr.reduce((s,v)=>s+v,0)/arr.length; }
+
 function computeAxle(unit, axle){
-  const rows = axle.positions.map(pos => ({pos, m:computeTire(unit.tires[pos])}));
+  const rows = axle.positions.map(p => ({pos:p.pos, lado:p.lado, m:computeTire(unit.tires[p.pos])}));
   const valids = rows.filter(r => r.m.valid);
 
-  let avgKmMm = null, avgPct = null, diffPct = null, minPos = null;
+  let avgKmMm = null, avgPct = null, avgKmProyectado = null, totalKmAcumulado = null;
+  let bestPos = null, worstPos = null;
   if(valids.length >= 1){
-    avgKmMm = valids.reduce((s,r)=>s+r.m.kmMm,0)/valids.length;
-    avgPct  = valids.reduce((s,r)=>s+r.m.pctConsumo,0)/valids.length;
-    minPos  = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).pos;
+    avgKmMm          = mean(valids.map(r=>r.m.kmMm));
+    avgPct           = mean(valids.map(r=>r.m.pctConsumo));
+    avgKmProyectado  = mean(valids.map(r=>r.m.kmProyectado));
+    totalKmAcumulado = valids.reduce((s,r)=>s+r.m.kmAcumulado,0);
+    bestPos  = valids.reduce((a,b)=> b.m.kmMm > a.m.kmMm ? b : a).pos;
+    worstPos = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).pos;
   }
-  if(valids.length >= 2){
-    const kms = valids.map(r=>r.m.kmMm);
-    const mean = kms.reduce((s,v)=>s+v,0)/kms.length;
-    // 2 posiciones → |A−B|/prom. >2 → dispersión (máx−mín)/prom (generalización
-    // documentada del criterio de dos lados a ejes con más posiciones).
-    const spread = valids.length === 2 ? Math.abs(kms[0]-kms[1]) : (Math.max(...kms)-Math.min(...kms));
-    diffPct = (spread / mean) * 100;
+
+  // Balance Izq/Der — promedio de Km/mm por lado (según "lado" del catálogo).
+  const izq = valids.filter(r => r.lado === "Izq");
+  const der = valids.filter(r => r.lado === "Der");
+  let lr = null;
+  if(izq.length && der.length){
+    const izqAvg = mean(izq.map(r=>r.m.kmMm));
+    const derAvg = mean(der.map(r=>r.m.kmMm));
+    const diffPct = Math.abs(izqAvg - derAvg) / ((izqAvg + derAvg) / 2) * 100;
+    lr = {izqAvg, derAvg, diffPct, balanced: diffPct <= AXLE_BALANCE_THRESHOLD_PERCENT};
   }
 
   return {
     rows, valids,
-    canCompare: valids.length >= 2,       // hay balance verde/rojo
-    avgKmMm, avgPct, diffPct, minPos,
-    balanced: diffPct != null ? diffPct <= AXLE_BALANCE_THRESHOLD_PERCENT : null,
+    avgKmMm, avgPct, avgKmProyectado, totalKmAcumulado,
+    bestPos, worstPos, lr,
   };
 }
 
@@ -538,25 +536,19 @@ const fmtPct = v => (Math.round(v*10)/10).toFixed(1);
 const fmtCost= v => "$ " + v.toFixed(4);
 
 /* =========================================================================
-   ESTADO DE UI
+   ESTADO DE UI — un solo flujo: eje seleccionado → posición seleccionada.
    ========================================================================= */
-let mode = "axle";              // "tire" | "axle" — arranca en "por eje"
 let unitId = UNITS[0].id;
-let axleKey = null;             // eje seleccionado (modo eje)
-let selectedPos = null;
+let axleKey = null;             // eje seleccionado
+let selectedPos = null;         // posición seleccionada dentro del eje
 
 function currentUnit(){ return UNITS.find(u => u.id === unitId); }
 function currentAxle(){ return currentUnit().axles.find(a => a.key === axleKey) || null; }
 
-// Posiciones visibles en las pills según el modo.
+// Posiciones visibles en las pills: solo las del eje seleccionado.
 function visiblePositions(){
-  const u = currentUnit();
-  if(mode === "axle"){
-    const ax = currentAxle();
-    return ax ? ax.positions.slice() : [];
-  }
-  // por neumático → todas, en orden de ejes.
-  return u.axles.flatMap(a => a.positions);
+  const ax = currentAxle();
+  return ax ? ax.positions.map(p => p.pos) : [];
 }
 
 /* =========================================================================
@@ -567,16 +559,6 @@ function renderUnitOptions(){
   sel.innerHTML = UNITS.map(u => `<option value="${u.id}">${u.label}</option>`).join("");
   sel.value = unitId;
   sel.addEventListener("change", e => { unitId = e.target.value; initSelectionForUnit(); renderAll(); });
-}
-
-function renderModeButtons(){
-  document.getElementById("modeTire").setAttribute("aria-pressed", String(mode==="tire"));
-  document.getElementById("modeAxle").setAttribute("aria-pressed", String(mode==="axle"));
-  // El selector de eje solo existe en modo eje y solo si hay >1 eje agrupado.
-  const showAxle = mode==="axle" && currentUnit().axles.length > 1;
-  document.getElementById("axleBlock").style.display = showAxle ? "" : "none";
-  document.getElementById("posLabel").textContent =
-    mode==="axle" ? "Posición del eje" : "Posición";
 }
 
 function renderAxleTabs(){
@@ -676,30 +658,56 @@ function renderCard(){
     </div>`;
 }
 
-function renderAnalysis(){
-  const mount = document.getElementById("analysisMount");
-  if(mode !== "axle"){ mount.innerHTML = ""; return; }
+function renderSummary(){
+  const mount = document.getElementById("summaryMount");
   const u = currentUnit();
   const ax = currentAxle();
   if(!ax){ mount.innerHTML = ""; return; }
 
   const agg = computeAxle(u, ax);
+  const n = agg.valids.length;
+  const plural = n>1 ? "es" : "";
 
-  // KPIs promedio — mostrar solo si hay al menos una posición válida.
+  // KPIs del eje — mostrar solo si hay al menos una posición válida.
   const kpis = (agg.avgKmMm != null) ? `
     <div class="avg-kpis">
       <div class="avg-stat">
+        <div class="a-label">Km Acumulado</div>
+        <div class="a-value num">${fmtKm(agg.totalKmAcumulado)}<span class="a-unit">km</span></div>
+        <div class="a-sub">Total del eje · ${n} posición${plural}</div>
+      </div>
+      <div class="avg-stat">
+        <div class="a-label">Km Proyectado promedio</div>
+        <div class="a-value num">${fmtKm(agg.avgKmProyectado)}<span class="a-unit">km</span></div>
+        <div class="a-sub">Promedio de ${n} posición${plural}</div>
+      </div>
+      <div class="avg-stat">
         <div class="a-label">Km/mm promedio</div>
         <div class="a-value num">${fmtKmMm(agg.avgKmMm)}<span class="a-unit">km/mm</span></div>
-        <div class="a-sub">Promedio de ${agg.valids.length} posición${agg.valids.length>1?"es":""} del eje</div>
+        <div class="a-sub">Promedio de ${n} posición${plural}</div>
       </div>
       <div class="avg-stat">
         <div class="a-label">% Consumo promedio</div>
         <div class="a-value num">${fmtPct(agg.avgPct)}<span class="a-unit">%</span></div>
-        <div class="a-sub">Promedio de ${agg.valids.length} posición${agg.valids.length>1?"es":""} del eje</div>
+        <div class="a-sub">Promedio de ${n} posición${plural}</div>
       </div>
     </div>` : `
     <div class="note">Sin datos suficientes en este eje para calcular promedios.</div>`;
+
+  // Mejor / peor posición del eje (por Km/mm).
+  const bw = (agg.bestPos && agg.bestPos !== agg.worstPos) ? `
+    <div class="bw-row">
+      <div class="bw-card best">
+        <div class="bw-label">Mejor posición</div>
+        <div class="bw-pos">${agg.bestPos}</div>
+        <div class="bw-value num">${fmtKmMm(agg.rows.find(r=>r.pos===agg.bestPos).m.kmMm)} km/mm</div>
+      </div>
+      <div class="bw-card worst">
+        <div class="bw-label">Peor posición</div>
+        <div class="bw-pos">${agg.worstPos}</div>
+        <div class="bw-value num">${fmtKmMm(agg.rows.find(r=>r.pos===agg.worstPos).m.kmMm)} km/mm</div>
+      </div>
+    </div>` : ``;
 
   // Gráfico posición vs posición (Km/mm) — todas las posiciones del eje.
   const maxKmMm = agg.valids.length ? Math.max(...agg.valids.map(r=>r.m.kmMm)) : 1;
@@ -712,10 +720,10 @@ function renderAnalysis(){
       </div>`;
     }
     const pct = Math.max(3, (r.m.kmMm / maxKmMm) * 100);
-    const isMin = r.pos === agg.minPos && agg.valids.length >= 2;
+    const isWorst = r.pos === agg.worstPos && agg.valids.length >= 2;
     return `<div class="bar-row">
       <span class="bar-pos">${r.pos}</span>
-      <span class="bar-track"><span class="bar-fill ${isMin?"is-min":""}" style="width:${pct}%"></span></span>
+      <span class="bar-track"><span class="bar-fill ${isWorst?"is-min":""}" style="width:${pct}%"></span></span>
       <span class="bar-val num">${fmtKmMm(r.m.kmMm)}<span class="bv-unit">km/mm</span></span>
     </div>`;
   }).join("");
@@ -730,13 +738,13 @@ function renderAnalysis(){
         <div class="chart-title">Rendimiento por posición · <b>Km/mm</b></div>
         ${bars}
       </div>`;
-    // Veredicto de balance — solo si hay ≥2 posiciones con datos válidos.
-    if(agg.canCompare){
-      const cls = agg.balanced ? "ok" : "bad";
-      const verdict = agg.balanced ? "Balance saludable" : "Desbalance detectado";
-      const detail = agg.balanced
-        ? `Diferencia dentro del umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%)`
-        : `Supera el umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%) · revisar presión, alineación o carga`;
+    // Veredicto de balance Izq/Der — solo si hay datos válidos en ambos lados.
+    if(agg.lr){
+      const cls = agg.lr.balanced ? "ok" : "bad";
+      const verdict = agg.lr.balanced ? "Lados balanceados" : "Desbalance Izq/Der detectado";
+      const detail = agg.lr.balanced
+        ? `Izq ${fmtKmMm(agg.lr.izqAvg)} · Der ${fmtKmMm(agg.lr.derAvg)} km/mm · dentro del umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%)`
+        : `Izq ${fmtKmMm(agg.lr.izqAvg)} · Der ${fmtKmMm(agg.lr.derAvg)} km/mm · revisar presión, alineación o carga`;
       chartBlock += `
         <div class="balance ${cls}">
           <span class="b-dot"></span>
@@ -745,29 +753,29 @@ function renderAnalysis(){
             <div class="b-detail">${detail}</div>
           </div>
           <div class="b-metric">
-            <div class="bm-value num">${fmtPct(agg.diffPct)}%</div>
-            <div class="bm-label">Diferencia</div>
+            <div class="bm-value num">${fmtPct(agg.lr.diffPct)}%</div>
+            <div class="bm-label">Diferencia Izq/Der</div>
           </div>
         </div>`;
     } else {
-      chartBlock += `<div class="note">No hay suficientes posiciones con datos para evaluar el balance del eje.</div>`;
+      chartBlock += `<div class="note">No hay datos suficientes en ambos lados para evaluar el balance Izq/Der.</div>`;
     }
   }
 
   mount.innerHTML = `
     <div class="axle-analysis">
-      <div class="analysis-head">Análisis del eje · <span class="ah-axle">${ax.name}</span></div>
+      <div class="analysis-head">Resumen del eje · <span class="ah-axle">${ax.name}</span></div>
       ${kpis}
+      ${bw}
       ${chartBlock}
     </div>`;
 }
 
 function renderAll(){
-  renderModeButtons();
   renderAxleTabs();
   renderPills();
   renderCard();
-  renderAnalysis();
+  renderSummary();
 }
 
 /* =========================================================================
@@ -775,38 +783,15 @@ function renderAll(){
    ========================================================================= */
 function initSelectionForUnit(){
   const u = currentUnit();
-  if(mode === "axle"){
-    // primer eje + primera posición del eje
-    axleKey = u.axles[0].key;
-    selectedPos = currentAxle().positions[0];
-  } else {
-    axleKey = null;
-    selectedPos = u.axles.flatMap(a=>a.positions)[0];
-  }
-}
-
-function setMode(next){
-  if(mode === next) return;
-  mode = next;
-  const u = currentUnit();
-  if(mode === "axle"){
-    // reencontrar el eje de la posición actual para no perder contexto
-    const owning = u.axles.find(a => a.positions.includes(selectedPos));
-    axleKey = (owning || u.axles[0]).key;
-    if(!currentAxle().positions.includes(selectedPos)){
-      selectedPos = currentAxle().positions[0];
-    }
-  } else {
-    axleKey = null;
-    // mantiene selectedPos (la card es la misma)
-  }
-  renderAll();
+  // primer eje + primera posición del eje
+  axleKey = u.axles[0].key;
+  selectedPos = currentAxle().positions[0].pos;
 }
 
 function selectAxle(key){
   if(axleKey === key) return;
   axleKey = key;
-  selectedPos = currentAxle().positions[0];   // auto-selecciona 1ª posición del eje
+  selectedPos = currentAxle().positions[0].pos;   // auto-selecciona 1ª posición del eje
   renderAll();
 }
 
