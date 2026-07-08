@@ -346,7 +346,7 @@ function buildInspectionsFromSupabase(rows){
   return byDate;
 }
 
-async function loadSupabaseFleet(){
+async function loadSupabaseFleet(isRefresh){
   if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
     renderNoData("Supabase no configurado. No se muestran datos locales.");
     RenovaSupabase && RenovaSupabase.showBadge("empty");
@@ -359,7 +359,9 @@ async function loadSupabaseFleet(){
     const dates = Object.keys(data).sort().reverse();
     if(!dates.length) throw new Error("v_inspection_dashboard_rows sin filas");
     INSPECTIONS = data;
-    selectedDate = dates[0];
+    // Refresco en vivo (Realtime): conserva la fecha que el usuario está
+    // mirando, salvo que haya dejado de existir. Carga inicial: la más reciente.
+    if(!isRefresh || !INSPECTIONS[selectedDate]) selectedDate = dates[0];
     renderDateOptions();
     renderAll();
     RenovaSupabase.showBadge("supabase", rows[0].company_name || "");
@@ -599,7 +601,12 @@ document.getElementById("dateSelect").addEventListener("change", e => {
 renderNoData("Cargando datos del Excel desde Supabase...");
 onRenovaSupabaseReady(async () => {
   await RenovaSupabase.requireAuth();
-  loadSupabaseFleet();
+  await loadSupabaseFleet();
+  // Tiempo real: cuando la app guarda una inspección, esta pantalla se
+  // refresca sola (sin recargar la página ni saltar de fecha) en <1s.
+  RenovaSupabase.onDataChange(["inspections", "inspection_measurements"], () => {
+    loadSupabaseFleet(true);
+  });
 });
 </script>
 </body>

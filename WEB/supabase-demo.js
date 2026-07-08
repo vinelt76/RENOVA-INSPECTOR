@@ -13,6 +13,7 @@
      RenovaSupabase.getSession()            → Promise<Session|null>
      RenovaSupabase.fetchView(name, params) → Promise<rows>  (REST /rest/v1, GET, con sesión)
      RenovaSupabase.showBadge(mode, detail) → pill fija "DATOS: …" abajo a la derecha
+     RenovaSupabase.onDataChange(tables, cb) → unsubscribe()  (Realtime, debounced 400ms)
 */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -151,6 +152,30 @@ function requireAuth() {
   });
 }
 
+// Refresco en vivo: se suscribe a INSERT/UPDATE/DELETE de las tablas dadas
+// (RLS ya filtra por empresa — Realtime respeta la misma policy que SELECT,
+// el usuario solo recibe eventos de sus propias filas) y llama a `cb` con un
+// debounce chico, para no disparar un refresh por cada fila cuando
+// save_inspection() escribe varias mediciones de una sola inspección de
+// golpe. Devuelve una función para cancelar la suscripción.
+function onDataChange(tables, cb) {
+  if (!enabled) return () => {};
+  let timer = null;
+  const debounced = () => {
+    clearTimeout(timer);
+    timer = setTimeout(cb, 400);
+  };
+  const channel = supabase.channel(`renova-live-${tables.join("-")}`);
+  for (const table of tables) {
+    channel.on("postgres_changes", { event: "*", schema: "public", table }, debounced);
+  }
+  channel.subscribe();
+  return () => {
+    clearTimeout(timer);
+    supabase.removeChannel(channel);
+  };
+}
+
 window.RenovaSupabase = {
   enabled,
   supabase,
@@ -161,6 +186,7 @@ window.RenovaSupabase = {
   getSession,
   onAuthStateChange,
   requireAuth,
+  onDataChange,
 };
 
 // Este módulo se carga con type="module" (diferido) para poder importar

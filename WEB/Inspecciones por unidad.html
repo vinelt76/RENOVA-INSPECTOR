@@ -1038,6 +1038,13 @@ function init(){
     await loadSupabaseInspection();
     updateWheelStates();
     select(qs.get('pos') || Object.keys(POSICIONES)[0] || 1);
+    // Tiempo real: cuando la app guarda esta inspección, la pantalla se
+    // refresca sola (sin recargar ni cambiar la posición que se está viendo).
+    RenovaSupabase.onDataChange(['inspections', 'inspection_measurements'], async () => {
+      await loadSupabaseInspection();
+      updateWheelStates();
+      select(POSICIONES[selected] ? selected : (Object.keys(POSICIONES)[0] || 1));
+    });
   });
 }
 init();
