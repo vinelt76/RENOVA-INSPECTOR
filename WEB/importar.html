@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>RENOVA — Importar Inspecciones</title>
+<!--
+  PANTALLA NUEVA E INDEPENDIENTE — Importar Inspecciones desde Excel.
+  Autocontenida: abrir directamente en el navegador.
+
+  Objetivo: cargar datos crudos de inspecciones (una fila por neumático, tal
+  como los maneja el inspector/empresa) sin pasar por la app móvil, para
+  poblar rápido las 4 empresas (MÓVIL BUS, CRUZ DEL SUR, ITTSABUS, CIVA).
+
+  Flujo: elegir .xlsx → parsear con SheetJS → agrupar filas por
+  (empresa, placa, fecha) → una llamada a supabase.rpc('save_inspection', …)
+  por cada grupo — el MISMO RPC que ya usa la app móvil
+  (app/src/sync/pushInspeccion.ts), así que la lógica de negocio (RTD MOVI,
+  ESTADO RTD, upsert idempotente) vive en un solo lugar: el servidor.
+
+  Columnas esperadas en la hoja (fila 1 = encabezados, texto libre, sin
+  acentos ni mayúsculas obligatorias — se normalizan al leer):
+    empresa | placa y/o numero_vehiculo | fecha | kilometraje | posicion |
+    codigo | medida | rtd_a | rtd_b | rtd_c | rtd_d | presion | marca |
+    modelo | modelo_reencauche | condicion | anomalia_neumatico | tapa_valvula
+
+  codigo (identidad del casco) y medida (define el umbral RTD/presión de
+  referencia en fn_rtd_state() del servidor) NO son obligatorias, pero su
+  ausencia se avisa en el resumen antes de enviar — sin medida, el servidor
+  usa el umbral genérico de la empresa en vez del específico por tamaño.
+
+  El identificador de unidad admite CUALQUIERA de las dos columnas (placa o
+  numero_vehiculo) — algunas empresas identifican por placa, otras por
+  número interno de flota. Si el Excel trae ambas, se usa la placa cuando
+  está llena y si no el número de vehículo.
+
+  NO requiere columna "eje" ni "configuracion": el eje se infiere de la
+  posición (1-2 Direccional, 3-6 Tracción, 7-8 Libre) y la configuración del
+  conteo de posiciones por (placa, fecha) — 8 filas → 2-4-2, 6 filas → 2-4
+  (reglas_negocio.md, tabla de configuraciones — alcance MVP: solo BUS).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
+<style>
+  :root{
+    --screen-dark:#07111C;
+    --field-dark:#111E2E;
+    --navy-brand:#15233f;
+    --border-dark:#1B2D42;
+    --label-blue:#7AABCC;
+    --value-ice:#F0F8FF;
+    --ember-orange:#F06822;
+    --signal-yellow:#f4b821;
+    --verified-green:#1f9d6b;
+    --crit:#F06822;
+    --crit-bg:rgba(240,104,34,.14);
+    --warn:#f4b821;
+    --warn-bg:rgba(244,184,33,.14);
+    --normal:var(--verified-green);
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--screen-dark);color:var(--value-ice);font-family:var(--mono);
+    font-weight:700;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+    padding-bottom:40px;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  header{
+    background:var(--navy-brand);padding:18px 16px 16px;position:sticky;top:0;z-index:20;
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto}
+  .brand .logo{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.06em;color:var(--value-ice)}
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{font-family:var(--display);font-size:19px;line-height:1;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
+  .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
+  .screen-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .screen-nav a{
+    color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
+    background:var(--field-dark);border-radius:8px;padding:10px 12px;
+    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
+
+  main{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:22px}
+
+  .panel{
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;
+    padding:20px 24px;
+  }
+  .panel h2{
+    font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:14px;
+  }
+  .panel p{font-size:12px;font-weight:600;color:var(--label-blue);line-height:1.6}
+  .panel p b{color:var(--value-ice)}
+  .panel ul{margin:10px 0 0 18px;font-size:12px;color:var(--label-blue);line-height:1.8}
+  .panel code{
+    background:var(--screen-dark);border:1px solid var(--border-dark);border-radius:4px;
+    padding:1px 6px;color:var(--signal-yellow);font-size:11px;
+  }
+
+  .drop-zone{
+    border:2px dashed var(--border-dark);border-radius:12px;padding:32px 20px;
+    text-align:center;cursor:pointer;transition:border-color .15s ease-out,background .15s ease-out;
+    margin-top:14px;
+  }
+  .drop-zone:hover,.drop-zone.dragover{border-color:var(--ember-orange);background:rgba(240,104,34,.06)}
+  .drop-zone input{display:none}
+  .drop-zone .dz-title{font-size:14px;font-weight:800;color:var(--value-ice)}
+  .drop-zone .dz-sub{font-size:11px;color:var(--label-blue);margin-top:6px}
+  .file-picked{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-top:14px;padding:12px 14px;background:var(--screen-dark);
+    border:2px solid var(--border-dark);border-radius:8px;font-size:12px;
+  }
+  .file-picked b{color:var(--value-ice)}
+  .file-picked button{
+    border:none;background:none;color:var(--label-blue);cursor:pointer;
+    font-family:inherit;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  }
+
+  .unmapped-warning{
+    margin-top:14px;padding:12px 14px;background:var(--warn-bg);
+    border:2px solid var(--warn);border-radius:8px;font-size:11px;color:var(--value-ice);
+  }
+  .unmapped-warning b{color:var(--warn)}
+  .unmapped-warning code{
+    background:var(--screen-dark);border:1px solid var(--border-dark);border-radius:4px;
+    padding:1px 6px;margin:2px;display:inline-block;color:var(--value-ice);font-size:11px;
+  }
+
+  .btn{
+    border:none;border-radius:8px;background:var(--ember-orange);color:#fff;
+    padding:12px 20px;font-weight:800;font-size:12px;letter-spacing:.06em;
+    text-transform:uppercase;cursor:pointer;font-family:inherit;
+  }
+  .btn:disabled{background:var(--border-dark);color:var(--label-blue);cursor:not-allowed}
+  .btn.secondary{background:var(--field-dark);border:2px solid var(--border-dark);color:var(--value-ice)}
+
+  /* ── Resumen de grupos detectados ── */
+  .summary-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin-top:14px}
+  .sum-card{
+    background:var(--screen-dark);border:2px solid var(--border-dark);border-radius:10px;
+    padding:12px 14px;font-size:11px;
+  }
+  .sum-card.has-errors{border-color:var(--crit);background:linear-gradient(180deg,var(--crit-bg),transparent 60%),var(--screen-dark)}
+  .sum-card .sc-plate{font-size:16px;font-weight:800;color:var(--value-ice)}
+  .sum-card .sc-meta{color:var(--label-blue);margin-top:4px;letter-spacing:.04em;text-transform:uppercase;font-size:10px}
+  .sum-card .sc-errors{margin-top:8px;color:var(--crit);font-size:10px;line-height:1.6}
+  .sum-card .sc-warnings{margin-top:8px;color:var(--warn);font-size:10px;line-height:1.6}
+
+  /* ── Tabla de resultados de envío ── */
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-size:11px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-dark)}
+  th{color:var(--label-blue);text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+  td.status-ok{color:var(--verified-green);font-weight:800}
+  td.status-error{color:var(--crit);font-weight:800}
+  td.status-pending{color:var(--label-blue)}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+  .empty-hint{color:var(--label-blue);font-size:12px;text-align:center;padding:20px 0}
+
+  footer{
+    max-width:1200px;margin:24px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>·</b></div>
+      <div class="screen-name">IMPORTAR INSPECCIONES</div>
+      <div class="subtitle">Carga masiva desde Excel — MÓVIL BUS · CRUZ DEL SUR · ITTSABUS · CIVA</div>
+    </div>
+    <nav class="screen-nav" aria-label="Pantallas">
+      <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+      <a href="instalacion.html">Instalación</a>
+      <a href="rendimiento.html">Rendimiento</a>
+      <a class="active" href="importar.html">Importar</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Formato del Excel</h2>
+    <p>Fila 1 = encabezados. <b>Una fila por neumático.</b> El eje y la configuración del
+      vehículo se infieren solos — no hace falta indicarlos.</p>
+    <ul id="columnList"></ul>
+    <p style="margin-top:12px">
+      <b>Empresa</b> debe ser exactamente uno de: <code>MOVIL BUS</code>, <code>CRUZ DEL SUR</code>,
+      <code>ITTSABUS</code>, <code>CIVA</code> (no distingue mayúsculas/acentos).
+      <b>Placa</b> o <b>número de vehículo</b>: alcanza con una de las dos columnas — si el
+      Excel trae ambas, se usa la placa cuando está llena y si no el número de vehículo.
+      <b>Posición</b> 1–8 (2-4-2) o 1–6 (2-4) — se agrupa por identificador+fecha para saber cuántas hay.
+      <b>Código</b> y <b>medida</b> no son obligatorias pero se recomiendan: código identifica
+      el neumático entre inspecciones, medida define qué umbral RTD/presión usa el servidor
+      (sin medida, se usa el umbral genérico de la empresa).
+    </p>
+  </section>
+
+  <section class="panel">
+    <h2>1. Elegir archivo</h2>
+    <label class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" />
+      <div class="dz-title">Arrastrá tu .xlsx acá o hacé clic para elegirlo</div>
+      <div class="dz-sub">Se procesa en tu navegador — nada se sube hasta que confirmes el envío</div>
+    </label>
+    <div class="file-picked" id="filePicked" style="display:none">
+      <span><b id="fileName"></b> · <span id="fileRows"></span></span>
+      <button id="clearFile">Quitar</button>
+    </div>
+    <div class="unmapped-warning" id="unmappedWarning" style="display:none"></div>
+  </section>
+
+  <section class="panel" id="previewPanel" style="display:none">
+    <h2>2. Revisar inspecciones detectadas</h2>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="toolbar">
+      <button class="btn" id="sendBtn">Enviar a Supabase</button>
+      <button class="btn secondary" id="resetBtn">Empezar de nuevo</button>
+    </div>
+  </section>
+
+  <section class="panel" id="resultPanel" style="display:none">
+    <h2>3. Resultado del envío</h2>
+    <table id="resultTable">
+      <thead>
+        <tr><th>Empresa</th><th>Placa</th><th>Fecha</th><th>Neumáticos</th><th>Estado</th></tr>
+      </thead>
+      <tbody id="resultBody"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer>Importación manual · usa el mismo RPC save_inspection() que la app móvil</footer>
+
+<script type="module">
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Columnas esperadas — clave interna → posibles encabezados en el Excel
+   (normalizados a minúsculas sin acentos antes de comparar). El inspector
+   puede copiar-pegar su Excel viejo casi tal cual: se aceptan varios alias
+   por columna en vez de exigir un nombre exacto.
+   ───────────────────────────────────────────────────────────────────────── */
+const COLUMN_ALIASES = {
+  empresa:            ["empresa", "company", "cliente"],
+  // Placa y número de vehículo pueden venir en columnas separadas del mismo
+  // Excel (algunas empresas identifican la unidad por placa, otras por número
+  // interno de flota). Se admiten ambas; si el Excel solo trae una, funciona
+  // igual — ver resolvePlaca() más abajo para el criterio de prioridad.
+  placa:              ["placa", "plate"],
+  numero_vehiculo:    ["unidad", "numero_unidad", "numero", "numero_vehiculo", "n_vehiculo", "n° vehiculo", "vehiculo"],
+  fecha:              ["fecha", "fecha_inspeccion", "fecha inspeccion", "date"],
+  kilometraje:        ["kilometraje", "km", "odometro", "odometro_km"],
+  posicion:           ["posicion", "position", "pos"],
+  codigo:             ["codigo", "codigo_neumatico", "código", "tire_code", "cod"],
+  medida:             ["medida", "tire_size", "size", "medida_neumatico"],
+  rtd_a:              ["rtd_a", "rtd a", "a"],
+  rtd_b:              ["rtd_b", "rtd b", "b"],
+  rtd_c:              ["rtd_c", "rtd c", "c"],
+  rtd_d:              ["rtd_d", "rtd d", "d"],
+  presion:            ["presion", "presión", "pressure", "psi"],
+  marca:              ["marca", "brand"],
+  modelo:             ["modelo", "diseno_original", "diseño original", "modelo_neumatico", "modelo neumatico"],
+  modelo_reencauche:  ["modelo_reencauche", "modelo reencauche", "diseno_actual", "diseño actual", "reencauche"],
+  condicion:          ["condicion", "condición", "condition"],
+  // "anomalia" queda como alias por compatibilidad, pero el nombre correcto
+  // es anomalia_neumatico (existe también anomalia_aro en el dominio real —
+  // ver reference/seed_unidades_demo.json — que este importador no captura).
+  anomalia_neumatico: ["anomalia_neumatico", "anomalia neumatico", "anomalia", "anomalía", "anomaly"],
+  tapa_valvula:       ["tapa_valvula", "tapa válvula", "valvula", "válvula", "valve_cap"],
+};
+
+// "placa" y "numero_vehiculo" NO están ambas en REQUIRED: se exige que venga
+// AL MENOS UNA de las dos columnas (ver checkIdentifierColumn más abajo),
+// no las dos a la vez. "codigo" y "medida" tampoco son obligatorias: hay
+// Excel viejos que no las traen, pero si faltan el importador avisa (ver
+// summary de fila) porque afectan cálculo (medida → umbral RTD) y trazabilidad
+// del neumático (codigo → identidad del casco).
+const REQUIRED = ["empresa", "fecha", "posicion", "rtd_a", "rtd_b", "rtd_c"];
+
+const COLUMN_LABELS = {
+  empresa: "empresa",
+  placa: "placa (o numero_vehiculo — al menos una de las dos)",
+  numero_vehiculo: "numero_vehiculo (o placa — al menos una de las dos)",
+  fecha: "fecha (AAAA-MM-DD o cualquier formato de fecha de Excel)",
+  kilometraje: "kilometraje", posicion: "posicion (1-8)",
+  codigo: "codigo (código del neumático — identidad del casco)",
+  medida: "medida (ej. 295/80R22.5 — define el umbral RTD/presión de referencia)",
+  rtd_a: "rtd_a", rtd_b: "rtd_b", rtd_c: "rtd_c",
+  rtd_d: "rtd_d (opcional, cualquier eje)", presion: "presion", marca: "marca", modelo: "modelo (diseño original)",
+  modelo_reencauche: "modelo_reencauche (diseño actual)", condicion: "condicion (N, R1, R2…)",
+  anomalia_neumatico: "anomalia_neumatico", tapa_valvula: "tapa_valvula",
+};
+document.getElementById("columnList").innerHTML = Object.entries(COLUMN_LABELS)
+  .map(([k, label]) => `<li><code>${k}</code> — ${label}${REQUIRED.includes(k) ? " · obligatoria" : ""}</li>`)
+  .join("");
+
+// Posición → eje (reglas_negocio.md: BUS 2-4-2 → 1-2 Direccional, 3-6 Tracción, 7-8 Libre;
+// BUS 2-4 → 1-2 Direccional, 3-6 Tracción). Alcance MVP: solo BUS.
+// Nota: el eje es metadato descriptivo (axle_type), NO determina cuántos
+// canales RTD trae la fila — eso lo decide qué columnas vienen con valor.
+function axleTypeFor(position) {
+  if (position <= 2) return "Direccional";
+  if (position <= 6) return "Tracción";
+  return "Libre";
+}
+
+function normalizeHeader(h) {
+  return String(h ?? "").trim().toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, ""); // quita acentos
+}
+
+function buildColumnMap(headerRow) {
+  const normalized = headerRow.map(normalizeHeader);
+  const map = {};
+  for (const [key, aliases] of Object.entries(COLUMN_ALIASES)) {
+    const idx = normalized.findIndex(h => aliases.some(a => normalizeHeader(a) === h));
+    if (idx !== -1) map[key] = idx;
+  }
+  return map;
+}
+
+const COMPANY_NAMES = ["MOVIL BUS", "CRUZ DEL SUR", "ITTSABUS", "CIVA"];
+function normalizeCompany(raw) {
+  const n = normalizeHeader(raw).replace(/[^a-z0-9]/g, "");
+  const match = COMPANY_NAMES.find(c => normalizeHeader(c).replace(/[^a-z0-9]/g, "") === n);
+  return match || null;
+}
+
+function excelDateToIso(value) {
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === "number") {
+    // Serial de Excel (días desde 1899-12-30)
+    const d = new Date(Math.round((value - 25569) * 86400 * 1000));
+    return d.toISOString().slice(0, 10);
+  }
+  const s = String(value ?? "").trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  const m2 = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/); // dd/mm/aaaa
+  if (m2) return `${m2[3]}-${m2[2].padStart(2, "0")}-${m2[1].padStart(2, "0")}`;
+  return null;
+}
+
+function toNumberOrNull(v) {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Parseo: hoja → filas crudas → agrupadas por (empresa, placa, fecha).
+   Cada grupo se valida (RTD requeridos, posición válida) antes de habilitar
+   el envío.
+   ───────────────────────────────────────────────────────────────────────── */
+function parseWorkbook(ab) {
+  const wb = XLSX.read(ab, { type: "array", cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+  if (!rows.length) throw new Error("La hoja está vacía");
+
+  const colMap = buildColumnMap(rows[0]);
+  const missing = REQUIRED.filter(k => !(k in colMap));
+  if (missing.length) throw new Error(`Faltan columnas obligatorias: ${missing.join(", ")}`);
+  // El identificador de unidad puede venir como "placa" o "numero_vehiculo"
+  // (o ambas) — se exige que al menos una de las dos columnas exista.
+  if (!("placa" in colMap) && !("numero_vehiculo" in colMap)) {
+    throw new Error('Falta columna de identificador de unidad: "placa" o "numero_vehiculo"');
+  }
+
+  const dataRows = rows.slice(1).filter(r => r.some(c => c !== "" && c !== null && c !== undefined));
+
+  const groups = new Map(); // key "empresa|placa|fecha" -> { empresa, placa, fecha, km, items:[], errors:[] }
+
+  dataRows.forEach((r, i) => {
+    const rowNum = i + 2; // +1 por header, +1 por índice 1-based
+    const get = k => (k in colMap ? r[colMap[k]] : "");
+
+    const empresaRaw = get("empresa");
+    const empresa = normalizeCompany(empresaRaw);
+    // Prioridad: placa si viene con dato; si no, número de vehículo. Muchas
+    // empresas usan uno u otro por fila, o incluso mezclado en la misma hoja.
+    const placaCol = String(get("placa") ?? "").trim();
+    const numeroCol = String(get("numero_vehiculo") ?? "").trim();
+    const placa = placaCol || numeroCol;
+    const fecha = excelDateToIso(get("fecha"));
+    const posicion = toNumberOrNull(get("posicion"));
+
+    const rowErrors = [];
+    if (!empresa) rowErrors.push(`fila ${rowNum}: empresa "${empresaRaw}" no reconocida`);
+    if (!placa) rowErrors.push(`fila ${rowNum}: falta placa o número de vehículo`);
+    if (!fecha) rowErrors.push(`fila ${rowNum}: fecha inválida`);
+    if (!posicion || posicion < 1 || posicion > 12) rowErrors.push(`fila ${rowNum}: posición inválida`);
+
+    const key = `${empresa ?? "?"}|${placa || "?"}|${fecha ?? "?"}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        empresa, placa, fecha,
+        km: toNumberOrNull(get("kilometraje")),
+        items: [], errors: [], warnings: [],
+      });
+    }
+    const g = groups.get(key);
+    if (g.km == null) g.km = toNumberOrNull(get("kilometraje"));
+    if (rowErrors.length) { g.errors.push(...rowErrors); return; }
+
+    // Canales RTD: A/B/C obligatorios en cualquier posición. D es OPCIONAL en
+    // cualquier eje (incluido Direccional) — hay modelos/medidas que se miden
+    // en 4 puntos sin importar el eje, así que no se restringe por tipo_eje.
+    // RTD MOVI = MIN de los canales que vengan con valor (nunca sustituir un
+    // canal faltante por 0 — reglas_negocio.md §1).
+    const axleType = axleTypeFor(posicion);
+    const rtdA = toNumberOrNull(get("rtd_a"));
+    const rtdB = toNumberOrNull(get("rtd_b"));
+    const rtdC = toNumberOrNull(get("rtd_c"));
+    const rtdD = toNumberOrNull(get("rtd_d"));
+
+    if (rtdA == null || rtdB == null || rtdC == null) g.errors.push(`fila ${rowNum} (pos ${posicion}): faltan RTD A/B/C`);
+    if ([rtdA, rtdB, rtdC, rtdD].some(v => v != null && v < 0)) g.errors.push(`fila ${rowNum} (pos ${posicion}): RTD negativo`);
+    // No bloquean el envío (se puede importar sin código/medida), pero se
+    // avisan porque afectan trazabilidad (codigo) y el umbral RTD usado por
+    // el servidor (medida) — ver fn_rtd_state().
+    if (!String(get("codigo") ?? "").trim()) g.warnings.push(`fila ${rowNum} (pos ${posicion}): sin código de neumático`);
+    if (!String(get("medida") ?? "").trim()) g.warnings.push(`fila ${rowNum} (pos ${posicion}): sin medida — se usará el umbral RTD genérico de la empresa`);
+
+    const channelValues = [rtdA, rtdB, rtdC, rtdD].filter(v => v != null);
+    const rtdMovi = (rtdA != null && rtdB != null && rtdC != null) ? Math.min(...channelValues) : null;
+
+    g.items.push({
+      position: String(posicion),
+      axle_type: axleType,
+      // Código = identidad del casco (trazabilidad entre inspecciones). Medida
+      // = clave del umbral RTD/presión de referencia en fn_rtd_state() del
+      // servidor — sin ella, save_inspection cae al umbral genérico de la
+      // empresa (sin filtrar por medida).
+      tire_code: String(get("codigo") ?? "").trim() || null,
+      tire_size: String(get("medida") ?? "").trim() || null,
+      tire_brand: String(get("marca") ?? "").trim() || null,
+      original_design: String(get("modelo") ?? "").trim() || null,
+      current_design: String(get("modelo_reencauche") ?? "").trim() || null,
+      tire_condition: String(get("condicion") ?? "").trim() || null,
+      rtd_a: rtdA, rtd_b: rtdB, rtd_c: rtdC, rtd_d: rtdD,
+      rtd_movi: rtdMovi,
+      pressure: toNumberOrNull(get("presion")),
+      valve_cap: String(get("tapa_valvula") ?? "").trim() || null,
+      tire_anomaly: String(get("anomalia_neumatico") ?? "").trim() || null,
+      scrap: false, // el server no calcula desecho en este RPC — queda para revisión manual
+    });
+  });
+
+  // Configuración inferida por conteo de posiciones del grupo (MVP: solo BUS).
+  for (const g of groups.values()) {
+    const maxPos = g.items.reduce((m, it) => Math.max(m, Number(it.position)), 0);
+    g.configuration = maxPos > 6 ? "2-4-2" : "2-4";
+    g.vehicle_type = "BUS";
+  }
+
+  // Diagnóstico: encabezados del Excel que NO matchearon ningún alias
+  // conocido — esas columnas se ignoraron en silencio durante el parseo.
+  // Se muestran para que el usuario detecte de inmediato un alias faltante
+  // en vez de notar datos perdidos recién después de importar.
+  const mappedIndexes = new Set(Object.values(colMap));
+  const unmappedHeaders = rows[0]
+    .map((h, idx) => ({ h: String(h ?? "").trim(), idx }))
+    .filter(({ h, idx }) => h !== "" && !mappedIndexes.has(idx))
+    .map(({ h }) => h);
+
+  return { groups: [...groups.values()], unmappedHeaders };
+}
+
+/* ───────────────────────────── UI wiring ───────────────────────────── */
+const dropZone = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+const filePicked = document.getElementById("filePicked");
+const fileName = document.getElementById("fileName");
+const fileRows = document.getElementById("fileRows");
+const clearFile = document.getElementById("clearFile");
+const unmappedWarning = document.getElementById("unmappedWarning");
+const previewPanel = document.getElementById("previewPanel");
+const summaryGrid = document.getElementById("summaryGrid");
+const sendBtn = document.getElementById("sendBtn");
+const resetBtn = document.getElementById("resetBtn");
+const resultPanel = document.getElementById("resultPanel");
+const resultBody = document.getElementById("resultBody");
+
+let currentGroups = [];
+
+["dragover", "dragenter"].forEach(evt =>
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add("dragover"); }));
+["dragleave", "drop"].forEach(evt =>
+  dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove("dragover"); }));
+dropZone.addEventListener("drop", e => {
+  const f = e.dataTransfer.files?.[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener("change", e => {
+  const f = e.target.files?.[0];
+  if (f) handleFile(f);
+});
+clearFile.addEventListener("click", e => { e.preventDefault(); resetAll(); });
+resetBtn.addEventListener("click", resetAll);
+
+function resetAll() {
+  currentGroups = [];
+  fileInput.value = "";
+  filePicked.style.display = "none";
+  unmappedWarning.style.display = "none";
+  previewPanel.style.display = "none";
+  resultPanel.style.display = "none";
+}
+
+// Aviso de columnas del Excel que no matchearon ningún alias conocido — para
+// que el usuario detecte de inmediato un nombre de columna que el importador
+// no reconoce, en vez de notar datos faltantes recién después de importar.
+function renderUnmappedWarning(headers) {
+  if (!headers.length) {
+    unmappedWarning.style.display = "none";
+    return;
+  }
+  unmappedWarning.innerHTML =
+    `<b>⚠ Columnas del Excel no reconocidas</b> (se ignoraron, sus datos NO se importaron):<br>` +
+    headers.map(h => `<code>${h}</code>`).join("") +
+    `<br>Si alguna de estas debería mapear a un campo (por ejemplo "Cod. Anomalía" → anomalia), avisá para agregar el alias.`;
+  unmappedWarning.style.display = "block";
+}
+
+async function handleFile(file) {
+  try {
+    const ab = await file.arrayBuffer();
+    const { groups, unmappedHeaders } = parseWorkbook(ab);
+    currentGroups = groups;
+
+    fileName.textContent = file.name;
+    const totalItems = groups.reduce((n, g) => n + g.items.length, 0);
+    fileRows.textContent = `${groups.length} inspecciones · ${totalItems} neumáticos`;
+    filePicked.style.display = "flex";
+
+    renderUnmappedWarning(unmappedHeaders);
+    renderSummary(groups);
+    previewPanel.style.display = "block";
+    resultPanel.style.display = "none";
+  } catch (err) {
+    alert("No se pudo leer el archivo: " + err.message);
+  }
+}
+
+function renderSummary(groups) {
+  summaryGrid.innerHTML = groups.map(g => {
+    const hasErrors = g.errors.length > 0;
+    const hasWarnings = (g.warnings ?? []).length > 0;
+    return `<div class="sum-card ${hasErrors ? "has-errors" : ""}">
+      <div class="sc-plate">${g.placa || "?"}</div>
+      <div class="sc-meta">${g.empresa || "empresa desconocida"} · ${g.fecha || "sin fecha"}</div>
+      <div class="sc-meta">${g.configuration} · ${g.items.length} neumáticos${g.km != null ? " · " + g.km + " km" : ""}</div>
+      ${hasErrors ? `<div class="sc-errors">${g.errors.map(e => "⚠ " + e).join("<br>")}</div>` : ""}
+      ${hasWarnings ? `<div class="sc-warnings">${g.warnings.map(w => "· " + w).join("<br>")}</div>` : ""}
+    </div>`;
+  }).join("");
+
+  const anyErrors = groups.some(g => g.errors.length > 0);
+  sendBtn.disabled = anyErrors || groups.length === 0;
+  sendBtn.textContent = anyErrors ? "Corregí los errores antes de enviar" : "Enviar a Supabase";
+}
+
+sendBtn.addEventListener("click", async () => {
+  if (!(window.RenovaSupabase && RenovaSupabase.enabled)) {
+    alert("Supabase no está configurado en este navegador (falta supabase-config.public.js/local.js).");
+    return;
+  }
+  await RenovaSupabase.requireAuth();
+
+  sendBtn.disabled = true;
+  resultPanel.style.display = "block";
+  resultBody.innerHTML = currentGroups.map((g, i) =>
+    `<tr id="resultRow${i}">
+      <td>${g.empresa}</td><td>${g.placa}</td><td>${g.fecha}</td>
+      <td>${g.items.length}</td><td class="status-pending">Enviando…</td>
+    </tr>`).join("");
+
+  for (let i = 0; i < currentGroups.length; i++) {
+    const g = currentGroups[i];
+    const row = document.getElementById(`resultRow${i}`);
+    const statusCell = row.querySelector("td:last-child");
+    try {
+      const payload = {
+        company_name: g.empresa,
+        plate_number: g.placa,
+        inspection_date: g.fecha,
+        odometer_km: g.km ?? 0,
+        vehicle_type: g.vehicle_type,
+        configuration: g.configuration,
+        items: g.items,
+      };
+      const { error } = await RenovaSupabase.supabase.rpc("save_inspection", { payload });
+      if (error) throw new Error(error.message);
+      statusCell.textContent = "✓ Importado";
+      statusCell.className = "status-ok";
+    } catch (err) {
+      statusCell.textContent = "✗ " + err.message;
+      statusCell.className = "status-error";
+    }
+  }
+  sendBtn.disabled = false;
+});
+</script>
+</body>
+</html>

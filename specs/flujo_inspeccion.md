@@ -58,7 +58,7 @@ El orden de campos respeta el flujo manual actual del inspector.
 | Campo | Comportamiento |
 |---|---|
 | RTD A / B / C | Stepper ±1mm, rango 0–22mm. SIN teclado. |
-| RTD D | Solo visible si posición es de 4 canales (Libre/Dual). |
+| RTD D | Siempre visible, en cualquier eje. Opcional: A/B/C son obligatorios para calcular RTD MOVI, D solo si el neumático se mide en 4 puntos (no depende del tipo_eje). |
 | RTD MOVI | Calculado al instante. Solo lectura. Chip de color. |
 | IDI | Calculado al instante. Solo lectura. Chip de color. |
 | Valor anterior | Texto tenue debajo del campo ("anterior: 9mm"). |

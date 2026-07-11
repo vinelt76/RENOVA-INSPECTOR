@@ -1,5 +1,6 @@
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
+import { empresaRepo } from '../db/repos/empresaRepo';
 import { listInspeccionesPorPlaca, type UnidadPreloadRow } from './readInspecciones';
 
 function inferConfig(rows: UnidadPreloadRow[]): string {
@@ -10,9 +11,12 @@ function inferConfig(rows: UnidadPreloadRow[]): string {
 }
 
 export async function preloadUnidadFromSupabase(empresaId: string, plate: string): Promise<boolean> {
-  if (empresaId !== 'movil') return false;
+  // Resolvemos el nombre de empresa (Supabase indexa por company_name, no por el
+  // slug local). Funciona para cualquier empresa, no solo MÓVIL BUS.
+  const empresa = await empresaRepo.getById(empresaId);
+  if (!empresa) return false;
 
-  const rows = await listInspeccionesPorPlaca(plate);
+  const rows = await listInspeccionesPorPlaca(empresa.nombre, plate);
   if (!rows.length) return false;
 
   const latestDate = rows[0].inspected_on;

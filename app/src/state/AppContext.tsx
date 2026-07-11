@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { empresaRepo } from '../db/repos/empresaRepo';
 import { initApp } from '../db/sqlite';
+import { pullEmpresas } from '../sync/pullEmpresas';
 import { AppContext, type AppState } from './context';
 
 const EMPRESA_KEY = 'renova_empresa_id';
@@ -22,6 +23,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await initApp();
       } catch (e) {
         console.error('DB init error:', e);
+      }
+      // Refresca la lista de empresas desde Supabase si hay red (offline-first:
+      // si falla, la app sigue con las empresas del seed local). No bloquea el
+      // arranque más que un fetch corto; sin red devuelve rápido.
+      try {
+        const res = await pullEmpresas();
+        if (!res.ok && res.error) console.warn('pullEmpresas:', res.error);
+      } catch (e) {
+        console.warn('pullEmpresas error:', e);
       }
       const saved = localStorage.getItem(EMPRESA_KEY);
       if (saved) {

@@ -17,7 +17,7 @@ Estas reglas están implementadas en `app/src/core/calculations.ts` (paridad con
 
 | Regla | Definición fija | Dónde |
 |---|---|---|
-| **RTD MOVI** | `MIN` de los canales **medidos** (3 = Dir/Tracción A,B,C; 4 = Libre/Dual A,B,C,D). Nº de canales lo da el `tipo_eje`. Nunca sustituir un canal faltante por 0. | `calcularRtdMovi` |
+| **RTD MOVI** | `MIN` de los canales **medidos** (A,B,C siempre; D opcional en CUALQUIER eje, no solo Libre/Dual). El `tipo_eje` es descriptivo, no restringe canales. Nunca sustituir un canal faltante por 0. | `calcularRtdMovi` |
 | **ESTADO RTD** | `if/elif` **secuencial**: `≤ rtd_cambio` → "Para Reencauche"; `≤ rtd_proximo` → "Próximo a Reencauche"; else "Normal". | `calcularEstadoRtd` |
 | **IDI** | `MAX − MIN` de los mismos canales. | `calcularIdi` |
 | **DESECHO** | Se auto-marca si la anomalía tiene `desecho=TRUE` en `cat_anomalia` (solo 13 de 67). También manual. Nunca por heurística. | `inspeccionRepo.calcularDesecho` |

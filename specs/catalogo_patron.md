@@ -84,7 +84,10 @@ Aplican cuando CONDICIÓN = R1 o R2.
 ## 3. Configuraciones de vehículo — SOLO BUS (2)
 
 Cada combinación `tipo_vehiculo + configuracion` define las posiciones y el tipo de eje
-de cada una. El TIPO EJE determina los canales de RTD (Direccional/Tracción = 3, Libre = 4).
+de cada una. El TIPO EJE es metadato descriptivo de la posición (Direccional/Tracción/Libre);
+NO restringe cuántos canales de RTD se capturan — Libre suele traer 4 (A,B,C,D) y
+Direccional/Tracción suelen traer 3 (A,B,C), pero RTD_D es opcional en cualquier eje
+(hay medidas/diseños que se miden en 4 puntos también en Dirección o Tracción).
 
 | Tipo | Config | Posiciones | Ejes |
 |---|---|---|---|

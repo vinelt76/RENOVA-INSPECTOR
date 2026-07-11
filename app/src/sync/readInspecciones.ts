@@ -83,14 +83,13 @@ export interface UnidadPreloadRow {
   anomaly: string | null;
 }
 
-// Empresa fija — hoy este proyecto Supabase solo contiene el dataset MÓVIL
-// BUS (mismo criterio que pushInspeccion.ts / save_inspection).
-const COMPANY_NAME = 'MÓVIL BUS';
-
-export async function listInspeccionesPorPlaca(plate: string): Promise<UnidadPreloadRow[]> {
+export async function listInspeccionesPorPlaca(
+  companyName: string,
+  plate: string,
+): Promise<UnidadPreloadRow[]> {
   if (!supabase) return [];
   const { data, error } = await supabase.rpc('get_unidad_preload', {
-    p_company_name: COMPANY_NAME,
+    p_company_name: companyName,
     p_plate: plate,
   });
   if (error) throw error;

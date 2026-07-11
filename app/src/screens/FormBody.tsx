@@ -32,7 +32,6 @@ interface Props {
   anomalias: CatAnomalia[];
   valvulas: CatValvula[];
   condiciones: CatCondicion[];
-  needsR4: boolean;
   r1Ref: React.RefObject<HTMLInputElement | null>;
   r2Ref: React.RefObject<HTMLInputElement | null>;
   r3Ref: React.RefObject<HTMLInputElement | null>;
@@ -49,14 +48,14 @@ interface Props {
 
 export default function FormBody({
   data, commit, marcas, modelos, medidas, reencauches, anomalias, valvulas, condiciones,
-  needsR4, r1Ref, r2Ref, r3Ref, r4Ref, presionRef,
+  r1Ref, r2Ref, r3Ref, r4Ref, presionRef,
   onNewMarca, onNewModelo, onNewMedida, onNewReencauche, onAccordionChange,
   showBuscarOtra, onBuscarOtra,
 }: Props) {
   const remRefs = { r1: r1Ref, r2: r2Ref, r3: r3Ref, r4: r4Ref };
-  const remNext: Record<string, string | null> = needsR4
-    ? { r1: 'r2', r2: 'r3', r3: 'r4', r4: null }
-    : { r1: 'r2', r2: 'r3', r3: null, r4: null };
+  // R4 siempre alcanzable por Enter, en cualquier eje: es un campo opcional,
+  // no exclusivo de Libre/Dual (ver specs/reglas_negocio.md §1).
+  const remNext: Record<string, string | null> = { r1: 'r2', r2: 'r3', r3: 'r4', r4: null };
 
   const advanceRem = (key: string) => {
     const nk = remNext[key];

@@ -10,13 +10,13 @@ import {
 } from './calculations';
 
 describe('calcularRtdMovi', () => {
-  it('calcula MIN de 3 canales (Dirección/Tracción)', () => {
+  it('calcula MIN de 3 canales (A,B,C — sin D)', () => {
     expect(calcularRtdMovi(12, 11, 13)).toBe(11);
     expect(calcularRtdMovi(10, 10, 10)).toBe(10);
     expect(calcularRtdMovi(7, 5, 6)).toBe(5);
   });
 
-  it('calcula MIN de 4 canales (Libre/Dual)', () => {
+  it('calcula MIN de 4 canales (A,B,C,D — D es opcional en cualquier eje, no exclusivo de Libre/Dual)', () => {
     expect(calcularRtdMovi(12, 11, 13, 10)).toBe(10);
     expect(calcularRtdMovi(16, 16, 16, 16)).toBe(16);
   });

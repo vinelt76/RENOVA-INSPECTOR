@@ -26,7 +26,7 @@ export default function EmpresaScreen() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
 
   useEffect(() => {
-    empresaRepo.listAll().then(rows => setEmpresas(rows.filter(e => e.id === 'movil')));
+    empresaRepo.listAll().then(setEmpresas);
   }, []);
 
   const handleComenzar = async () => {

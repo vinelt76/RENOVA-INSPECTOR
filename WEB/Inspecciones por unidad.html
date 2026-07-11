@@ -90,6 +90,8 @@ header{
 }
 a.chip{text-decoration:none}
 a.chip.active{color:var(--orange);border-color:var(--orange)}
+button.chip{font-family:inherit;cursor:pointer;transition:border-color .15s ease-out}
+button.chip:hover{border-color:var(--orange)}
 .dot{width:8px;height:8px;border-radius:50%;flex:none}
 .dot.g{background:var(--green)}
 .dot.y{background:var(--yellow)}
@@ -129,6 +131,10 @@ main{flex:1;display:flex;min-height:0}
 .id-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .id-cell{background:var(--screen);border:2px solid var(--border);border-radius:8px;padding:9px 11px}
 .id-cell .v{font-size:13px;font-weight:800;color:var(--ice);margin-top:4px;letter-spacing:.02em}
+/* Código y Condición/Reencauche son los dos datos que más se consultan en
+   campo — pastilla de ancho completo y tipografía más grande que el resto. */
+.id-cell.destacada{grid-column:1/-1;padding:12px 14px}
+.id-cell.destacada .v{font-size:22px}
 /* El Código es un LINK a la vista aparte Historial de Neumático. */
 .id-codigo-link{cursor:pointer;color:var(--orange);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
 .id-codigo-link:hover{color:var(--ice)}
@@ -148,29 +154,14 @@ main{flex:1;display:flex;min-height:0}
   padding:8px 10px;text-align:center;position:relative;
 }
 .canal .v{font-size:16px;font-weight:800;color:var(--ice);margin-top:3px}
-.canal.min{border-color:var(--yellow)}
-.canal.min .v{color:var(--yellow)}
-.canal.min.cambio{border-color:var(--orange)}
-.canal.min.cambio .v{color:var(--orange)}
+.canal.proximo{border-color:var(--yellow)}
+.canal.proximo .v{color:var(--yellow)}
+.canal.cambio{border-color:var(--orange)}
+.canal.cambio .v{color:var(--orange)}
 .canal .mintag{
   position:absolute;top:-8px;right:6px;font-size:8px;font-weight:800;letter-spacing:.1em;
   background:var(--field);color:var(--label);padding:1px 5px;border-radius:3px;
 }
-/* threshold meter */
-.meter{margin-bottom:8px}
-.meter-bar{
-  position:relative;height:14px;border-radius:4px;overflow:hidden;
-  border:2px solid var(--border);display:flex;
-}
-.meter-bar .z-cambio{background:rgba(240,104,34,.28)}
-.meter-bar .z-prox{background:rgba(244,184,33,.20)}
-.meter-bar .z-ok{background:rgba(31,157,107,.14);flex:1}
-.meter-marker{
-  position:absolute;top:-5px;bottom:-5px;width:3px;background:var(--ice);border-radius:2px;
-  transition:left .28s cubic-bezier(.22,1,.36,1);
-}
-.meter-scale{display:flex;justify-content:space-between;margin-top:6px}
-.meter-scale span{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--label)}
 .estados-leyenda{display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:2px solid var(--border);flex-wrap:wrap}
 .estados-leyenda .item{display:flex;align-items:center;gap:6px;font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--label)}
 
@@ -438,7 +429,6 @@ main{flex:1;display:flex;min-height:0}
 @media (prefers-reduced-motion: reduce){
   .world{animation:none}
   .wheel.estado-cambio .pulse{animation:none;opacity:.5;transform:scale(1.05)}
-  .meter-marker{transition:none}
 }
 </style>
 
@@ -460,8 +450,7 @@ main{flex:1;display:flex;min-height:0}
       <a class="chip active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a class="chip" href="instalacion.html">Instalación</a>
       <a class="chip" href="rendimiento.html">Rendimiento</a>
-      <div class="chip" id="source-chip"><span class="dot y"></span>CARGANDO · <span class="ice">EXCEL</span></div>
-      <div class="chip"><span class="ice">JT</span>· JEFE DE TALLER</div>
+      <button class="chip" id="user-chip" type="button"><span class="ice">SN</span>· SUPERVISOR DE NEUMÁTICOS</button>
     </div>
   </header>
 
@@ -478,10 +467,10 @@ main{flex:1;display:flex;min-height:0}
           <span class="badge proximo" id="estado-badge">⚠ PRÓXIMO A REENCAUCHE</span>
         </div>
         <div class="id-grid">
-          <div class="id-cell"><div class="lbl">Código · <span class="id-hist-hint">ver historial ›</span></div><div class="v num id-codigo-link" id="id-codigo" role="link" tabindex="0" title="Ver historial del neumático">NEU-04182</div></div>
+          <div class="id-cell destacada"><div class="lbl">Código · <span class="id-hist-hint">ver historial ›</span></div><div class="v num id-codigo-link" id="id-codigo" role="link" tabindex="0" title="Ver historial del neumático">NEU-04182</div></div>
           <div class="id-cell"><div class="lbl">Medida</div><div class="v num" id="id-medida">295/80R22.5</div></div>
           <div class="id-cell"><div class="lbl">Diseño</div><div class="v" id="id-diseno">RIB HWY</div></div>
-          <div class="id-cell"><div class="lbl">Reencauches</div><div class="v num" id="id-reenc">2 / MÁX 3</div></div>
+          <div class="id-cell destacada"><div class="lbl">Condición · Reencauche</div><div class="v" id="id-reenc">N · Sin reencauche</div></div>
         </div>
       </section>
 
@@ -496,18 +485,6 @@ main{flex:1;display:flex;min-height:0}
           <div class="val proximo num" id="rtd-movi">6.5<small>MM</small></div>
         </div>
         <div class="canales" id="canales"></div>
-        <div class="meter">
-          <div class="lbl" style="margin-bottom:6px">UMBRALES DE EMPRESA · <span id="meter-medida">295/80R22.5</span></div>
-          <div class="meter-bar" id="meter-bar">
-            <div class="z-cambio" id="z-cambio"></div>
-            <div class="z-prox" id="z-prox"></div>
-            <div class="z-ok"></div>
-            <div class="meter-marker" id="meter-marker"></div>
-          </div>
-          <div class="meter-scale num">
-            <span>0</span><span id="th-cambio"></span><span id="th-prox"></span><span id="th-max"></span>
-          </div>
-        </div>
         <div class="estados-leyenda">
           <div class="item"><span class="dot g"></span>NORMAL</div>
           <div class="item"><span class="dot y"></span>PRÓXIMO A REENCAUCHE</div>
@@ -517,7 +494,7 @@ main{flex:1;display:flex;min-height:0}
 
       <div class="row2">
         <section class="card">
-          <div class="lbl">PRESIÓN · MODO FRÍO</div>
+          <div class="lbl">PRESIÓN</div>
           <div class="mini-hero num" id="presion-val">98 <small>PSI</small></div>
           <div class="mini-sub num" id="presion-sub">REF 105 PSI · Δ −6.7%</div>
           <div style="margin-top:8px"><span class="badge normal" id="presion-badge">NORMAL</span></div>
@@ -663,7 +640,7 @@ main{flex:1;display:flex;min-height:0}
    DATOS REALES — este panel lee Supabase/Excel.
    Umbrales: SIEMPRE configuración por empresa y medida.
    ============================================================ */
-const CONFIG_EMPRESA = { rtdCambio: 4.0, rtdProximo: 7.0, presionRef: 105, deltaAltoPct: 8, deltaBajoPct: 10, medida: '295/80R22.5', rtdMax: 16 };
+const CONFIG_EMPRESA = { medida: '295/80R22.5' };
 
 /* Placeholder visual para foto de anomalía ausente — autocontenido, sin red. En producción
    viene de la foto registrada en la inspección (Capacitor Camera). */
@@ -705,25 +682,41 @@ function rowsToPositions(rows){
   const out = {};
   rows.forEach(r => {
     const pos = Number(r.position_number);
+    // canales + su estado (rtd_a_state..d_state) ya vienen calculados por
+    // fn_channel_rtd_state en la vista — el HTML solo lee, no recalcula umbral.
     const canales = {};
-    if(r.rtd_a_mm != null) canales.A = Number(r.rtd_a_mm);
-    if(r.rtd_b_mm != null) canales.B = Number(r.rtd_b_mm);
-    if(r.rtd_c_mm != null) canales.C = Number(r.rtd_c_mm);
-    if(r.rtd_d_mm != null) canales.D = Number(r.rtd_d_mm);
+    const canalStates = {};
+    if(r.rtd_a_mm != null){ canales.A = Number(r.rtd_a_mm); canalStates.A = r.rtd_a_state; }
+    if(r.rtd_b_mm != null){ canales.B = Number(r.rtd_b_mm); canalStates.B = r.rtd_b_state; }
+    if(r.rtd_c_mm != null){ canales.C = Number(r.rtd_c_mm); canalStates.C = r.rtd_c_state; }
+    if(r.rtd_d_mm != null){ canales.D = Number(r.rtd_d_mm); canalStates.D = r.rtd_d_state; }
     out[pos] = {
       nombre: posName(r),
       codigo: r.tire_code || r.casing_code || 'N/V',
-      diseno: r.retread_design || r.brand_name || 'SIN DATO',
-      reenc: r.condition || '—',
+      // "Diseño" = marca del neumático (no hay diseño original separado en
+      // la vista). El diseño de RECENCAUCHE se muestra aparte, en `reenc`.
+      diseno: r.brand_name || 'SIN DATO',
+      // Condición (N/R1/R2…) + diseño de reencauche si existe. Un neumático
+      // Nuevo (condition='N') nunca tiene retread_design — es esperado, no
+      // un dato faltante.
+      reenc: r.condition
+        ? (r.retread_design ? `${r.condition} · ${r.retread_design}` : `${r.condition} · Sin reencauche`)
+        : '—',
       medida: r.size_name || CONFIG_EMPRESA.medida,
       canales,
+      canalStates,
       presion: r.pressure_psi == null ? null : Number(r.pressure_psi),
-      pressure_state: r.pressure_state || null,
+      // pressure_state_fixed: regla fija 100/130, calculada en la vista (fn_pressure_state_fixed).
+      pressure_state: r.pressure_state_fixed || null,
       rtd_state: r.rtd_state || null,
-      anomalias: r.anomaly ? [{
+      // has_anomaly ya excluye "Normal" (calculado en la vista) — el HTML no filtra texto.
+      // is_critical = is_discard (check manual) OR anomaly_is_severe (catálogo
+      // de anomalías, ver anomaly_catalog.desecho) — calculado en la vista,
+      // el HTML no decide gravedad por texto.
+      anomalias: r.has_anomaly ? [{
         txt: r.anomaly,
-        nivel: r.is_discard ? 'DESECHO' : 'REVISAR',
-        causal: !!r.is_discard,
+        nivel: r.is_critical ? 'DESECHO' : 'REVISAR',
+        causal: !!r.is_critical,
         causaPosible:'Registrada en inspección',
         foto: r.anomaly_photo_url || null,
       }] : [],
@@ -743,10 +736,6 @@ function applyMeta(){
   document.querySelectorAll('.flota-tag').forEach(el => {
     el.textContent = `${INSPECTION_META.company || 'RENOVA'} · ${INSPECTION_META.plate || '—'}`;
   });
-  const chip = document.getElementById('source-chip');
-  chip.innerHTML = INSPECTION_META.source === 'supabase'
-    ? '<span class="dot g"></span>SUPABASE · <span class="ice">EXCEL</span>'
-    : '<span class="dot y"></span>SIN DATOS · <span class="ice">EXCEL</span>';
   document.getElementById('src-note').innerHTML = INSPECTION_META.source === 'supabase'
     ? '<span class="dot g"></span>FUENTE: SUPABASE · SOLO LECTURA · DATOS DEL EXCEL'
     : '<span class="dot y"></span>FUENTE: SIN DATOS DEL EXCEL';
@@ -755,7 +744,6 @@ async function loadSupabaseInspection(){
   if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
     POSICIONES = {};
     applyMeta();
-    window.RenovaSupabase && RenovaSupabase.showBadge('empty');
     return;
   }
   try{
@@ -763,7 +751,15 @@ async function loadSupabaseInspection(){
     if(qs.get('inspection_id')) params.inspection_id = `eq.${qs.get('inspection_id')}`;
     else if(qs.get('plate')) params.plate = `eq.${qs.get('plate')}`;
     const rows = await RenovaSupabase.fetchView('v_inspection_dashboard_rows', params);
-    if(!rows.length) throw new Error('v_inspection_dashboard_rows sin filas para esta unidad');
+    // Sesión válida pero sin filas para esta unidad (empresa nueva, o
+    // placa/inspection_id que no le pertenece) NO es un error de conexión —
+    // la sesión sigue activa y el botón de logout debe seguir visible.
+    if(!rows.length){
+      POSICIONES = {};
+      INSPECTION_META.source = 'empty';
+      applyMeta();
+      return;
+    }
     const inspectionId = rows[0].inspection_id;
     const sameInspection = rows.filter(r => r.inspection_id === inspectionId);
     POSICIONES = rowsToPositions(sameInspection);
@@ -779,42 +775,55 @@ async function loadSupabaseInspection(){
     const firstSize = sameInspection.find(r => r.size_name)?.size_name;
     if(firstSize) CONFIG_EMPRESA.medida = firstSize;
     applyMeta();
-    RenovaSupabase.showBadge('supabase', h.company_name || '');
   }catch(err){
     console.warn('Inspección por unidad: Supabase no disponible.', err);
     POSICIONES = {};
     INSPECTION_META.source = 'empty';
     applyMeta();
-    RenovaSupabase.showBadge('empty');
   }
 }
 
-/* ---- Reglas de negocio (paridad con reference/calculations.py) ---- */
+/* ---- Solo mapeo de texto/color de UI. El ESTADO (rtd_state, rtd_a_state..d_state,
+   pressure_state_fixed) ya viene calculado por Supabase (fn_rtd_state,
+   fn_channel_rtd_state, fn_pressure_state_fixed) — nunca se recalcula acá. ---- */
 const rtdMovi = c => {
   const vals = Object.values(c || {}).filter(v => Number.isFinite(Number(v))).map(Number);
   return vals.length ? Math.min(...vals) : null;
 };
-function estadoRTD(movi, cfg){            // secuencial, NO paralelo
-  if (movi == null) return {txt:'SIN MEDIR', cls:'normal', dot:'g'};
-  if (movi <= cfg.rtdCambio)  return {txt:'PARA REENCAUCHE',      cls:'cambio',  dot:'o'};
-  if (movi <= cfg.rtdProximo) return {txt:'PRÓXIMO A REENCAUCHE', cls:'proximo', dot:'y'};
-  return {txt:'NORMAL', cls:'normal', dot:'g'};
+function estadoRTD(state){
+  if (state === 'Para Reencauche')      return {txt:'PARA REENCAUCHE',      cls:'cambio',  dot:'o'};
+  if (state === 'Próximo a Reencauche') return {txt:'PRÓXIMO A REENCAUCHE', cls:'proximo', dot:'y'};
+  if (state === 'Normal')               return {txt:'NORMAL', cls:'normal', dot:'g'};
+  return {txt:'SIN MEDIR', cls:'normal', dot:'g'};
 }
-function estadoPresion(psi, cfg){         // solo modo FRÍO (CALIENTE: sin definir)
-  if (psi == null) return {txt:'SIN DATO', cls:'normal', delta:null};
-  const d = (psi - cfg.presionRef) / cfg.presionRef * 100;
-  if (d >  cfg.deltaAltoPct) return {txt:'ALTA',  cls:'cambio',  delta:d};
-  if (d < -cfg.deltaBajoPct) return {txt:'BAJA',  cls:'cambio',  delta:d};
-  return {txt:'NORMAL', cls:'normal', delta:d};
+function estadoPresion(state){
+  if (state === 'Alta Presión' || state === 'Baja Presión')
+    return {txt: state === 'Alta Presión' ? 'ALTA' : 'BAJA', cls:'cambio'};
+  if (state === 'Normal') return {txt:'NORMAL', cls:'normal'};
+  return {txt:'SIN DATO', cls:'normal'};
 }
-/* estado de la posición para el gemelo digital 3D: RTD por umbral de empresa/medida,
+/* estado de la posición para el gemelo digital 3D: RTD MOVI de Supabase,
    salvo que haya una anomalía marcada como causal de retiro → manda naranja/rojo. */
-function estadoWheel(n){
-  const d = POSICIONES[n];
-  if(!d) return {cls:'normal', dot:'g'};
+/* Estado EFECTIVO de una posición: combina RTD + anomalías, nunca solo uno.
+   Jerarquía (la peor gana):
+     1. Anomalía crítica (is_critical: is_discard o catálogo desecho) → naranja
+     2. RTD "Para Reencauche"                                          → naranja
+     3. RTD "Próximo a Reencauche" O hay anomalía no-crítica presente   → amarillo
+     4. resto                                                          → verde
+   Antes solo miraba RTD si no había anomalía crítica — una anomalía "revisar"
+   quedaba invisible (rueda verde con anomalía activa). */
+function estadoEfectivo(d){
+  if(!d) return {txt:'SIN MEDIR', cls:'normal', dot:'g'};
   const causal = d.anomalias.some(a=>a.causal);
-  if (causal) return {cls:'cambio', dot:'o'};
-  return estadoRTD(rtdMovi(d.canales), CONFIG_EMPRESA);
+  if (causal) return {txt:'PARA REENCAUCHE', cls:'cambio', dot:'o'};
+  const eR = estadoRTD(d.rtd_state);
+  if (eR.cls === 'cambio') return eR;
+  if (eR.cls === 'proximo' || d.anomalias.length > 0)
+    return {txt: d.anomalias.length > 0 && eR.cls !== 'proximo' ? 'REVISAR' : eR.txt, cls:'proximo', dot:'y'};
+  return eR;
+}
+function estadoWheel(n){
+  return estadoEfectivo(POSICIONES[n]);
 }
 
 /* ================= RENDER DEL PANEL ================= */
@@ -837,7 +846,7 @@ function renderPanel(n){
     document.getElementById('acciones-pos-n').textContent = '—';
     return;
   }
-  const movi = rtdMovi(d.canales), eR = estadoRTD(movi,cfg), eP = estadoPresion(d.presion,cfg);
+  const movi = rtdMovi(d.canales), eR = estadoEfectivo(d), eP = estadoPresion(d.pressure_state);
   const desecho = d.anomalias.some(a=>a.causal);
 
   document.getElementById('pos-title').textContent = `POS ${n} · ${d.nombre}`;
@@ -848,7 +857,7 @@ function renderPanel(n){
   document.getElementById('id-codigo').textContent = d.codigo;
   document.getElementById('id-medida').textContent = d.medida || cfg.medida;
   document.getElementById('id-diseno').textContent = d.diseno;
-  document.getElementById('id-reenc').textContent  = typeof d.reenc === 'number' ? `${d.reenc} / MÁX 3` : d.reenc;
+  document.getElementById('id-reenc').textContent  = d.reenc;
 
   const rtdEl = document.getElementById('rtd-movi');
   rtdEl.innerHTML = movi == null ? `—<small>MM</small>` : `${movi.toFixed(1)}<small>MM</small>`;
@@ -857,24 +866,20 @@ function renderPanel(n){
   const keys = Object.keys(d.canales);
   document.getElementById('canales').innerHTML = keys.map(k=>{
     const isMin = d.canales[k]===movi;
-    return `<div class="canal num ${isMin?'min '+(eR.cls==='cambio'?'cambio':''):''}">
+    // El color de alerta del canal sigue el ESTADO de ese canal (rtd_a_state..d_state,
+    // calculado en Supabase) — no solo "es el mínimo", así un canal en zona
+    // próximo/cambio se ilumina aunque no sea el valor mínimo del set.
+    const canalCls = estadoRTD(d.canalStates[k]).cls;
+    const stateClass = canalCls !== 'normal' ? canalCls : '';
+    return `<div class="canal num ${stateClass} ${isMin?'min':''}">
       ${isMin?'<span class="mintag">MIN</span>':''}
       <div class="lbl">CANAL ${k}</div><div class="v">${d.canales[k].toFixed(1)}</div></div>`;
   }).join('');
 
-  document.getElementById('meter-marker').style.left =
-    `calc(${movi == null ? 0 : Math.min(movi/cfg.rtdMax*100,100)}% - 1px)`;
-  document.getElementById('meter-medida').textContent = d.medida || cfg.medida;
-  document.getElementById('z-cambio').style.width = (cfg.rtdCambio/cfg.rtdMax*100)+'%';
-  document.getElementById('z-prox').style.width = ((cfg.rtdProximo-cfg.rtdCambio)/cfg.rtdMax*100)+'%';
-  document.getElementById('th-cambio').textContent = `CAMBIO ≤ ${cfg.rtdCambio.toFixed(1)}`;
-  document.getElementById('th-prox').textContent = `PRÓXIMO ≤ ${cfg.rtdProximo.toFixed(1)}`;
-  document.getElementById('th-max').textContent = `${cfg.rtdMax} MM`;
-
   document.getElementById('presion-val').innerHTML = d.presion == null ? `— <small>PSI</small>` : `${d.presion} <small>PSI</small>`;
   document.getElementById('presion-sub').textContent =
-    eP.delta == null ? (d.pressure_state || 'Sin presión registrada') :
-    `REF ${cfg.presionRef} PSI · Δ ${eP.delta>=0?'+':'−'}${Math.abs(eP.delta).toFixed(1)}%`;
+    d.presion == null ? (d.pressure_state || 'Sin presión registrada') :
+    'RANGO NORMAL: 100–130 PSI';
   const pB = document.getElementById('presion-badge');
   pB.textContent = (eP.cls==='normal'?'':'⚠ ')+eP.txt;
   pB.className = 'badge '+eP.cls;
@@ -1029,6 +1034,15 @@ function goToTireHistory(){
 document.getElementById('id-codigo').addEventListener('click', goToTireHistory);
 document.getElementById('id-codigo').addEventListener('keydown', e=>{
   if(e.key==='Enter' || e.key===' '){ e.preventDefault(); goToTireHistory(); }
+});
+
+/* ================= CHIP DE USUARIO → CERRAR SESIÓN ================= */
+document.getElementById('user-chip').addEventListener('click', async () => {
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)) return;
+  if(confirm('¿Cerrar sesión?')){
+    await RenovaSupabase.signOut();
+    location.reload();
+  }
 });
 
 /* init */

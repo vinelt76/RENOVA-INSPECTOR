@@ -152,12 +152,6 @@ export default function InspeccionScreen() {
 
   const flashSave = () => { setFlash(true); setTimeout(() => setFlash(false), 1400); };
 
-  // ¿La posición requiere 4 canales? (Libre/Dual — reglas_negocio §1)
-  const requiresR4 = (p: number) => {
-    const cfg = configPos.find(c => c.posicion === p);
-    return cfg?.tipo_eje === 'Libre' || cfg?.tipo_eje === 'Dual';
-  };
-
   // commit por PARCHE: merge contra dataRef (estado real), nunca contra el
   // snapshot del render del caller — evita que un blur diferido pise teclas.
   const commit = async (patch: Record<string, string>) => {
@@ -202,10 +196,12 @@ export default function InspeccionScreen() {
 
   const handleExit = () => navigate('/unidad');
 
-  // Estado de cada posición para el grid del sheet
+  // Estado de cada posición para el grid del sheet.
+  // R4 es opcional en cualquier eje (reglas_negocio.md §1): A/B/C alcanzan
+  // para marcar "completa", sin importar tipo_eje.
   const posStatus = (p: number): 'completa' | 'parcial' | 'vacia' => {
     const d = p === pos ? data : (store[p] || empty());
-    const rtdOk = !!(d.r1 && d.r2 && d.r3 && (!requiresR4(p) || d.r4));
+    const rtdOk = !!(d.r1 && d.r2 && d.r3);
     if (rtdOk && d.presion) return 'completa';
     if (d.r1 || d.r2 || d.r3 || d.r4 || d.presion) return 'parcial';
     return 'vacia';
@@ -320,7 +316,6 @@ export default function InspeccionScreen() {
           anomalias={anomalias}
           valvulas={valvulas}
           condiciones={condiciones}
-          needsR4={requiresR4(pos)}
           r1Ref={r1Ref}
           r2Ref={r2Ref}
           r3Ref={r3Ref}

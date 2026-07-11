@@ -11,12 +11,15 @@ Si el código y este archivo difieren, el código está mal.
 El remanente operativo es el valor mínimo de todos los canales medidos.
 
 ```
-RTD MOVI = MIN(RTD_A, RTD_B, RTD_C)          -- 3 canales (Dirección, Tracción)
-RTD MOVI = MIN(RTD_A, RTD_B, RTD_C, RTD_D)   -- 4 canales (Libre, Dual)
+RTD MOVI = MIN(RTD_A, RTD_B, RTD_C)          -- 3 canales medidos
+RTD MOVI = MIN(RTD_A, RTD_B, RTD_C, RTD_D)   -- 4 canales medidos
 ```
 
-**El número de canales lo determina el TIPO EJE de la posición**, no el neumático en sí.
-El `tipo_eje` viene del catálogo `configuracion_vehiculo` (PATRON).
+**El número de canales lo determina cuáles vienen medidos, NO el TIPO EJE de la
+posición.** RTD_D es opcional en cualquier eje — Libre/Dual lo miden casi siempre,
+pero hay medidas/diseños que también se miden en 4 puntos en Dirección o Tracción.
+El `tipo_eje` (catálogo `configuracion_vehiculo`, PATRON) es metadato descriptivo
+de la posición; no restringe cuántos canales se pueden capturar.
 
 **Validación de entrada:** cada RTD_x debe ser ≥ 0 mm. Si es negativo, rechazar.
 Rango esperado en campo: 0–22 mm. Valores > 22 mm deben generar advertencia (posible error de tipeo).

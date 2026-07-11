@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "root_dir": "/home/facundo/Imágenes/RENOVA INSPECTOR",
+  "root_dir": "/home/facundo/Vídeos/RENOVA-INSPECTOR",
   "exclude": [
     "target/**",
     ".git/**",
@@ -20,5 +20,5 @@
   "git_ignore": true,
   "default_path_include": [],
   "default_path_exclude": [],
-  "last_indexed_version": ""
+  "last_indexed_version": "7.0.2"
 }

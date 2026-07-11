@@ -4,12 +4,15 @@ import catalogoPatron from './seed_data/catalogo_patron.json';
 import catalogoFlota from './seed_data/catalogo_flota.json';
 import { slugify } from './slugify';
 
+// Las 4 empresas reales (coinciden con public.companies en Supabase).
+// CTA se quitó: no existe en el servidor y no es cliente activo.
+// El pull de Supabase (pullEmpresas) puede refrescar/agregar empresas al
+// arrancar con red; este seed es el fallback offline-first.
 const EMPRESAS = [
   { id: 'movil', nombre: 'MÓVIL BUS',    flota: null },
   { id: 'cruz',  nombre: 'CRUZ DEL SUR', flota: null },
   { id: 'civa',  nombre: 'CIVA',         flota: null },
   { id: 'ittsa', nombre: 'ITTSABUS',     flota: null },
-  { id: 'cta',   nombre: 'CTA',          flota: null },
 ];
 
 const POS_LADO_MAP: Record<number, 'Izq' | 'Der'> = {

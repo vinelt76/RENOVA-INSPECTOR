@@ -13,14 +13,17 @@
   Solo visualiza, en una fecha de inspección, la salud general de todas las unidades y
   sirve de entrada hacia la inspección individual ya existente (openInspection()).
 
-  Regla de color EXCLUSIVA de esta pantalla (más simple que la de Inspección, priorizando
-  velocidad de lectura sobre muchas unidades):
-    · Anomalía causal de retiro            → CRÍTICO (naranja)
-    · RTD remanente < 4 mm                 → CRÍTICO (naranja)
-    · RTD remanente entre 4 mm y 8 mm      → OBSERVACIÓN (amarillo)
-    · RTD remanente > 8 mm y sin anomalía  → NORMAL (verde)
+  Regla de color: calculada 100% server-side en Supabase (v_unit_tire_status,
+  v_fleet_unit_status — umbrales efectivos de empresa vía fn_effective_rtd_thresholds,
+  4/7 confirmado 2026-07-10). Este HTML SOLO lee unit_status/worst_rtd_mm y
+  renderiza — no recalcula umbrales en JS:
+    · Anomalía causal de retiro: is_discard (check manual) O anomaly_catalog.desecho
+      (texto de la anomalía coincide con una entrada grave del catálogo)  → CRÍTICO (naranja)
+    · RTD remanente ≤ rtd_change_mm          → CRÍTICO (naranja)
+    · RTD remanente ≤ rtd_next_mm            → OBSERVACIÓN (amarillo)
+    · resto                                  → NORMAL (verde)
   (Semáforo del negocio, DESIGN.md §8: el naranja ES la máxima severidad; no se usa rojo.)
-  El color de la unidad = el PEOR caso entre todos sus neumáticos.
+  El color de la unidad = el PEOR caso entre todos sus neumáticos (unit_status).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -282,6 +285,7 @@
         <a class="active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="instalacion.html">Instalación</a>
         <a href="rendimiento.html">Rendimiento</a>
+        <a href="importar.html">Importar</a>
       </nav>
       <div class="date-picker">
         <label for="dateSelect">Fecha de inspección</label>
@@ -310,39 +314,29 @@
 let INSPECTIONS = {};
 
 /* =========================================================================
-   DATOS REALES (Supabase) — v_inspection_dashboard_rows.
-   La regla de color (tireStatus/calculateUnitStatus) NO cambia: sigue
-   siendo la del HTML. Cada fecha muestra las unidades inspeccionadas ESE día
-   (con datos reales suele ser 1–2 unidades por fecha — es la realidad del
-   Excel, no un bug). rtd = RTD MOVI (mínimo de canales) de esa inspección.
+   DATOS REALES (Supabase) — v_fleet_unit_status: YA es una fila por unidad,
+   con unit_status (PEOR caso entre sus neumáticos) y worst_rtd_mm calculados
+   server-side con los umbrales efectivos de empresa (fn_effective_rtd_thresholds,
+   ver v_unit_tire_status/v_fleet_unit_status). El HTML solo lee y renderiza,
+   no recalcula umbrales ni agrupa "peor caso" en JS. Cada fecha muestra las
+   unidades inspeccionadas ESE día (con datos reales suele ser 1–2 unidades
+   por fecha — es la realidad del Excel, no un bug).
    ========================================================================= */
 function buildInspectionsFromSupabase(rows){
   const byDate = {};
-  const byInspection = new Map();
   rows.forEach(r => {
-    if(!byInspection.has(r.inspection_id)) byInspection.set(r.inspection_id, []);
-    byInspection.get(r.inspection_id).push(r);
-  });
-  for(const g of byInspection.values()){
-    g.sort((a,b) => a.position_number - b.position_number);
-    const h = g[0];
-    if(!h.inspected_on) continue;
+    if(!r.inspected_on) return;
     const unit = {
-      id: h.inspection_id,
-      plate: h.plate,
-      company: h.company_name || "—",
+      id: r.inspection_id,
+      plate: r.plate,
+      company: r.company_name || "—",
       equipmentType: "Bus",
-      inspectionDate: h.inspected_on,
-      tires: g.map(r => ({
-        position: "P" + r.position_number,
-        rtd: r.rtd_movi_mm != null ? Number(r.rtd_movi_mm) : null,
-        withdrawalAnomaly: !!r.is_discard,
-        axle: r.axle_number ?? 0,
-        side: r.side === "Der" ? "R" : "L",
-      })),
+      inspectionDate: r.inspected_on,
+      unitStatus: r.unit_status,
+      worstRtdMm: r.worst_rtd_mm != null ? Number(r.worst_rtd_mm) : null,
     };
-    (byDate[h.inspected_on] = byDate[h.inspected_on] || []).push(unit);
-  }
+    (byDate[r.inspected_on] = byDate[r.inspected_on] || []).push(unit);
+  });
   return byDate;
 }
 
@@ -353,11 +347,19 @@ async function loadSupabaseFleet(isRefresh){
     return;
   }
   try{
-    const rows = await RenovaSupabase.fetchView("v_inspection_dashboard_rows",
-      { order: "inspected_on.desc,plate.asc,position_number.asc", limit: "800" });
+    const rows = await RenovaSupabase.fetchView("v_fleet_unit_status",
+      { order: "inspected_on.desc,plate.asc" });
+    // Sesión válida pero sin filas propias (empresa nueva, aún sin datos
+    // importados) NO es un error de conexión — la sesión sigue activa y el
+    // botón de logout (showBadge("supabase")) debe seguir visible.
+    if(!rows.length){
+      renderNoData("Sin datos del Excel para tu empresa todavía.");
+      const session = await RenovaSupabase.getSession();
+      RenovaSupabase.showBadge("supabase", session?.user?.email || "");
+      return;
+    }
     const data = buildInspectionsFromSupabase(rows);
     const dates = Object.keys(data).sort().reverse();
-    if(!dates.length) throw new Error("v_inspection_dashboard_rows sin filas");
     INSPECTIONS = data;
     // Refresco en vivo (Realtime): conserva la fecha que el usuario está
     // mirando, salvo que haya dejado de existir. Carga inicial: la más reciente.
@@ -370,35 +372,6 @@ async function loadSupabaseFleet(isRefresh){
     renderNoData("No se pudieron cargar los datos del Excel desde Supabase.");
     RenovaSupabase.showBadge("empty");
   }
-}
-
-/* =========================================================================
-   LÓGICA DE ESTADO  (regla EXCLUSIVA de Vista de Flota)
-   El color NUNCA se fija a mano en la unidad: sale de estas funciones.
-   ========================================================================= */
-
-// Estado de un neumático individual.
-function tireStatus(tire){
-  if(tire.withdrawalAnomaly) return "critical";   // causal de retiro → rojo
-  if(tire.rtd < 4)  return "critical";            // < 4 mm            → rojo
-  if(tire.rtd <= 8) return "warning";             // 4–8 mm            → naranja
-  return "normal";                                // > 8 mm            → normal
-}
-
-// Estado de la unidad = PEOR caso entre sus neumáticos.
-function calculateUnitStatus(unit){
-  let worst = "normal";
-  for(const t of unit.tires){
-    const s = tireStatus(t);
-    if(s === "critical") return "critical";       // no hay nada peor
-    if(s === "warning")  worst = "warning";
-  }
-  return worst;
-}
-
-// RTD remanente más bajo de la unidad (mm).
-function getWorstRTD(unit){
-  return unit.tires.reduce((min,t)=> t.rtd < min ? t.rtd : min, Infinity);
 }
 
 // PLACEHDER de navegación → abre la inspección YA EXISTENTE de la unidad.
@@ -504,8 +477,7 @@ function renderKpis(){
   const total = units.length;
   let crit=0, warn=0, normal=0;
   units.forEach(u=>{
-    const s = calculateUnitStatus(u);
-    if(s==="critical") crit++; else if(s==="warning") warn++; else normal++;
+    if(u.unitStatus==="critical") crit++; else if(u.unitStatus==="warning") warn++; else normal++;
   });
   const atRisk = crit + warn;
   const riskPct = total ? Math.round((atRisk/total)*100) : 0;
@@ -565,14 +537,14 @@ function renderGrid(){
   // Orden: críticas primero, luego observación, luego normales; dentro, por RTD ascendente.
   const rank = {critical:0, warning:1, normal:2};
   const sorted = [...units].sort((a,b)=>{
-    const ra = rank[calculateUnitStatus(a)], rb = rank[calculateUnitStatus(b)];
-    return ra !== rb ? ra - rb : getWorstRTD(a) - getWorstRTD(b);
+    const ra = rank[a.unitStatus], rb = rank[b.unitStatus];
+    return ra !== rb ? ra - rb : (a.worstRtdMm ?? Infinity) - (b.worstRtdMm ?? Infinity);
   });
 
   // Card simplificada (design-principle.md, Goal 2.4): solo placa, empresa,
   // configuración y un estado grande por color — sin pills de neumático.
   grid.innerHTML = sorted.map((u,idx)=>{
-    const status = calculateUnitStatus(u);
+    const status = u.unitStatus;
     const delay = Math.min(idx * 18, 260);
     return `<button class="unit-card pressable status-${status}"
               style="animation-delay:${delay}ms"

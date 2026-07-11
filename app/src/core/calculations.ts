@@ -14,9 +14,10 @@ export function calcularRtdMovi(
 ): number {
   /**
    * RTD MOVI = MIN de los canales medidos.
-   * rtdD es undefined/null para posiciones de 3 canales (Dirección, Tracción).
-   * rtdD se pasa para posiciones de 4 canales (Libre, Dual).
-   * 
+   * rtdD es opcional en CUALQUIER posición/eje — hay medidas/diseños que se
+   * miden en 4 puntos incluso en Dirección. El tipo_eje NO restringe cuántos
+   * canales se pueden capturar; solo se usan los canales que vengan con valor.
+   *
    * Lanza Error si algún canal es negativo.
    */
   const canales: number[] = [rtdA, rtdB, rtdC];

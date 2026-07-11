@@ -173,6 +173,34 @@ export const inspeccionRepo = {
     return neumatico;
   },
 
+  // Cabeceras inspeccionadas HOY para una empresa — usado por el cierre de
+  // inspección (re-push + borrado de la copia local ya sincronizada).
+  async listCabecerasHoy(empresaId: string, fecha: string): Promise<InspeccionCabecera[]> {
+    const db = await getDb();
+    const result = await db.query(
+      'SELECT * FROM inspeccion_cabecera WHERE empresa_id = ? AND fecha = ? ORDER BY updated_at',
+      [empresaId, fecha]
+    );
+    return result.values as InspeccionCabecera[];
+  },
+
+  // Marca la cabecera como confirmada en la nube (tras un push OK). No borra nada.
+  async marcarSincronizada(id: string): Promise<void> {
+    const db = await getDb();
+    await db.run('UPDATE inspeccion_cabecera SET sincronizado = 1 WHERE id = ?', [id]);
+    await persistDb();
+  },
+
+  // Borra la inspección local (cabecera + neumáticos). Se llama SOLO tras
+  // confirmar que ya está subida a Supabase: la nube es la fuente de verdad
+  // a partir de ahí. La unidad se conserva (historial de placas del día).
+  async borrarCabecera(id: string): Promise<void> {
+    const db = await getDb();
+    await db.run('DELETE FROM inspeccion_neumatico WHERE cabecera_id = ?', [id]);
+    await db.run('DELETE FROM inspeccion_cabecera WHERE id = ?', [id]);
+    await persistDb();
+  },
+
   async listNeumaticos(cabeceraId: string): Promise<InspeccionNeumatico[]> {
     const db = await getDb();
     const result = await db.query(

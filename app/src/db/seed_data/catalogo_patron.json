@@ -333,7 +333,17 @@
       "desecho": true
     },
     {
-      "nombre": "Desgaste irregular en el hombro",
+      "nombre": "Desgaste irregular en hombros",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste irregular en hombro interno",
+      "posible_causa": "Proveedor",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste irregular en hombro externo",
       "posible_causa": "Proveedor",
       "desecho": false
     },
@@ -355,6 +365,31 @@
     {
       "nombre": "Objeto punzocortante en flanco",
       "posible_causa": "Neumático-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte en banda de rodamiento",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Corte en hombro externo",
+      "posible_causa": "Conducción-Ruta",
+      "desecho": false
+    },
+    {
+      "nombre": "Perforacion en banda de rodamiento",
+      "posible_causa": "Servicio",
+      "desecho": false
+    },
+    {
+      "nombre": "Desgaste irregular en la banda de rodamiento",
+      "posible_causa": "Mantenimiento Alineación",
+      "desecho": false
+    },
+    {
+      "nombre": "Cuerdas expuestas",
+      "posible_causa": "Conducción-Ruta",
       "desecho": false
     }
   ],

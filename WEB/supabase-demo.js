@@ -37,6 +37,8 @@ async function fetchView(name, params) {
 }
 
 // Pill de origen de datos — el jefe de flota siempre sabe qué está mirando.
+// Cuando hay sesión activa (mode "supabase"), incluye un botón "Cambiar
+// empresa" para cerrar sesión sin pasar por la consola del navegador.
 function showBadge(mode /* "supabase" | "empty" */, detail) {
   let el = document.getElementById("renovaDataBadge");
   if (!el) {
@@ -45,18 +47,29 @@ function showBadge(mode /* "supabase" | "empty" */, detail) {
     el.style.cssText =
       "position:fixed;right:12px;bottom:12px;z-index:99;" +
       "font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;" +
-      "letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;" +
-      "border-radius:8px;border:2px solid;background:#111E2E;pointer-events:none";
+      "letter-spacing:.08em;text-transform:uppercase;" +
+      "display:flex;align-items:center;gap:8px;";
     document.body.appendChild(el);
   }
+  const pillStyle =
+    "padding:7px 12px;border-radius:8px;border:2px solid;background:#111E2E;";
   if (mode === "supabase") {
-    el.style.borderColor = "#1f9d6b";
-    el.style.color = "#1f9d6b";
-    el.textContent = "DATOS: SUPABASE" + (detail ? " · " + detail : "");
+    el.innerHTML = `
+      <button id="renovaLogoutBtn" type="button" style="${pillStyle}border-color:#1B2D42;color:#F0F8FF;
+        cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit;
+        display:flex;align-items:center;gap:8px;">
+        <span style="color:#7AABCC;">SN</span> · SUPERVISOR DE NEUMÁTICOS${detail ? " · " + detail : ""}
+      </button>`;
+    const btn = el.querySelector("#renovaLogoutBtn");
+    btn.addEventListener("click", async () => {
+      if (!confirm("¿Cerrar sesión?")) return;
+      btn.disabled = true;
+      btn.textContent = "SALIENDO…";
+      await signOut();
+      location.reload();
+    });
   } else {
-    el.style.borderColor = "#f4b821";
-    el.style.color = "#f4b821";
-    el.textContent = "DATOS: SIN SUPABASE" + (detail ? " · " + detail : "");
+    el.innerHTML = `<span style="${pillStyle}border-color:#f4b821;color:#f4b821;">DATOS: SIN SUPABASE${detail ? " · " + detail : ""}</span>`;
   }
 }
 

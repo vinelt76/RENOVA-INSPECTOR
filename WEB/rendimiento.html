@@ -382,6 +382,7 @@
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="instalacion.html">Instalación</a>
         <a class="active" href="rendimiento.html">Rendimiento</a>
+        <a href="importar.html">Importar</a>
       </nav>
       <div class="unit-picker">
         <label for="unitSelect">Unidad</label>
@@ -505,7 +506,15 @@ async function loadSupabaseData(){
     const rows = await RenovaSupabase.fetchView("v_rendimiento_dashboard_rows",
       { order: "plate.asc,position_number.asc" });
     const units = buildUnitsFromSupabase(rows);
-    if(!units.length) throw new Error("v_rendimiento_dashboard_rows sin filas");
+    // Sesión válida pero sin filas propias (empresa nueva, aún sin datos
+    // importados) NO es un error de conexión — la sesión sigue activa y el
+    // botón de logout debe seguir visible.
+    if(!units.length){
+      renderNoData("Sin datos del Excel para tu empresa todavía.");
+      const session = await RenovaSupabase.getSession();
+      RenovaSupabase.showBadge("supabase", session?.user?.email || "");
+      return;
+    }
     UNITS = units;
     unitId = UNITS[0].id;
     renderUnitOptions();
@@ -752,7 +761,7 @@ function sourcePanel(u, pos, raw){
       ${srcRow("Presión", f.pressure_psi != null ? Number(f.pressure_psi).toFixed(0) : null, "psi")}
       ${srcRow("Estado presión", f.pressure_state)}
       ${srcRow("Tapa válvula", f.valve_cap)}
-      ${srcRow("Anomalía", f.anomaly)}
+      ${srcRow("Anomalía", f.has_anomaly ? f.anomaly : null)}
       ${srcRow("Inspector", f.inspector_name)}`;
   } else {
     inst = `${srcRow("Código casco", null)}${srcRow("Fecha instalación", null)}`;

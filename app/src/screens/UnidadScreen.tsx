@@ -6,6 +6,8 @@ import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { localDate } from '../db/sqlite';
 import { preloadUnidadFromSupabase } from '../sync/preloadUnidadFromSupabase';
+import { terminarInspeccionesDelDia } from '../sync/terminarInspeccion';
+import { supabaseEnabled } from '../sync/supabaseClient';
 import { BEBAS, MONO, NAVY, ORANGE, YELLOW, SCREEN_DARK, FIELD_DARK, LABEL_BLUE, BORDER_DARK, VALUE_COLOR } from '../theme';
 import type { Unidad, CatConfiguracion } from '../db/schema';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -46,6 +48,7 @@ export default function UnidadScreen() {
   const [recientes, setRecientes] = useState<Unidad[]>([]);
   const [focusedField, setFocusedField] = useState<'search' | 'odometro' | null>(null);
   const [loadingSupabase, setLoadingSupabase] = useState(false);
+  const [terminando, setTerminando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const latestQuery = useRef('');
@@ -246,6 +249,36 @@ export default function UnidadScreen() {
     navigate('/empresa');
   };
 
+  const handleTerminar = async () => {
+    if (!empresaId || terminando) return;
+    const ok = window.confirm(
+      `¿Terminar la jornada de ${empresa?.nombre ?? 'esta empresa'}?\n\n` +
+      `Se subirán a la nube las ${recientes.length} inspección(es) de hoy y ` +
+      `se borrará la copia local. Las que no logren subir se conservarán.`
+    );
+    if (!ok) return;
+    setTerminando(true);
+    try {
+      const res = await terminarInspeccionesDelDia(empresaId);
+      refreshHoy();
+      if (res.error) {
+        window.alert(`No se pudo terminar: ${res.error}`);
+      } else if (res.pendientes > 0) {
+        window.alert(
+          `Se subieron y limpiaron ${res.borradas}. ` +
+          `${res.pendientes} quedaron pendientes (sin conexión) y se conservan.`
+        );
+      } else {
+        window.alert(`Jornada terminada: ${res.borradas} inspección(es) subidas y limpiadas.`);
+      }
+    } catch (e) {
+      console.error('handleTerminar error:', e);
+      window.alert('Ocurrió un error al terminar la jornada.');
+    } finally {
+      setTerminando(false);
+    }
+  };
+
   const fotoButton = (
     <button onClick={handleFoto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: `2px dashed ${BORDER_DARK}`, borderRadius: 12, padding: '12px', background: FIELD_DARK, cursor: 'pointer', fontFamily: MONO, flexShrink: 0, transition: 'border-color 0.15s' }}>
       {fotoUnidad ? (
@@ -347,6 +380,31 @@ export default function UnidadScreen() {
                 </button>
               ))}
             </div>
+
+            {supabaseEnabled && (
+              <button
+                onClick={handleTerminar}
+                disabled={terminando}
+                className="pressable"
+                style={{
+                  width: '100%',
+                  marginTop: 16,
+                  background: 'transparent',
+                  border: `2px solid ${terminando ? BORDER_DARK : ORANGE}`,
+                  borderRadius: 14,
+                  padding: '15px',
+                  color: terminando ? LABEL_BLUE : ORANGE,
+                  fontWeight: 800,
+                  fontSize: 13,
+                  letterSpacing: '0.06em',
+                  cursor: terminando ? 'default' : 'pointer',
+                  fontFamily: MONO,
+                  transition: 'border-color 0.15s, color 0.15s',
+                }}
+              >
+                {terminando ? 'SUBIENDO Y LIMPIANDO…' : 'TERMINAR INSPECCIÓN DEL DÍA'}
+              </button>
+            )}
           </div>
         )}
 
