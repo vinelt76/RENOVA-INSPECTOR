@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
 <title>RENOVA - Instalaciones</title>
-<!-- Pantalla de instalación: solo datos reales del Excel cargados en Supabase. -->
+<!-- Pantalla de instalación: instalaciones activas reales de Supabase, con acciones de taller (instalar, retirar, trasladar). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
@@ -73,6 +73,100 @@
   .code{color:var(--ember-orange);font-weight:800}
   .empty{border:2px dashed var(--border-dark);border-radius:12px;padding:18px;color:var(--label-blue);font-size:12px;line-height:1.5}
   @media (max-width:780px){.summary{grid-template-columns:1fr 1fr}.head-row{align-items:flex-start}.nav{width:100%}}
+
+  /* ───────── Acciones + botón primario ───────── */
+  .btn-primary{
+    font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:#fff;background:var(--ember-orange);border:0;border-radius:10px;padding:11px 16px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;transition:filter .15s ease-out,transform .12s ease-out;
+  }
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn-primary:active{transform:scale(.98)}
+  .btn-primary svg{width:14px;height:14px}
+  .row-actions{display:flex;gap:6px}
+  .btn-mini{
+    font-family:var(--mono);font-weight:800;font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--label-blue);background:transparent;border:2px solid var(--border-dark);border-radius:7px;
+    padding:6px 9px;cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap;
+  }
+  .btn-mini:hover{color:var(--value-ice);border-color:#294263}
+  .btn-mini.danger:hover{color:var(--ember-orange);border-color:var(--ember-orange)}
+
+  /* ───────── Modal genérico (sheet), igual patrón que inventario.html ───────── */
+  .scrim{
+    position:fixed;inset:0;background:rgba(4,9,16,.72);
+    display:none;align-items:flex-end;justify-content:center;z-index:60;
+  }
+  .scrim.open{display:flex}
+  @media (min-width:640px){.scrim{align-items:center}}
+  .sheet{
+    width:100%;max-width:560px;background:var(--field-dark);
+    border-top:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+    border-radius:18px 18px 0 0;box-shadow:0 8px 24px rgba(0,0,0,.4);
+    padding:20px 20px 24px;max-height:92vh;overflow-y:auto;
+    transform:translateY(12px);animation:sheetIn .25s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  @media (min-width:640px){.sheet{border-radius:18px}}
+  @keyframes sheetIn{to{transform:translateY(0)}}
+  .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+  .sheet-title{font-family:var(--display);font-size:22px;letter-spacing:.09em;color:var(--value-ice);line-height:1}
+  .sheet-sub{font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--label-blue);margin-top:8px;line-height:1.5}
+  .sheet-close{
+    background:transparent;border:0;cursor:pointer;color:rgba(255,255,255,.9);
+    width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex:none;
+    border-radius:10px;transition:background .15s ease-out;
+  }
+  .sheet-close:hover{background:var(--border-dark)}
+  .sheet-close svg{width:20px;height:20px}
+  .form-field{margin-bottom:16px}
+  .form-field label{
+    display:block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--label-blue);margin-bottom:8px;
+  }
+  .form-field label .req{color:var(--ember-orange);margin-left:3px}
+  .form-field select,.form-field input,.form-field textarea{
+    width:100%;appearance:none;-webkit-appearance:none;background:var(--screen-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:700;font-size:14px;border:2px solid var(--border-dark);border-radius:10px;
+    padding:11px 13px;transition:border-color .15s ease-out;
+  }
+  .form-field textarea{resize:vertical;min-height:60px}
+  .form-field select{
+    padding-right:38px;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+  }
+  .form-field select:focus,.form-field input:focus,.form-field textarea:focus{outline:none;border-color:var(--ember-orange)}
+  .form-field.invalid select,.form-field.invalid input{border-color:var(--discard-red,#c0453a)}
+  .form-field .err{font-size:10px;font-weight:800;color:#c0453a;margin-top:7px;display:none}
+  .form-field.invalid .err{display:block}
+  .form-field.hidden{display:none}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .form-note{font-size:10px;font-weight:700;color:var(--label-blue);line-height:1.5;margin:-6px 0 16px}
+  .btn-submit{
+    width:100%;font-family:var(--mono);font-weight:800;font-size:14px;letter-spacing:.08em;text-transform:uppercase;
+    color:#fff;background:var(--ember-orange);border:0;border-radius:11px;padding:15px 14px;cursor:pointer;margin-top:6px;
+    transition:filter .15s ease-out,transform .12s ease-out;
+  }
+  .btn-submit:hover{filter:brightness(1.08)}
+  .btn-submit:disabled{opacity:.6;cursor:default}
+  .target-card{
+    background:var(--screen-dark);border:2px solid var(--border-dark);border-radius:10px;
+    padding:12px 14px;margin-bottom:18px;
+  }
+  .target-card .t-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .target-card .t-value{font-size:15px;font-weight:800;color:var(--value-ice);margin-top:5px}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--navy-brand);border:2px solid var(--verified-green);border-radius:12px;padding:13px 18px;z-index:80;
+    display:flex;align-items:center;gap:11px;opacity:0;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4);
+    transition:opacity .25s ease-out,transform .25s ease-out;max-width:calc(100% - 32px);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast svg{width:18px;height:18px;color:var(--verified-green);flex:none}
+  .toast .t-text{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--value-ice);line-height:1.4}
+  .toast.error{border-color:#c0453a}
+  .toast.error svg{color:#c0453a}
 </style>
 </head>
 <body>
@@ -81,12 +175,14 @@
     <div class="brand">
       <div class="logo">RENOVA<b>.</b></div>
       <div class="screen-name">INSTALACIONES</div>
-      <div class="subtitle">Datos fuente del Excel · montaje por unidad y posición</div>
+      <div class="subtitle">Instalaciones activas · montaje, retiro y traslado por unidad y posición</div>
     </div>
     <nav class="nav" aria-label="Pantallas">
       <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a class="active" href="instalacion.html">Instalación</a>
+      <a href="inventario.html">Inventario</a>
       <a href="rendimiento.html">Rendimiento</a>
+      <a href="comparativo.html">Comparativo</a>
       <a href="importar.html">Importar</a>
     </nav>
   </div>
@@ -102,6 +198,10 @@
       <label for="positionSelect">Posición</label>
       <select id="positionSelect"></select>
     </div>
+    <button class="btn-primary" type="button" onclick="openInstalar()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Nueva instalación
+    </button>
   </div>
 
   <section class="summary" id="summary"></section>
@@ -117,7 +217,7 @@
           <tr>
             <th>Unidad</th><th>Pos</th><th>Código</th><th>Marca</th><th>Medida</th>
             <th>Diseño actual</th><th>Cond.</th><th>Fecha instala</th><th>Km instala</th>
-            <th>RTD inicial</th><th>Precio</th><th>Últ. inspección</th><th>Km recorrido</th>
+            <th>RTD inicial</th><th>Precio</th><th>Últ. inspección</th><th>Km recorrido</th><th>Acciones</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
@@ -126,22 +226,175 @@
   </section>
 </main>
 
+<!-- Modal: Nueva instalación desde cero -->
+<div class="scrim" id="instScrim" onclick="if(event.target===this) closeInstalar()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="instTitle">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title" id="instTitle">NUEVA INSTALACIÓN</div>
+        <div class="sheet-sub">Casco + ciclo + montaje inicial · campos obligatorios marcados</div>
+      </div>
+      <button class="sheet-close" onclick="closeInstalar()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <form id="instForm" onsubmit="submitInstalar(event)" novalidate>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffCode"><label>Código del casco</label><input id="i-code" type="text" placeholder="Ej. 241088"></div>
+        <div class="form-field" id="i-ffCondition"><label>Condición <span class="req">*</span></label>
+          <select id="i-condition" onchange="onConditionChange()">
+            <option value="">Seleccionar…</option>
+            <option value="N">N (Nuevo)</option><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option>
+          </select>
+          <div class="err">Elegí la condición.</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffBrand"><label>Marca</label><input id="i-brand" type="text" placeholder="Ej. MICHELIN"></div>
+        <div class="form-field" id="i-ffModel"><label>Modelo</label><input id="i-model" type="text" placeholder="Ej. X MULTI Z"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffSize"><label>Medida</label><input id="i-size" type="text" placeholder="Ej. 295/80R22.5"></div>
+        <div class="form-field hidden" id="i-ffDesign"><label>Diseño de reencauche <span class="req">*</span></label><input id="i-design" type="text" placeholder="Ej. KMD01">
+          <div class="err">Obligatorio cuando la condición no es N.</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffOtd"><label>OTD (mm)</label><input id="i-otd" type="number" step="0.1" min="0"></div>
+        <div class="form-field" id="i-ffRtd"><label>RTD instalación (mm)</label><input id="i-rtd" type="number" step="0.1" min="0"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffCost"><label>Costo</label><input id="i-cost" type="number" step="0.01" min="0"></div>
+        <div class="form-field" id="i-ffCurrency"><label>Moneda</label><input id="i-currency" type="text" value="PEN" maxlength="3"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffUnit"><label>Vehículo <span class="req">*</span></label>
+          <select id="i-unit" onchange="onInstUnitChange()"><option value="">Seleccionar unidad…</option></select>
+          <div class="err">Elegí la unidad.</div>
+        </div>
+        <div class="form-field" id="i-ffPosition"><label>Posición <span class="req">*</span></label>
+          <select id="i-position"><option value="">Seleccionar posición…</option></select>
+          <div class="err">Elegí la posición.</div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="i-ffOdo"><label>Odómetro instalación</label><input id="i-odo" type="number" min="0"></div>
+        <div class="form-field" id="i-ffDate"><label>Fecha instalación <span class="req">*</span></label><input id="i-date" type="date">
+          <div class="err">Ingresá la fecha.</div>
+        </div>
+      </div>
+      <div class="form-field" id="i-ffNotes"><label>Observaciones</label><textarea id="i-notes"></textarea></div>
+      <button class="btn-submit" type="submit">Registrar instalación</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Retiro -->
+<div class="scrim" id="remScrim" onclick="if(event.target===this) closeRetirar()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="remTitle">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title" id="remTitle">RETIRAR NEUMÁTICO</div>
+        <div class="sheet-sub">Cierra la instalación activa</div>
+      </div>
+      <button class="sheet-close" onclick="closeRetirar()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="target-card"><div class="t-label">Neumático</div><div class="t-value" id="remTarget"></div></div>
+    <form id="remForm" onsubmit="submitRetirar(event)" novalidate>
+      <div class="form-field" id="r-ffReason"><label>Motivo <span class="req">*</span></label>
+        <select id="r-reason" onchange="onReasonChange()">
+          <option value="">Seleccionar…</option>
+          <option value="rotation">Rotación</option>
+          <option value="retention">Retén</option>
+          <option value="retread">Reencauche</option>
+          <option value="discard">Descarte</option>
+          <option value="other">Otro</option>
+        </select>
+        <div class="err">Elegí el motivo.</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="r-ffDate"><label>Fecha de retiro <span class="req">*</span></label><input id="r-date" type="date">
+          <div class="err">Ingresá la fecha.</div>
+        </div>
+        <div class="form-field" id="r-ffOdo"><label>Odómetro</label><input id="r-odo" type="number" min="0"></div>
+      </div>
+      <div class="form-field" id="r-ffRtd"><label>RTD al retiro (mm)</label><input id="r-rtd" type="number" step="0.1" min="0"></div>
+      <div class="form-field hidden" id="r-ffCause"><label>Causa de descarte <span class="req">*</span></label>
+        <select id="r-cause">
+          <option value="">Seleccionar…</option>
+          <option value="Servicio">Servicio</option>
+          <option value="Neumático">Neumático</option>
+          <option value="Conducción-Ruta">Conducción-Ruta</option>
+          <option value="Mantenimiento Alineación">Mantenimiento Alineación</option>
+          <option value="Proveedor">Proveedor</option>
+          <option value="Otro">Otro</option>
+        </select>
+        <div class="err">Un descarte necesita la causa.</div>
+      </div>
+      <div class="form-field hidden" id="r-ffPhoto"><label>URL de foto del daño</label><input id="r-photo" type="url" placeholder="https://…"></div>
+      <div class="form-field" id="r-ffNotes"><label>Observaciones</label><textarea id="r-notes"></textarea></div>
+      <button class="btn-submit" type="submit">Confirmar retiro</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Traslado -->
+<div class="scrim" id="trScrim" onclick="if(event.target===this) closeTrasladar()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="trTitle">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title" id="trTitle">TRASLADAR NEUMÁTICO</div>
+        <div class="sheet-sub">Retiro del origen + instalación en destino, en una sola operación</div>
+      </div>
+      <button class="sheet-close" onclick="closeTrasladar()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="target-card"><div class="t-label">Neumático</div><div class="t-value" id="trTarget"></div></div>
+    <form id="trForm" onsubmit="submitTrasladar(event)" novalidate>
+      <div class="form-grid">
+        <div class="form-field" id="t-ffUnit"><label>Unidad destino <span class="req">*</span></label>
+          <select id="t-unit" onchange="onTrUnitChange()"><option value="">Seleccionar unidad…</option></select>
+          <div class="err">Elegí la unidad destino.</div>
+        </div>
+        <div class="form-field" id="t-ffPosition"><label>Posición destino <span class="req">*</span></label>
+          <select id="t-position"><option value="">Seleccionar posición…</option></select>
+          <div class="err">Elegí la posición destino.</div>
+        </div>
+      </div>
+      <div class="form-field" id="t-ffDate"><label>Fecha del traslado <span class="req">*</span></label><input id="t-date" type="date">
+        <div class="err">Ingresá la fecha.</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field" id="t-ffOdoOrigin"><label>Odómetro en origen</label><input id="t-odo-origin" type="number" min="0"></div>
+        <div class="form-field" id="t-ffOdoDest"><label>Odómetro en destino</label><input id="t-odo-dest" type="number" min="0"></div>
+      </div>
+      <div class="form-field" id="t-ffRtd"><label>RTD al trasladar (mm)</label><input id="t-rtd" type="number" step="0.1" min="0"></div>
+      <button class="btn-submit" type="submit">Confirmar traslado</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <div class="t-text" id="toastText"></div>
+</div>
+
 <script>
 "use strict";
-const EXCEL_PLATES = new Set(["2145","5021","5032","225","2134","2151","256"]);
 let INSTALLATIONS = [];
 let selectedUnit = "all";
 let selectedPosition = "all";
+let UNITS = [];
+let POSITIONS_BY_CONFIG = {};
 const nf = new Intl.NumberFormat("es-PE");
 const money = new Intl.NumberFormat("es-PE", { style:"currency", currency:"USD" });
 const mm = v => v == null ? "—" : Number(v).toFixed(1) + " mm";
 const km = v => v == null ? "—" : nf.format(Math.round(Number(v))) + " km";
 const fdate = d => d ? d.split("-").reverse().join("/") : "—";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function normalize(rows){
   return rows
-    .filter(r => EXCEL_PLATES.has(String(r.plate)))
     .map(r => ({
+      lifeCycleId:r.life_cycle_id,
+      unitId:r.unit_id,
       plate:String(r.plate),
       position:Number(r.position_number),
       casing_code:r.casing_code || "—",
@@ -158,6 +411,35 @@ function normalize(rows){
       km_run:r.km_run,
     }))
     .sort((a,b) => a.plate.localeCompare(b.plate, "es", {numeric:true}) || a.position - b.position);
+}
+
+async function loadUnitsAndPositions(){
+  const { data: units, error: uErr } = await RenovaSupabase.supabase
+    .from("units").select("id,plate,config_id").order("plate");
+  if(uErr) throw uErr;
+  UNITS = units || [];
+  const configIds = [...new Set(UNITS.map(u => u.config_id))];
+  POSITIONS_BY_CONFIG = {};
+  if(configIds.length){
+    const { data: positions, error: pErr } = await RenovaSupabase.supabase
+      .from("tire_positions").select("config_id,position_number")
+      .in("config_id", configIds).order("position_number");
+    if(pErr) throw pErr;
+    (positions || []).forEach(p => {
+      (POSITIONS_BY_CONFIG[p.config_id] ||= []).push(p.position_number);
+    });
+  }
+}
+
+function fillUnitSelect(selectEl){
+  selectEl.innerHTML = `<option value="">Seleccionar unidad…</option>` +
+    UNITS.map(u => `<option value="${esc(u.id)}">${esc(u.plate)}</option>`).join("");
+}
+function fillPositionSelect(selectEl, unitId){
+  const unit = UNITS.find(u => u.id === unitId);
+  const positions = unit ? (POSITIONS_BY_CONFIG[unit.config_id] || []) : [];
+  selectEl.innerHTML = `<option value="">Seleccionar posición…</option>` +
+    positions.map(p => `<option value="${p}">P${p}</option>`).join("");
 }
 
 function filtered(){
@@ -198,7 +480,7 @@ function renderRows(rows){
   document.getElementById("rowCount").textContent = `${rows.length} fila${rows.length === 1 ? "" : "s"}`;
   if(!rows.length){
     document.getElementById("rows").innerHTML =
-      `<tr><td colspan="13"><div class="empty">Sin instalaciones del Excel para este filtro.</div></td></tr>`;
+      `<tr><td colspan="14"><div class="empty">Sin instalaciones para este filtro.</div></td></tr>`;
     return;
   }
   document.getElementById("rows").innerHTML = rows.map(r => `
@@ -216,6 +498,12 @@ function renderRows(rows){
       <td>${r.cost == null ? "—" : money.format(Number(r.cost))}</td>
       <td class="dim">${fdate(r.last_inspection_on)}</td>
       <td>${km(r.km_run)}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn-mini" type="button" onclick="openTrasladar('${r.lifeCycleId}')">Trasladar</button>
+          <button class="btn-mini danger" type="button" onclick="openRetirar('${r.lifeCycleId}')">Retirar</button>
+        </div>
+      </td>
     </tr>`).join("");
 }
 
@@ -228,11 +516,11 @@ function render(){
 
 function renderNoData(message){
   INSTALLATIONS = [];
-  document.getElementById("unitSelect").innerHTML = `<option value="">Sin datos Excel</option>`;
-  document.getElementById("positionSelect").innerHTML = `<option value="">Sin datos Excel</option>`;
+  document.getElementById("unitSelect").innerHTML = `<option value="">Sin datos</option>`;
+  document.getElementById("positionSelect").innerHTML = `<option value="">Sin datos</option>`;
   document.getElementById("summary").innerHTML = `<div class="empty" style="grid-column:1/-1">${message}</div>`;
   document.getElementById("rowCount").textContent = "0 filas";
-  document.getElementById("rows").innerHTML = `<tr><td colspan="13"><div class="empty">${message}</div></td></tr>`;
+  document.getElementById("rows").innerHTML = `<tr><td colspan="14"><div class="empty">${message}</div></td></tr>`;
 }
 
 async function load(){
@@ -243,17 +531,18 @@ async function load(){
   }
   try{
     const rows = await RenovaSupabase.fetchView("v_rendimiento_dashboard_rows", {
-      select:"company_name,plate,position_number,casing_code,brand_name,model_name,size_name,condition,retread_design,installed_at,odometer_at_install,rtd_at_install_mm,cost,currency,last_inspection_on,km_run",
+      select:"company_name,life_cycle_id,unit_id,plate,position_number,casing_code,brand_name,model_name,size_name,condition,retread_design,installed_at,odometer_at_install,rtd_at_install_mm,cost,currency,last_inspection_on,km_run",
       order:"plate.asc,position_number.asc",
       limit:"200",
     });
     INSTALLATIONS = normalize(rows);
-    if(!INSTALLATIONS.length) throw new Error("sin instalaciones del Excel");
+    await loadUnitsAndPositions();
     render();
-    RenovaSupabase.showBadge("supabase", rows[0]?.company_name || "MÓVIL BUS");
+    if(INSTALLATIONS.length) RenovaSupabase.showBadge("supabase", rows[0]?.company_name || "");
+    else RenovaSupabase.showBadge("supabase", "sin instalaciones activas todavía");
   }catch(err){
     console.warn("Instalaciones: no se pudo cargar Supabase.", err);
-    renderNoData("No se pudieron cargar instalaciones del Excel desde Supabase.");
+    renderNoData("No se pudieron cargar instalaciones desde Supabase.");
     RenovaSupabase.showBadge("empty");
   }
 }
@@ -266,10 +555,236 @@ document.getElementById("positionSelect").addEventListener("change", e => {
   selectedPosition = e.target.value || "all";
   render();
 });
-renderNoData("Cargando instalaciones del Excel desde Supabase...");
+renderNoData("Cargando instalaciones desde Supabase...");
 onRenovaSupabaseReady(async () => {
   await RenovaSupabase.requireAuth();
   load();
+});
+
+/* =========================================================================
+   TOAST
+   ========================================================================= */
+let toastTimer = null;
+function showToast(html, isError){
+  const el = document.getElementById("toast");
+  document.getElementById("toastText").innerHTML = html;
+  el.classList.toggle("error", !!isError);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3800);
+}
+
+/* =========================================================================
+   NUEVA INSTALACIÓN — register_full_installation()
+   ========================================================================= */
+function openInstalar(){
+  const form = document.getElementById("instForm");
+  form.reset();
+  document.getElementById("i-currency").value = "PEN";
+  document.getElementById("i-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("i-ffDesign").classList.add("hidden");
+  ["i-ffCondition","i-ffDesign","i-ffUnit","i-ffPosition","i-ffDate"].forEach(f => document.getElementById(f).classList.remove("invalid"));
+  fillUnitSelect(document.getElementById("i-unit"));
+  document.getElementById("i-position").innerHTML = `<option value="">Seleccionar posición…</option>`;
+  document.getElementById("instScrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeInstalar(){
+  document.getElementById("instScrim").classList.remove("open");
+  document.body.style.overflow = "";
+}
+function onConditionChange(){
+  const cond = document.getElementById("i-condition").value;
+  document.getElementById("i-ffDesign").classList.toggle("hidden", cond === "N" || !cond);
+}
+function onInstUnitChange(){
+  fillPositionSelect(document.getElementById("i-position"), document.getElementById("i-unit").value);
+}
+
+async function submitInstalar(ev){
+  ev.preventDefault();
+  const condition = document.getElementById("i-condition").value;
+  const design = document.getElementById("i-design").value.trim();
+  const unitId = document.getElementById("i-unit").value;
+  const position = document.getElementById("i-position").value;
+  const date = document.getElementById("i-date").value;
+
+  const checks = [
+    ["i-ffCondition", !!condition],
+    ["i-ffDesign", condition === "N" || !!design],
+    ["i-ffUnit", !!unitId],
+    ["i-ffPosition", !!position],
+    ["i-ffDate", !!date],
+  ];
+  let ok = true;
+  checks.forEach(([f, valid]) => { document.getElementById(f).classList.toggle("invalid", !valid); if(!valid) ok = false; });
+  if(!ok) return;
+
+  const submitBtn = document.querySelector("#instForm .btn-submit");
+  submitBtn.disabled = true; submitBtn.textContent = "Guardando…";
+  try{
+    const { error } = await RenovaSupabase.supabase.rpc("register_full_installation", {
+      p_casing_code: document.getElementById("i-code").value.trim() || null,
+      p_brand_name: document.getElementById("i-brand").value.trim() || null,
+      p_model_name: document.getElementById("i-model").value.trim() || null,
+      p_size_name: document.getElementById("i-size").value.trim() || null,
+      p_condition: condition,
+      p_unit_id: unitId,
+      p_position: Number(position),
+      p_installed_at: date,
+      p_retread_design: condition === "N" ? null : design,
+      p_otd_mm: document.getElementById("i-otd").value ? Number(document.getElementById("i-otd").value) : null,
+      p_cost: document.getElementById("i-cost").value ? Number(document.getElementById("i-cost").value) : null,
+      p_currency: document.getElementById("i-currency").value.trim() || "PEN",
+      p_odometer: document.getElementById("i-odo").value ? Number(document.getElementById("i-odo").value) : null,
+      p_rtd_mm: document.getElementById("i-rtd").value ? Number(document.getElementById("i-rtd").value) : null,
+      p_notes: document.getElementById("i-notes").value.trim() || null,
+    });
+    if(error) throw error;
+    closeInstalar();
+    await load();
+    showToast("Instalación registrada.");
+  }catch(err){
+    console.warn("Nueva instalación:", err);
+    showToast(esc(err.message || "No se pudo registrar la instalación."), true);
+  }finally{
+    submitBtn.disabled = false; submitBtn.textContent = "Registrar instalación";
+  }
+}
+
+/* =========================================================================
+   RETIRO — register_removal()
+   ========================================================================= */
+let removingLifeCycleId = null;
+function openRetirar(lifeCycleId){
+  const row = INSTALLATIONS.find(r => r.lifeCycleId === lifeCycleId);
+  if(!row) return;
+  removingLifeCycleId = lifeCycleId;
+  document.getElementById("remTarget").textContent = `#${row.casing_code} · ${row.plate} P${row.position} · ${row.brand_name}`;
+  document.getElementById("remForm").reset();
+  document.getElementById("r-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("r-ffCause").classList.add("hidden");
+  document.getElementById("r-ffPhoto").classList.add("hidden");
+  ["r-ffReason","r-ffDate","r-ffCause"].forEach(f => document.getElementById(f).classList.remove("invalid"));
+  document.getElementById("remScrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeRetirar(){
+  document.getElementById("remScrim").classList.remove("open");
+  document.body.style.overflow = "";
+  removingLifeCycleId = null;
+}
+function onReasonChange(){
+  const isDiscard = document.getElementById("r-reason").value === "discard";
+  document.getElementById("r-ffCause").classList.toggle("hidden", !isDiscard);
+  document.getElementById("r-ffPhoto").classList.toggle("hidden", !isDiscard);
+}
+
+async function submitRetirar(ev){
+  ev.preventDefault();
+  const reason = document.getElementById("r-reason").value;
+  const date = document.getElementById("r-date").value;
+  const cause = document.getElementById("r-cause").value;
+  const checks = [
+    ["r-ffReason", !!reason],
+    ["r-ffDate", !!date],
+    ["r-ffCause", reason !== "discard" || !!cause],
+  ];
+  let ok = true;
+  checks.forEach(([f, valid]) => { document.getElementById(f).classList.toggle("invalid", !valid); if(!valid) ok = false; });
+  if(!ok) return;
+
+  const submitBtn = document.querySelector("#remForm .btn-submit");
+  submitBtn.disabled = true; submitBtn.textContent = "Guardando…";
+  try{
+    const { error } = await RenovaSupabase.supabase.rpc("register_removal", {
+      p_life_cycle_id: removingLifeCycleId,
+      p_removed_at: date,
+      p_reason: reason,
+      p_odometer: document.getElementById("r-odo").value ? Number(document.getElementById("r-odo").value) : null,
+      p_rtd_mm: document.getElementById("r-rtd").value ? Number(document.getElementById("r-rtd").value) : null,
+      p_discard_cause: reason === "discard" ? cause : null,
+      p_photo_url: reason === "discard" ? (document.getElementById("r-photo").value.trim() || null) : null,
+      p_notes: document.getElementById("r-notes").value.trim() || null,
+    });
+    if(error) throw error;
+    closeRetirar();
+    await load();
+    showToast("Retiro registrado.");
+  }catch(err){
+    console.warn("Retiro:", err);
+    showToast(esc(err.message || "No se pudo registrar el retiro."), true);
+  }finally{
+    submitBtn.disabled = false; submitBtn.textContent = "Confirmar retiro";
+  }
+}
+
+/* =========================================================================
+   TRASLADO — transfer_tire()
+   ========================================================================= */
+let transferringLifeCycleId = null;
+function openTrasladar(lifeCycleId){
+  const row = INSTALLATIONS.find(r => r.lifeCycleId === lifeCycleId);
+  if(!row) return;
+  transferringLifeCycleId = lifeCycleId;
+  document.getElementById("trTarget").textContent = `#${row.casing_code} · actualmente en ${row.plate} P${row.position}`;
+  document.getElementById("trForm").reset();
+  document.getElementById("t-date").value = new Date().toISOString().slice(0,10);
+  ["t-ffUnit","t-ffPosition","t-ffDate"].forEach(f => document.getElementById(f).classList.remove("invalid"));
+  fillUnitSelect(document.getElementById("t-unit"));
+  document.getElementById("t-position").innerHTML = `<option value="">Seleccionar posición…</option>`;
+  document.getElementById("trScrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeTrasladar(){
+  document.getElementById("trScrim").classList.remove("open");
+  document.body.style.overflow = "";
+  transferringLifeCycleId = null;
+}
+function onTrUnitChange(){
+  fillPositionSelect(document.getElementById("t-position"), document.getElementById("t-unit").value);
+}
+
+async function submitTrasladar(ev){
+  ev.preventDefault();
+  const unitId = document.getElementById("t-unit").value;
+  const position = document.getElementById("t-position").value;
+  const date = document.getElementById("t-date").value;
+  const checks = [
+    ["t-ffUnit", !!unitId],
+    ["t-ffPosition", !!position],
+    ["t-ffDate", !!date],
+  ];
+  let ok = true;
+  checks.forEach(([f, valid]) => { document.getElementById(f).classList.toggle("invalid", !valid); if(!valid) ok = false; });
+  if(!ok) return;
+
+  const submitBtn = document.querySelector("#trForm .btn-submit");
+  submitBtn.disabled = true; submitBtn.textContent = "Guardando…";
+  try{
+    const { error } = await RenovaSupabase.supabase.rpc("transfer_tire", {
+      p_life_cycle_id: transferringLifeCycleId,
+      p_dest_unit_id: unitId,
+      p_dest_position: Number(position),
+      p_moved_at: date,
+      p_odometer_origin: document.getElementById("t-odo-origin").value ? Number(document.getElementById("t-odo-origin").value) : null,
+      p_rtd_mm: document.getElementById("t-rtd").value ? Number(document.getElementById("t-rtd").value) : null,
+      p_odometer_dest: document.getElementById("t-odo-dest").value ? Number(document.getElementById("t-odo-dest").value) : null,
+    });
+    if(error) throw error;
+    closeTrasladar();
+    await load();
+    showToast("Traslado registrado.");
+  }catch(err){
+    console.warn("Traslado:", err);
+    showToast(esc(err.message || "No se pudo trasladar el neumático. Verificá que la posición destino esté libre."), true);
+  }finally{
+    submitBtn.disabled = false; submitBtn.textContent = "Confirmar traslado";
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ closeInstalar(); closeRetirar(); closeTrasladar(); }
 });
 </script>
 </body>

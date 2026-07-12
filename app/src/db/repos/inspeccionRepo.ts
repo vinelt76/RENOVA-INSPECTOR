@@ -1,13 +1,13 @@
 import { getDb, persistDb } from '../sqlite';
 import { generateId, nowIso } from '../sqlite';
 import type { InspeccionCabecera, InspeccionNeumatico } from '../schema';
-import { calcularRtdMovi, calcularIdi, calcularEstadoRtd } from '../../core/calculations';
-
-// Default umbrales - TODO: configurables por empresa (deuda documentada en specs/reglas_fijas_vs_configurables.md)
-const DEFAULT_RTD_CAMBIO = 4;
-const DEFAULT_RTD_PROXIMO = 7;
+import { calcularRtdMovi, calcularIdi, calcularEstadoRtd, calcularIsaPeso } from '../../core/calculations';
+import { umbralRepo } from './umbralRepo';
+import { syncQueueRepo } from './syncQueueRepo';
 
 interface NeumaticoInput {
+  /** Empresa dueña de la cabecera — resuelve el umbral RTD aplicable (task_16). */
+  empresa_id: string;
   cabecera_id: string;
   posicion: number;
   codigo?: string | null;
@@ -60,6 +60,9 @@ export const inspeccionRepo = {
       [id, empresa_id, numero_unidad, fecha, km_odometro, foto_unidad ?? null, now, now, 0]
     );
     await persistDb();
+    // Encolar para el drainer (task_17) — una fila por cabecera alcanza: el push
+    // reenvía la cabecera completa con todas sus posiciones (idempotente).
+    await syncQueueRepo.enqueue('inspeccion_cabecera', id);
     return cabecera;
   },
 
@@ -82,6 +85,7 @@ export const inspeccionRepo = {
       [km_odometro, foto_unidad ?? null, now, id]
     );
     await persistDb();
+    await syncQueueRepo.enqueue('inspeccion_cabecera', id);
   },
 
   async upsertNeumatico(input: NeumaticoInput): Promise<InspeccionNeumatico> {
@@ -103,15 +107,25 @@ export const inspeccionRepo = {
     let rtd_movi: number | null = null;
     let idi: number | null = null;
     let estado_rtd: string | null = null;
+    let rtd_cambio_snap: number | null = null;
+    let rtd_proximo_snap: number | null = null;
+    let rtd_normal_snap: number | null = null;
 
     if (canales.length >= 3 && canales.every(c => c >= 0)) {
+      const umbral = await umbralRepo.getRtd(input.empresa_id, input.medida);
       const [a, b, c, d] = canales;
       rtd_movi = calcularRtdMovi(a, b, c, canales.length >= 4 ? d : undefined);
       idi = calcularIdi(a, b, c, canales.length >= 4 ? d : undefined);
-      estado_rtd = calcularEstadoRtd(rtd_movi, DEFAULT_RTD_CAMBIO, DEFAULT_RTD_PROXIMO);
+      estado_rtd = calcularEstadoRtd(rtd_movi, umbral.rtd_cambio, umbral.rtd_proximo);
+      rtd_cambio_snap = umbral.rtd_cambio;
+      rtd_proximo_snap = umbral.rtd_proximo;
+      rtd_normal_snap = umbral.rtd_normal;
     }
 
     const desecho = await calcularDesecho(input.anomalia ?? null);
+    // isa_peso_snap: snapshot del peso ISA por fila (specs/reglas_negocio.md §6). Solo se
+    // persiste — ISA como score agregado NO está wireado a ningún flujo de UI todavía.
+    const isa_peso_snap = calcularIsaPeso(desecho === 1);
 
     const neumatico: InspeccionNeumatico = {
       id,
@@ -134,12 +148,16 @@ export const inspeccionRepo = {
       idi,
       estado_rtd,
       desecho,
+      rtd_cambio_snap,
+      rtd_proximo_snap,
+      rtd_normal_snap,
+      isa_peso_snap,
       updated_at: now,
     };
 
     await db.run(
-      `INSERT INTO inspeccion_neumatico (id, cabecera_id, posicion, codigo, marca, modelo, condicion, reencauche, medida, r1, r2, r3, r4, presion, tapa_valvula, anomalia, rtd_movi, idi, estado_rtd, desecho, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO inspeccion_neumatico (id, cabecera_id, posicion, codigo, marca, modelo, condicion, reencauche, medida, r1, r2, r3, r4, presion, tapa_valvula, anomalia, rtd_movi, idi, estado_rtd, desecho, rtd_cambio_snap, rtd_proximo_snap, rtd_normal_snap, isa_peso_snap, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(cabecera_id, posicion) DO UPDATE SET
          codigo = excluded.codigo,
          marca = excluded.marca,
@@ -158,6 +176,10 @@ export const inspeccionRepo = {
          idi = excluded.idi,
          estado_rtd = excluded.estado_rtd,
          desecho = excluded.desecho,
+         rtd_cambio_snap = excluded.rtd_cambio_snap,
+         rtd_proximo_snap = excluded.rtd_proximo_snap,
+         rtd_normal_snap = excluded.rtd_normal_snap,
+         isa_peso_snap = excluded.isa_peso_snap,
          updated_at = excluded.updated_at`,
       [
         id, input.cabecera_id, input.posicion,
@@ -165,10 +187,12 @@ export const inspeccionRepo = {
         input.condicion ?? null, input.reencauche ?? null, input.medida ?? null,
         input.r1 ?? null, input.r2 ?? null, input.r3 ?? null, input.r4 ?? null,
         input.presion ?? null, input.tapa_valvula ?? null, input.anomalia ?? null,
-        rtd_movi, idi, estado_rtd, desecho, now,
+        rtd_movi, idi, estado_rtd, desecho,
+        rtd_cambio_snap, rtd_proximo_snap, rtd_normal_snap, isa_peso_snap, now,
       ]
     );
     await persistDb();
+    await syncQueueRepo.enqueue('inspeccion_cabecera', input.cabecera_id);
 
     return neumatico;
   },
@@ -198,6 +222,9 @@ export const inspeccionRepo = {
     const db = await getDb();
     await db.run('DELETE FROM inspeccion_neumatico WHERE cabecera_id = ?', [id]);
     await db.run('DELETE FROM inspeccion_cabecera WHERE id = ?', [id]);
+    // La cabecera ya no existe → sacarla de la cola, o el drainer reintentaría para
+    // siempre contra un id que pushInspeccionToSupabase ya no puede resolver.
+    await db.run('DELETE FROM sync_queue WHERE tabla = ? AND registro_id = ?', ['inspeccion_cabecera', id]);
     await persistDb();
   },
 
@@ -231,13 +258,15 @@ export const inspeccionRepo = {
       await db.run(
         `INSERT OR IGNORE INTO inspeccion_neumatico
            (id, cabecera_id, posicion, codigo, marca, modelo, condicion, reencauche, medida,
-            r1, r2, r3, r4, presion, tapa_valvula, anomalia, rtd_movi, idi, estado_rtd, desecho, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            r1, r2, r3, r4, presion, tapa_valvula, anomalia, rtd_movi, idi, estado_rtd, desecho,
+            rtd_cambio_snap, rtd_proximo_snap, rtd_normal_snap, isa_peso_snap, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           generateId(), destinoId, n.posicion,
           n.codigo, n.marca, n.modelo, n.condicion, n.reencauche, n.medida,
           n.r1, n.r2, n.r3, n.r4, n.presion, n.tapa_valvula, n.anomalia,
-          n.rtd_movi, n.idi, n.estado_rtd, n.desecho, now,
+          n.rtd_movi, n.idi, n.estado_rtd, n.desecho,
+          n.rtd_cambio_snap, n.rtd_proximo_snap, n.rtd_normal_snap, n.isa_peso_snap, now,
         ]
       );
     }

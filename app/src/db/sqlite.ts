@@ -217,8 +217,69 @@ export async function runMigrations(db: SQLiteDBConnection): Promise<void> {
     `);
     await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (2);`);
   }
+  if (currentVersion < 3) {
+    // v3 (task_16): umbrales RTD configurables por empresa+medida (antes hardcodeados
+    // 4/7/8 en inspeccionRepo.ts y pushInspeccion.ts — specs/reglas_negocio.md §2 exige
+    // que vivan en tabla, "NUNCA hardcodear"). medida='*' = default de la empresa.
+    // Snapshot en inspeccion_neumatico: registra CONTRA QUÉ umbral se evaluó estado_rtd,
+    // para que el histórico sea reproducible aunque el umbral de la empresa cambie después.
+    // umbral_presion queda creada pero INERTE: la referencia CALIENTE sigue sin definirse
+    // (specs/reglas_negocio.md §3) — no se lee ni se escribe desde ningún flujo todavía.
+    await db.execute(`
+      CREATE TABLE umbral_rtd (
+        empresa_id TEXT NOT NULL,
+        medida TEXT NOT NULL,
+        rtd_cambio REAL NOT NULL,
+        rtd_proximo REAL NOT NULL,
+        rtd_normal REAL NOT NULL,
+        PRIMARY KEY (empresa_id, medida),
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+      );
+      CREATE TABLE umbral_presion (
+        empresa_id TEXT NOT NULL,
+        medida TEXT NOT NULL,
+        tipo_eje TEXT NOT NULL,
+        presion_frio REAL,
+        delta_alto_pct REAL,
+        delta_bajo_pct REAL,
+        PRIMARY KEY (empresa_id, medida, tipo_eje),
+        FOREIGN KEY (empresa_id) REFERENCES empresa(id)
+      );
+      ALTER TABLE inspeccion_neumatico ADD COLUMN rtd_cambio_snap REAL;
+      ALTER TABLE inspeccion_neumatico ADD COLUMN rtd_proximo_snap REAL;
+      ALTER TABLE inspeccion_neumatico ADD COLUMN rtd_normal_snap REAL;
+      ALTER TABLE inspeccion_neumatico ADD COLUMN isa_peso_snap REAL;
+    `);
+    // Siembra el default '*' (4/7/8, igual al comportamiento previo) para cada empresa
+    // existente, y backfillea el snapshot de filas ya guardadas — evita NULLs en el
+    // re-push de terminarInspeccion.ts.
+    await db.execute(`
+      INSERT INTO umbral_rtd (empresa_id, medida, rtd_cambio, rtd_proximo, rtd_normal)
+        SELECT id, '*', 4, 7, 8 FROM empresa;
+      UPDATE inspeccion_neumatico
+        SET rtd_cambio_snap = 4, rtd_proximo_snap = 7, rtd_normal_snap = 8,
+            isa_peso_snap = CASE WHEN desecho = 1 THEN 5 ELSE 1 END
+        WHERE rtd_movi IS NOT NULL;
+    `);
+    await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (3);`);
+  }
+  if (currentVersion < 4) {
+    // v4 (task_17): sync_queue pasa de stub (nadie la leía/escribía) a cola real con
+    // reintentos. UNIQUE(tabla, registro_id): un solo pendiente por cabecera — reencolar
+    // (nuevo edit) resetea el estado de reintento en vez de acumular filas.
+    // El DROP TABLE sync_queue de v1 sigue gateado a instalación fresca (currentVersion<1)
+    // — NUNCA reintroducir un DROP fuera de ese bloque, borraría trabajo de campo pendiente.
+    await db.execute(`
+      ALTER TABLE sync_queue ADD COLUMN intentos INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE sync_queue ADD COLUMN ultimo_error TEXT;
+      ALTER TABLE sync_queue ADD COLUMN next_retry_at TEXT;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_queue_tabla_registro
+        ON sync_queue (tabla, registro_id);
+    `);
+    await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (4);`);
+  }
   // Plantilla para migraciones futuras:
-  // if (currentVersion < 3) { /* ALTER TABLE / CREATE TABLE incremental */ ; await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (3);`); }
+  // if (currentVersion < 5) { /* ALTER TABLE / CREATE TABLE incremental */ ; await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (5);`); }
 }
 
 export function generateId(): string {

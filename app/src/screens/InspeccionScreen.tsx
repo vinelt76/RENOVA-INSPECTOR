@@ -4,7 +4,8 @@ import { useApp } from '../state/useApp';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
-import { pushInspeccionToSupabase } from '../sync/pushInspeccion';
+import { drainSyncQueue } from '../sync/drainQueue';
+import { waitForUmbralesPendientes } from '../sync/pullUmbrales';
 import { supabaseEnabled } from '../sync/supabaseClient';
 import { MONO, NAVY, ORANGE, YELLOW, GREEN, RED, SCREEN_DARK, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../db/schema';
@@ -19,7 +20,7 @@ const empty = (): Record<string, string> => ({
 
 export default function InspeccionScreen() {
   const { cabeceraId } = useParams<{ cabeceraId: string }>();
-  const { empresa, unidadNumero, unidadConfig, unidadTipoVehiculo, cabeceraId: ctxCabId } = useApp();
+  const { empresa, empresaId, unidadNumero, unidadConfig, unidadTipoVehiculo, cabeceraId: ctxCabId } = useApp();
   const navigate = useNavigate();
   const activeCabId = cabeceraId ?? ctxCabId;
 
@@ -160,9 +161,16 @@ export default function InspeccionScreen() {
     setData(next);
     setStore(s => ({ ...s, [pos]: next }));
     flashSave();
-    if (activeCabId) {
+    if (activeCabId && empresaId) {
+      // Si el pull de umbrales de la empresa (disparado sin esperar al elegirla,
+      // AppContext.setEmpresa) todavía está en vuelo, esperarlo acá (con tope) para
+      // no snapshotear el umbral sembrado 4/7/8 en vez del real de la empresa —
+      // race detectada en code review de task_17 (2026-07-11). Resuelve al toque
+      // si ya terminó (caso normal: buscar unidad + tipear odómetro ya da tiempo).
+      await waitForUmbralesPendientes();
       const toNum = (v: string) => v === '' ? null : Number(v);
       await inspeccionRepo.upsertNeumatico({
+        empresa_id: empresaId,
         cabecera_id: activeCabId, posicion: pos,
         codigo: next.codigo || null, marca: next.marca || null, modelo: next.modelo || null,
         condicion: next.condicion || null, reencauche: next.reencauche || null,
@@ -229,20 +237,18 @@ export default function InspeccionScreen() {
   const allPositionsViewed = TOTAL > 0 && FILAS.every(p => visitedPositions.has(p));
   const canChangeUnit = allPositionsViewed;
 
-  // Envío a Supabase: se dispara (con debounce) después de cada guardado local.
-  // No exige completar todas las posiciones; así el HTML puede reflejar cambios
-  // parciales y correcciones durante la inspección.
-  // No bloquea nada: el guardado local (SQLite, vía `commit`) ya ocurrió antes y
-  // sigue siendo la fuente de verdad si esto falla.
+  // Envío a Supabase: cada guardado local (vía `commit`) ya encoló la cabecera en
+  // sync_queue (inspeccionRepo, task_17); este efecto solo dispara el drenado con
+  // debounce para que se sienta "en vivo" sin esperar al próximo evento `online` o
+  // arranque de app. Si falla, la fila queda en la cola con backoff — no se pierde.
   useEffect(() => {
     if (!supabaseEnabled || !activeCabId) return;
     if (syncRevision === 0) return;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
       setSyncState('sending');
-      const res = await pushInspeccionToSupabase(activeCabId);
-      if (!res.ok) console.warn('Supabase sync error:', res.error ?? (res.skipped ? 'skipped' : 'unknown'));
-      setSyncState(res.ok ? 'ok' : 'error');
+      const res = await drainSyncQueue();
+      setSyncState(res.pendientes === 0 ? 'ok' : 'error');
     }, 1200);
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps

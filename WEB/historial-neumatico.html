@@ -5,29 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RENOVA — Historial de Neumático</title>
 <!--
-  PANTALLA HISTORIAL DE NEUMÁTICO — vista de consulta (SOLO LECTURA).
-  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
+  PANTALLA HISTORIAL DE NEUMÁTICO — vista de consulta (SOLO LECTURA), con
+  datos REALES de Supabase (v_casing_history_summary, v_casing_installations,
+  v_casing_inspections), protegidos por RLS de empresa.
 
-  Es una VISTA APARTE, referenciada por LINK desde Inspección y desde Rendimiento:
+  Es una VISTA APARTE, referenciada por LINK desde Inventario/Inspección/Rendimiento:
   al hacer clic en el # Serie / Código de un neumático, esas pantallas navegan aquí
   pasando el código en la URL:
       historial-neumatico.html?serie=NEU-04533&from=rendimiento
       historial-neumatico.html?serie=NEU-04533&from=inspeccion
-  Un solo historial, una sola lógica, referenciado desde ambos orígenes.
-
-  Fuente de datos: NO es una fuente nueva. Modela lo que en producción ya existe
-  (Instalaciones, Desinstalaciones, Inspecciones, Rendimiento calculado), indexado
-  por # Serie / Código. Todo se filtra por ese código.
+      historial-neumatico.html?serie=NEU-04533&from=inventario
+  Un solo historial, una sola lógica, referenciado desde todos los orígenes.
 
   Reglas respetadas:
-    · Km acumulado = misma fórmula que Rendimiento (km_previo_acumulado + Km Recorrido).
-    · RTD actual por inspección = MIN de los canales de remanente disponibles.
+    · Km acumulado = vida completa del casco (lifetime_km, derivado en SQL a
+      partir de eventos reales; nunca calculado a mano en el navegador).
+    · RTD actual por inspección = rtd_movi_mm ya calculado (MIN de canales).
     · Instalaciones e inspecciones ordenadas de más reciente a más antigua.
     · Vista de SOLO LECTURA: sin gráficos nuevos, sin formularios, sin edición.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
 <style>
   :root{
     /* Paleta RENOVA (DESIGN.md) */
@@ -189,7 +191,7 @@
 <main id="view"></main>
 
 <footer>
-  Datos de demostración · Vista de consulta (solo lectura) · Historial por # Serie / Código.
+  Datos reales de Supabase (RLS por empresa) · Vista de consulta (solo lectura) · Historial por # Serie / Código.
 </footer>
 
 <script>
@@ -202,153 +204,56 @@ const serie  = (params.get("serie") || params.get("codigo") || "").trim();
 const from   = (params.get("from") || "").toLowerCase();
 
 /* =========================================================================
-   DATASET MOCK — historial indexado por # Serie / Código. Modela datos que en
-   producción viven en Instalaciones, Desinstalaciones, Inspecciones e Inventario.
-   Cada entrada:
-     identidad: marca, diseno, medida, estado (N/R1/R2/R3), condicion
-     ubicacion: unidadActual, posActual   (null si no está instalado)
-     src:       fuente para Km acumulado (misma fórmula que Rendimiento) o null
-     instalaciones[]: {placa, desde, hasta(null=montado), km}
-     inspecciones[]:  {fecha, placa, posicion, rtd[canales], psi, obs}
-   Los códigos coinciden con los usados en Inspección y en Rendimiento.
+   DATOS REALES — cargados de Supabase por código de casco (# Serie/Código):
+     v_casing_history_summary → identidad + estado + km/costo de vida
+     v_casing_installations   → unidades donde estuvo instalado (histórico)
+     v_casing_inspections     → inspecciones pasadas
+   HISTORIAL[serie] se llena en load(); misma forma que usaba el mock, para
+   no tocar el render de abajo.
    ========================================================================= */
-const HISTORIAL = {
-  // B-118 · P1 — direccional nueva; una vida, varias inspecciones.
-  "NEU-04182": {
-    marca:"Michelin", diseno:"XZE2 (RIB HWY)", medida:"295/80R22.5", estado:"N", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P1",
-    src:{otd:16, rtdInstalacion:16, rtdActual:11, kmInstalacion:120000, kmActual:160000, rtdRetiro:4, kmPrevioAcumulado:0},
-    instalaciones:[
-      {placa:"B-118", desde:"2023-11-02", hasta:null, km:40000},
-    ],
-    inspecciones:[
-      {fecha:"2024-07-01", placa:"B-118", posicion:"P1", rtd:[7.2,6.9,6.5], psi:98,  obs:"Desgaste irregular en hombro"},
-      {fecha:"2024-04-15", placa:"B-118", posicion:"P1", rtd:[9.4,9.1,8.9], psi:104, obs:"Presión baja corregida"},
-      {fecha:"2024-01-08", placa:"B-118", posicion:"P1", rtd:[13.0,12.8,13.1], psi:118, obs:""},
-    ],
-  },
-  // B-118 · P2 — direccional R1.
-  "NEU-03911": {
-    marca:"Michelin", diseno:"XZE2 (RIB HWY)", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P2",
-    src:{otd:16, rtdInstalacion:16, rtdActual:9, kmInstalacion:120000, kmActual:162000, rtdRetiro:4, kmPrevioAcumulado:118000},
-    instalaciones:[
-      {placa:"B-118", desde:"2024-01-20", hasta:null,         km:42000},
-      {placa:"B-141", desde:"2022-05-11", hasta:"2023-10-30", km:118000},
-    ],
-    inspecciones:[
-      {fecha:"2024-07-01", placa:"B-118", posicion:"P2", rtd:[11.6,11.4,11.2], psi:106, obs:"Corte superficial en flanco (vigilar)"},
-      {fecha:"2024-05-02", placa:"B-118", posicion:"P2", rtd:[12.8,12.5,12.3], psi:108, obs:""},
-    ],
-  },
-  // B-118 · P3 — dual de tracción reencauchada (R1); estuvo antes en otra unidad.
-  "NEU-04533": {
-    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P3",
-    src:{otd:20, rtdInstalacion:20, rtdActual:12, kmInstalacion:60000, kmActual:108000, rtdRetiro:6, kmPrevioAcumulado:140000},
-    instalaciones:[
-      {placa:"B-118", desde:"2024-02-18", hasta:null,          km:48000},
-      {placa:"B-090", desde:"2022-07-05", hasta:"2023-12-10",  km:140000},
-    ],
-    inspecciones:[
-      {fecha:"2024-07-01", placa:"B-118", posicion:"P3", rtd:[10.1,9.9,10.3,9.8], psi:108, obs:""},
-      {fecha:"2024-05-12", placa:"B-118", posicion:"P3", rtd:[11.4,11.0,11.6,10.9], psi:112, obs:"Desgaste parejo"},
-      {fecha:"2024-03-02", placa:"B-118", posicion:"P3", rtd:[13.0,12.7,13.2,12.9], psi:116, obs:""},
-      {fecha:"2023-10-20", placa:"B-090", posicion:"P5", rtd:[9.6,9.1,9.8,9.4], psi:108, obs:"Piedra en ranura (retirada)"},
-    ],
-  },
-  // B-118 · P4 — tracción R3, cerca del retiro.
-  "NEU-02748": {
-    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R3", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P4",
-    src:{otd:20, rtdInstalacion:20, rtdActual:4.1, kmInstalacion:0, kmActual:96000, rtdRetiro:6, kmPrevioAcumulado:320000},
-    instalaciones:[
-      {placa:"B-118", desde:"2023-08-01", hasta:null,          km:96000},
-      {placa:"B-118", desde:"2021-01-15", hasta:"2023-06-20",  km:224000},
-    ],
-    inspecciones:[
-      {fecha:"2024-07-01", placa:"B-118", posicion:"P4", rtd:[4.4,4.1,3.9,4.6], psi:101, obs:"Desgaste al centro · próximo a reencauche"},
-      {fecha:"2024-04-10", placa:"B-118", posicion:"P4", rtd:[6.0,5.7,5.5,6.2], psi:104, obs:""},
-    ],
-  },
-  // B-118 · P5 — tracción R1.
-  "NEU-04102": {
-    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R1", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P5",
-    src:{otd:20, rtdInstalacion:20, rtdActual:10.4, kmInstalacion:60000, kmActual:112000, rtdRetiro:6, kmPrevioAcumulado:150000},
-    instalaciones:[
-      {placa:"B-118", desde:"2024-01-05", hasta:null, km:52000},
-    ],
-    inspecciones:[
-      {fecha:"2024-07-01", placa:"B-118", posicion:"P5", rtd:[10.6,10.4,10.9,10.7], psi:116, obs:""},
-    ],
-  },
-  // B-118 · P6 — tracción R2.
-  "NEU-03650": {
-    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R2", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P6",
-    src:{otd:20, rtdInstalacion:20, rtdActual:6.9, kmInstalacion:0, kmActual:84000, rtdRetiro:6, kmPrevioAcumulado:260000},
-    instalaciones:[
-      {placa:"B-118", desde:"2023-09-12", hasta:null, km:84000},
-      {placa:"B-204", desde:"2022-02-01", hasta:"2023-07-15", km:176000},
-    ],
-    inspecciones:[
-      {fecha:"2024-07-01", placa:"B-118", posicion:"P6", rtd:[7.4,7.0,6.9,7.2], psi:104, obs:""},
-      {fecha:"2024-03-20", placa:"B-118", posicion:"P6", rtd:[9.1,8.8,8.6,9.0], psi:106, obs:""},
-    ],
-  },
-  // B-204 · P3 — tracción reencauchada 2 veces (R2).
-  "NEU-06220": {
-    marca:"Michelin", diseno:"XDN2 (TRACCIÓN)", medida:"295/80R22.5", estado:"R2", condicion:"Instalado",
-    unidadActual:"B-204", posActual:"P3",
-    src:{otd:20, rtdInstalacion:20, rtdActual:11, kmInstalacion:0, kmActual:63000, rtdRetiro:6, kmPrevioAcumulado:150000},
-    instalaciones:[
-      {placa:"B-204", desde:"2024-01-15", hasta:null,         km:63000},
-      {placa:"B-204", desde:"2022-09-01", hasta:"2023-11-30", km:150000},
-    ],
-    inspecciones:[
-      {fecha:"2024-06-28", placa:"B-204", posicion:"P3", rtd:[11.0,10.6,11.2,10.8], psi:110, obs:"Desgaste de hombro leve"},
-      {fecha:"2024-04-05", placa:"B-204", posicion:"P3", rtd:[13.4,13.0,13.6,13.2], psi:112, obs:""},
-    ],
-  },
-  // B-118 · P7 — recién instalado, SIN inspecciones aún (demuestra estado vacío 2).
-  "NEU-05007": {
-    marca:"Michelin", diseno:"XZE2 (LIBRE)", medida:"295/80R22.5", estado:"N", condicion:"Instalado",
-    unidadActual:"B-118", posActual:"P7",
-    src:{otd:16, rtdInstalacion:16, rtdActual:16, kmInstalacion:116000, kmActual:116000, rtdRetiro:4, kmPrevioAcumulado:0},
-    instalaciones:[
-      {placa:"B-118", desde:"2024-06-30", hasta:null, km:0},
-    ],
-    inspecciones:[],
-  },
-  // Neumático en retén con inspecciones pero SIN instalación asociada (estado vacío 3).
-  "NEU-05108": {
-    marca:"Michelin", diseno:"XZE2 (LIBRE)", medida:"295/80R22.5", estado:"R1", condicion:"En retén",
-    unidadActual:null, posActual:null,
-    src:null,
-    instalaciones:[],
-    inspecciones:[
-      {fecha:"2024-06-15", placa:"—", posicion:"—", rtd:[8.0,7.7,7.9], psi:null, obs:"Inspección de retén · pendiente de montaje"},
-    ],
-  },
-};
+let HISTORIAL = {};
 
-/* =========================================================================
-   LÓGICA — Km acumulado con la MISMA fórmula que Rendimiento.
-   ========================================================================= */
-function kmAcumulado(src){
-  if(!src) return null;
-  const ok = src.rtdInstalacion != null && src.kmInstalacion != null &&
-             src.kmActual != null && src.otd != null;
-  if(!ok) return null;
-  const kmRecorrido = src.kmActual - src.kmInstalacion;   // Km Actual − Km Instalación
-  return (src.kmPrevioAcumulado || 0) + kmRecorrido;       // previo + Km Recorrido
+function condicionDeEstado(inventoryStatus){
+  if(inventoryStatus === "installed") return "Instalado";
+  if(inventoryStatus === "in_inventory") return "En retén";
+  if(inventoryStatus === "discarded") return "Descartado";
+  return "—";
 }
-function minCanal(arr){
-  if(!Array.isArray(arr)) return null;
-  const vals = arr.filter(v => v != null);
-  return vals.length ? Math.min(...vals) : null;
+
+async function loadHistorial(code){
+  const [summaryRows, instRows, inspRows] = await Promise.all([
+    RenovaSupabase.fetchView("v_casing_history_summary", { select: "*", code: `eq.${code}` }),
+    RenovaSupabase.fetchView("v_casing_installations", { select: "*", casing_code: `eq.${code}`, order: "installed_at.desc" }),
+    RenovaSupabase.fetchView("v_casing_inspections", { select: "*", casing_code: `eq.${code}`, order: "inspected_on.desc" }),
+  ]);
+  const s = summaryRows[0];
+  if(!s) return null;
+  return {
+    marca: s.brand_name,
+    diseno: s.model_name,
+    medida: s.size_name,
+    estado: s.condition,
+    condicion: condicionDeEstado(s.inventory_status),
+    unidadActual: s.installed_plate || null,
+    posActual: s.installed_position != null ? `P${s.installed_position}` : null,
+    lifetimeKm: s.lifetime_km != null ? Number(s.lifetime_km) : null,
+    lastRtd: s.last_rtd_mm != null ? Number(s.last_rtd_mm) : null,
+    lastPressure: s.last_pressure_psi != null ? Number(s.last_pressure_psi) : null,
+    lastInspectionOn: s.last_inspection_on || null,
+    instalaciones: instRows.map(i => ({
+      placa: i.plate, desde: i.installed_at,
+      hasta: i.removed ? i.removed_at : null,
+      km: i.km_run != null ? Number(i.km_run) : null,
+    })),
+    inspecciones: inspRows.map(i => ({
+      fecha: i.inspected_on, placa: i.plate, posicion: i.position_number != null ? `P${i.position_number}` : "—",
+      rtdMovi: i.rtd_movi_mm != null ? Number(i.rtd_movi_mm) : null,
+      psi: i.pressure_psi != null ? Number(i.pressure_psi) : null,
+      obs: i.anomaly || "",
+    })),
+  };
 }
+
 
 /* ───────── Formato ───────── */
 const nf = new Intl.NumberFormat("es-PE");
@@ -413,11 +318,11 @@ function render(){
   const inspecciones  = (h.inspecciones || []).slice()
     .sort((a,b) => String(b.fecha||"").localeCompare(String(a.fecha||"")));
 
-  // Resumen rápido.
-  const kmAcum   = kmAcumulado(h.src);
+  // Resumen rápido. Km acumulado = vida completa del casco (SQL, no se recalcula acá).
+  const kmAcum   = h.lifetimeKm;
   const lastInsp = inspecciones[0] || null;
-  const rtdMin   = lastInsp ? minCanal(lastInsp.rtd) : (h.src ? h.src.rtdActual : null);
-  const psi      = lastInsp ? lastInsp.psi : null;
+  const rtdMin   = h.lastRtd;
+  const psi      = h.lastPressure;
 
   const kmAcumStr = kmAcum != null
     ? `<span class="s-value num">${fmtKm(kmAcum)}<small>km</small></span>`
@@ -449,7 +354,7 @@ function render(){
       <div class="th-section-title">Resumen rápido</div>
       <div class="th-summary">
         <div class="th-stat"><div class="s-label">Km acumulado</div>${kmAcumStr}</div>
-        <div class="th-stat"><div class="s-label">Última inspección</div><span class="s-value num">${fmtDate(lastInsp && lastInsp.fecha)}</span></div>
+        <div class="th-stat"><div class="s-label">Última inspección</div><span class="s-value num">${fmtDate(h.lastInspectionOn)}</span></div>
         <div class="th-stat"><div class="s-label">RTD actual (mín.)</div>${rtdStr}</div>
         <div class="th-stat"><div class="s-label">PSI actual</div>${psiStr}</div>
         <div class="th-stat"><div class="s-label">Unidad actual</div><span class="s-value">${h.unidadActual || "—"}</span></div>
@@ -482,7 +387,7 @@ function render(){
 
   // Inspecciones pasadas — RTD = MIN de canales de remanente.
   const inspList = inspecciones.map(ins => {
-    const rtd = minCanal(ins.rtd);
+    const rtd = ins.rtdMovi;
     const obs = ins.obs ? `<div class="th-obs">${ins.obs}</div>` : "";
     return `
       <div class="th-insp">
@@ -508,7 +413,37 @@ function render(){
   mount.innerHTML = backBtn + head + identity + resumen + instBlock + inspBlock;
 }
 
-render();
+function renderLoading(){
+  document.getElementById("view").innerHTML = `
+    <button class="th-back" type="button" onclick="goBack()">Volver</button>
+    <div class="th-head"><div class="th-title">Historial de Neumático</div><div class="th-serie num">${serie || "—"}</div></div>
+    <div class="th-section"><div class="th-empty">Cargando historial desde Supabase…</div></div>`;
+}
+
+async function init(){
+  if(!serie){
+    HISTORIAL = {};
+    render();
+    return;
+  }
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    document.getElementById("view").innerHTML =
+      `<div class="th-section"><div class="th-empty">Supabase no configurado. No se puede consultar el historial.</div></div>`;
+    return;
+  }
+  renderLoading();
+  try{
+    await RenovaSupabase.requireAuth();
+    const h = await loadHistorial(serie);
+    HISTORIAL = h ? { [serie]: h } : {};
+    render();
+  }catch(err){
+    console.warn("Historial: no se pudo cargar Supabase.", err);
+    document.getElementById("view").innerHTML =
+      `<div class="th-section"><div class="th-empty">No se pudo cargar el historial desde Supabase.</div></div>`;
+  }
+}
+onRenovaSupabaseReady(init);
 </script>
 </body>
 </html>

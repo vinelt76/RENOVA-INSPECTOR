@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Open kitty here",
+      "type": "shell",
+      "command": "kitty --start-as=fullscreen --detach --directory \"${workspaceFolder}\"",
+      "presentation": {
+        "reveal": "never",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

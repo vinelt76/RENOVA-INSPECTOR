@@ -790,3 +790,214 @@ Notas:
 - `GrillaBody` quedó archivado en `app/_archivo/` — ningún task del lote lo toca.
 - El APK se regenera recién con 12+11+13 aprobados (14 no lo bloquea: sin `.env` la app es
   idéntica a la local).
+
+> ⚠️ **Nota de auditoría (2026-07-11):** las filas de task_13/task_14 arriba dicen `PENDIENTE`,
+> pero el código actual (`app/src/sync/`, migraciones `supabase/migrations/2026070*` con RLS,
+> dashboards, `save_inspection`, `get_unidad_preload`) muestra que el sync con Supabase YA está
+> implementado y en uso (ver memoria de sesión "run6" / `docs/ESTUDIAR`). Esta tabla quedó
+> desactualizada respecto al código — no se corrige acá para no reescribir historial sin
+> confirmar con Facundo qué se dio por bueno y qué no. El Lote 6 de abajo se escribió leyendo el
+> código real, no esta tabla.
+
+---
+
+# 🆕 LOTE 6 — Productizar el contrato de datos (2026-07-11)
+
+> Specs escritos a partir de una auditoría de "qué falta para pasar de demo a producto de
+> campo": umbrales configurables, metadata real de unidad, cola de sync durable, cobertura de
+> tests. Ver `/home/facundo/.claude/plans/what-can-be-better-staged-thacker.md` para el contexto
+> completo de la decisión.
+
+Orden de ejecución: 15 → 16 → 17 → 18 (cada uno depende del anterior aprobado).
+
+| Task | Título | Estado | Depende de |
+|---|---|---|---|
+| `task_15_preload_metadata_real.md` | RPC `get_unidad_preload` devuelve `vehicle_type`/`notation` reales; se borra `inferConfig()` y el `'BUS'` hardcodeado | **APROBADO ✓** | — |
+| `task_16_umbrales_configurables.md` | Umbrales RTD por empresa/medida desde `rtd_thresholds` (server) + `umbral_rtd` (local) + snapshot reproducible en `inspeccion_neumatico` | **APROBADO ✓** | 15 |
+| `task_17_sync_queue_durable.md` | `sync_queue` real: encolado en cada guardado + drainer en background con reintentos/backoff | **LISTO ✓** | 16 |
+| `task_18_tests_repo_sync_bundle.md` | Tests de `inspeccionRepo`/`pushInspeccion`/`drainQueue` + `manualChunks` en Vite | **PENDIENTE** | 16, 17 |
+
+Notas:
+- El estado de presión (CALIENTE) sigue **ABIERTO** — ningún task de este lote lo implementa;
+  task_16 crea la tabla `umbral_presion` pero la deja explícitamente inerte.
+- task_16 reusa la tabla `rtd_thresholds` **ya aplicada** en
+  `supabase/migrations/20260706120000_demo_vertical_slice.sql` — no crea umbrales nuevos
+  server-side, solo los pull-ea al local y los persiste como snapshot por fila.
+- task_17 verificó que el `DROP TABLE sync_queue` de `sqlite.ts` ya está gateado a instalación
+  fresca (`currentVersion < 1`) — no es la fuente de pérdida de datos que parecía a primera vista;
+  igual la regla dura de no reintroducir un DROP fuera de ese bloque queda escrita en el spec.
+
+### task_15 — LISTO (2026-07-11)
+
+Ejecutado directo (ya sin flujo opencode, ver CLAUDE.md).
+
+- Migración aplicada en el proyecto real (`fbxupwwgiebhlciqftpw`) y versionada en
+  `supabase/migrations/20260711000000_preload_rpc_vehicle_metadata.sql`: `get_unidad_preload`
+  ahora devuelve `vehicle_type`/`notation` (join a `vehicle_configs` vía `units.config_id`).
+- `readInspecciones.ts`: `UnidadPreloadRow` con los 2 campos nuevos.
+- `preloadUnidadFromSupabase.ts`: se borró `inferConfig()` como camino normal — ahora usa
+  `head.vehicle_type`/`head.notation`; queda un fallback (`inferConfigFallback` + `'BUS'`) SOLO si
+  el servidor no devolviera el dato, con `console.warn`.
+- `npm run build` / `npm test` (23 verdes) / `npm run lint` verdes.
+- **Smoke test en navegador** (Playwright headless contra `npm run dev` + Supabase real):
+  empresa MÓVIL BUS → unidad 5028 → confirmado en la respuesta del RPC `vehicle_type:"BUS"`,
+  `notation:"2-4-2"`; la pantalla de inspección cargó las 8 posiciones correspondientes
+  (`1/8 · DIR·Izq`); cero errores/warnings de consola, sin caer al fallback adivinado.
+  Screenshots: `/tmp/t15_3_search.png`, `/tmp/t15_4_inspeccion.png`.
+
+### task_16 — LISTO (2026-07-11)
+
+Ejecutado directo (ya sin flujo opencode, ver CLAUDE.md).
+
+- Migración local `sqlite.ts` v3: tablas `umbral_rtd` (empresa+medida) y `umbral_presion`
+  (creada pero INERTE — nadie la lee/escribe, CALIENTE sigue sin definir), columnas snapshot
+  (`rtd_cambio_snap`/`rtd_proximo_snap`/`rtd_normal_snap`/`isa_peso_snap`) en
+  `inspeccion_neumatico`, con siembra de `'*' = 4/7/8` por empresa y backfill de filas
+  existentes.
+- `app/src/db/repos/umbralRepo.ts` nuevo (`getRtd` con fallback empresa→`'*'`→constantes
+  históricas; `upsertRtd`).
+- `inspeccionRepo.upsertNeumatico` ahora recibe `empresa_id`, resuelve el umbral real y
+  persiste el snapshot; se borraron `DEFAULT_RTD_CAMBIO`/`DEFAULT_RTD_PROXIMO`. `clonarNeumaticos`
+  copia el snapshot de origen.
+- `pushInspeccion.ts`: `rtd_for_change`/`rtd_next_change`/`rtd_normal` salen del snapshot de la
+  fila; se borraron las constantes `RTD_PARA_CAMBIO`/`RTD_PROXIMO_CAMBIO`/`RTD_NORMAL`.
+- Supabase: nuevo RPC `get_umbrales_rtd` (`supabase/migrations/20260711010000_...sql`, aplicado en
+  `fbxupwwgiebhlciqftpw`) sobre la tabla `rtd_thresholds` ya existente; nuevo
+  `app/src/sync/pullUmbrales.ts` disparado desde `AppContext.setEmpresa` (best-effort, no bloquea
+  navegación).
+- `specs/reglas_fijas_vs_configurables.md` actualizado: la deuda de umbrales RTD queda cerrada.
+- `npm run build` (`tsc -b` + vite) / `npm test` (23 verdes) / `npm run lint` verdes.
+- **Smoke test en navegador** (Playwright headless contra `npm run dev` + Supabase real):
+  se cambió temporalmente `rtd_thresholds` de MÓVIL BUS a 6/9 en el backend real, se seleccionó
+  la empresa (RPC `get_umbrales_rtd` confirmado devolviendo 6/9), se editó R1 de una posición con
+  `rtd_movi=8` → el payload de `save_inspection` capturado por red mostró
+  `rtd_for_change:6, rtd_next_change:9, rtd_status:"Próximo a Reencauche"` (antes habría sido
+  "Normal" con 4/7) — confirma que el umbral cambia el resultado **sin recompilar**. Se recargó la
+  página y el valor editado persistió. Cero errores de consola en todo el recorrido. Se revirtió
+  el umbral de demo a 4/7 y se borró la inspección de prueba insertada en Supabase para no
+  ensuciar los dashboards reales.
+
+### task_17 — LISTO (2026-07-11)
+
+Ejecutado directo (ya sin flujo opencode, ver CLAUDE.md).
+
+- Migración local `sqlite.ts` v4: `sync_queue` gana `intentos`/`ultimo_error`/`next_retry_at` +
+  `UNIQUE(tabla, registro_id)` (un solo pendiente por cabecera; reencolar resetea el estado de
+  reintento en vez de acumular filas). El `DROP TABLE sync_queue` de v1 sigue gateado a
+  instalación fresca — verificado que v4 no lo toca.
+- `app/src/db/repos/syncQueueRepo.ts` (nuevo): `enqueue` (upsert por `tabla+registro_id`),
+  `pendientes` (`enviado=0` y `next_retry_at` vencido o NULL, orden `created_at`),
+  `marcarEnviado`, `marcarError`.
+- `app/src/sync/drainQueue.ts` (nuevo): `drainSyncQueue()` procesa cada fila pendiente contra
+  `pushInspeccionToSupabase` (sin cambios en su firma/payload, congelado por task_16); éxito →
+  `enviado=1`; fallo → `intentos+1` + backoff `min(2^intentos, 300)`s; una fila aislada no bloquea
+  al resto. `skipped` (Supabase no configurado) no cuenta como error.
+- Encolado: `inspeccionRepo.crearCabecera`/`actualizarCabecera`/`upsertNeumatico` encolan la
+  cabecera (una fila por cabecera, no por neumático) tras cada escritura exitosa;
+  `borrarCabecera` saca la fila de la cola para no reintentar contra un id ya inexistente.
+- Disparadores: `AppContext` drena al montar la app y al recuperar el evento `online`;
+  `InspeccionScreen` mantiene su debounce de 1200ms pero ahora llama `drainSyncQueue()` en vez de
+  pushear directo (el guardado local ya encoló).
+- `terminarInspeccionesDelDia` (`terminarInspeccion.ts`) fuerza un drenado inmediato y solo borra
+  localmente las cabeceras cuya fila en `sync_queue` quedó `enviado=1` (o no tenía fila pendiente)
+  — mantiene la garantía de "solo borro lo confirmado en la nube".
+- `pushInspeccionToSupabase` no cambió de firma; sigue siendo llamable a mano para depurar.
+- Tests nuevos (10, total 33 verdes): `app/src/sync/drainQueue.test.ts` (drenado exitoso, fallo +
+  backoff exponencial con tope 300s, un fallo no bloquea al resto, `skipped` no cuenta como
+  error) + `app/src/db/repos/inspeccionRepo.test.ts` (encolado en `crearCabecera`/
+  `actualizarCabecera`/`upsertNeumatico`, `borrarCabecera` limpia la cola) — ambos con `getDb`/
+  `syncQueueRepo`/`umbralRepo`/`pushInspeccion` mockeados (sin depender de una conexión SQLite
+  real, que no corre en el entorno de test de Node).
+- `npm run build` / `npm test` (33 verdes) / `npm run lint` verdes.
+- **Smoke test en navegador** (Playwright headless contra `npm run dev` + Supabase real, `.env.local`):
+  en vez de cortar la red del navegador entero (que también bloquea la recarga de `localhost` en
+  Playwright), se interceptó y abortó específicamente el endpoint `rest/v1/rpc/save_inspection`
+  para simular "servidor inalcanzable a mitad del intento" sin afectar la navegación:
+  1. Con el endpoint bloqueado, se editó R1 de una posición → 2 intentos de push fallidos
+     capturados por la intercepción; indicador de UI pasó a "⚠ ERROR DE ENVÍO"; la fila quedó en
+     `sync_queue` con `enviado=0` (inferido: el drainer no lanza excepción y el guardado local ya
+     había ocurrido antes del intento de red).
+  2. Recarga de página con la fila aún pendiente y el bloqueo activo: la app vuelve a montar sin
+     crashear, sigue en la misma URL de inspección, sin errores de consola nuevos aparte del
+     `ERR_CONNECTION_FAILED` esperado de la intercepción.
+  3. Se restauró el endpoint y se disparó el evento `online` manualmente
+     (`window.dispatchEvent(new Event('online'))`): tras esperar el backoff acumulado, 2 llamadas
+     a `save_inspection` se completaron exitosamente (drenado automático sin acción del usuario).
+  4. Cero errores de consola de la app en todo el recorrido (solo los 2 `ERR_CONNECTION_FAILED`
+     esperados, generados por la intercepción deliberada, no por un bug).
+  Limitación de esta corrida: no se verificó visualmente el dashboard de Supabase para confirmar
+  la fila resultante (se infirió éxito por las 2 llamadas de red completadas sin abortar); si se
+  quiere blindar más, repetir capturando la respuesta HTTP 200 o consultando la tabla directo.
+
+### task_17 — FIX post-review (2026-07-11): 2 bugs P1 de pérdida de datos
+
+Doble code review (Codex, dos corridas independientes) sobre el diff de task_17 encontró 6
+hallazgos; 5 eran reales (no falta de contexto de los tasks). Se corrigieron los 2 de severidad
+P1 (pueden borrar una inspección sin haberla confirmado en la nube). Los otros 3 (P2) quedan
+pendientes — ver lista al final de esta entrada.
+
+- **Bug 1 — `terminarInspeccion.ts` trataba "sin fila en `sync_queue`" como "ya sincronizada".**
+  Cualquier cabecera creada ANTES de esta migración (dato real de lotes 1-6, ya en producción)
+  nunca pasa por `crearCabecera`/`upsertNeumatico` de nuevo, así que nunca tiene fila en la cola.
+  El código borraba esas cabeceras sin haberlas pusheado nunca. **Fix:** si no hay fila,
+  `terminarInspeccionesDelDia` ahora encola la cabecera y fuerza un push directo antes de decidir;
+  solo borra si ese push (o una fila `enviado=1` previa) confirma el envío.
+- **Bug 2 — race entre un push en vuelo y una edición nueva del inspector.** El `id` de la fila de
+  `sync_queue` es estable entre reencolados (el `ON CONFLICT` no lo toca), así que si el inspector
+  editaba un campo mientras el push anterior seguía en la red, `marcarEnviado(row.id)` podía marcar
+  `enviado=1` sobre una fila que ya había sido "rearmada" a pendiente por la edición nueva — esa
+  edición quedaba sin confirmar y luego `terminarInspeccionesDelDia` la podía borrar creyendo que
+  estaba sincronizada. **Fix:** `syncQueueRepo.marcarEnviado`/`marcarError` ahora reciben también
+  el `created_at` leído por el llamador antes del push y condicionan el `UPDATE` a que siga
+  coincidiendo (`enqueue` siempre reescribe `created_at` al reencolar) — si no coincide, el `UPDATE`
+  no toca nada y la fila queda pendiente para el próximo drenado real.
+- Tests nuevos (7, total 40 verdes): `app/src/db/repos/syncQueueRepo.test.ts` (guard de
+  `created_at` en `marcarEnviado`/`marcarError`, `enqueue` reescribe `created_at`) +
+  `app/src/sync/terminarInspeccion.test.ts` (borra con `enviado=1`; NO borra si el push directo de
+  una cabecera legacy falla; borra legacy solo tras push directo exitoso; NO borra con fila
+  pendiente sin enviar).
+- `npm run build` / `npm test` (40 verdes) / `npm run lint` verdes.
+- **Pendiente (P2, no bloqueante, no se tocó en este fix):**
+  1. `preloadUnidadFromSupabase.ts` reencola y reenvía datos que ya vinieron de Supabase (solo la
+     primera vez que se precarga localmente una unidad) — desperdicia una llamada y bumpea
+     `updated_at` sin cambio real; falta un camino de escritura que no encole para datos espejo.
+  2. `pullUmbrales.ts:31-33` mapea `rtd_removal_mm` (umbral de retiro proyectado por km) a
+     `rtd_normal` (referencia histórica informativa 8mm) — son conceptos distintos en
+     `rtd_thresholds`. **Verificado (2026-07-11) que es inofensivo en la práctica:** `rtd_normal`
+     (junto con `rtd_for_change`/`rtd_next_change`) en `inspection_items` es una columna que
+     `save_inspection()` solo escribe — grep sobre todas las migraciones confirma que ningún
+     dashboard/vista la lee después. El estado en vivo (`fleet_status`, etc.) se recalcula server-side
+     desde `rtd_thresholds` vía `fn_effective_rtd_thresholds`, independiente de este snapshot. No
+     afecta ni el cálculo de estado RTD ni el desecho — bajado de prioridad, corregir cuando se toque
+     `pullUmbrales.ts` por otro motivo, no antes.
+  3. `sqlite.ts` migración v3: el backfill de `isa_peso_snap` solo cubre filas con
+     `rtd_movi IS NOT NULL`, pero `isa_peso_snap` depende solo de `desecho` — filas viejas sin RTD
+     capturado quedan con `isa_peso_snap = NULL`.
+  4. `drainQueue.ts` no programa un reintento por sí solo al vencer `next_retry_at`; depende de que
+     ocurra otro disparador (mount, evento `online`, nuevo guardado). Cumple el spec tal como está
+     escrito (los 3 disparadores documentados), pero en campo puede dejar una fila pendiente más
+     tiempo del esperado si el inspector no vuelve a tocar nada tras recuperar señal.
+
+### task_16/17 — FIX post-review #2 (2026-07-11): race de `pullUmbrales()` con el primer guardado
+
+Un segundo code review sobre el mismo diff encontró un P1 nuevo (no relacionado a los 2 de la
+entrada anterior): `AppContext.setEmpresa` dispara `pullUmbrales()` sin esperarlo (a propósito,
+para no bloquear la navegación si no hay red). Si un inspector llega rápido a la pantalla de
+inspección y guarda el primer neumático antes de que ese RPC resuelva, ese guardado snapshotea el
+umbral sembrado (4/7/8) en vez del real de la empresa — dentro de la misma inspección, los
+primeros neumáticos podrían quedar evaluados (`estado_rtd`) con un umbral distinto al de los
+siguientes. A diferencia del hallazgo de `rtd_normal` (ver arriba), este SÍ afecta un cálculo real
+que ve el inspector, así que se corrigió.
+
+- **Fix:** `pullUmbrales.ts` ahora trackea el pull en vuelo (`inFlight`) y expone
+  `waitForUmbralesPendientes(timeoutMs = 3000)` — no bloquea nada por sí sola: si no hay pull en
+  curso resuelve al toque; si hay uno, espera a que termine con un tope de 3s (nunca cuelga si no
+  hay red o el pull nunca resuelve).
+- `InspeccionScreen.tsx` (`commit()`, el único call site de `inspeccionRepo.upsertNeumatico`) llama
+  `await waitForUmbralesPendientes()` justo antes de guardar. La navegación entre pantallas sigue
+  sin bloquearse — solo el guardado real espera, y en el flujo normal (buscar unidad + tipear
+  odómetro) el pull ya terminó hace rato, así que no se nota.
+- Tests nuevos (4, total 44 verdes): `app/src/sync/pullUmbrales.test.ts` — resuelve al toque sin
+  pull en vuelo; espera a que el pull en curso termine; nunca bloquea indefinidamente (corta al
+  timeout); un pull fallido no deja el wait colgado para el siguiente guardado.
+- `npm run build` / `npm test` (44 verdes) / `npm run lint` verdes.

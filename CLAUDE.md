@@ -37,38 +37,27 @@ calcula salud y (a futuro) genera reportes Excel por empresa.
 ├── reference/                ← calculations.py + golden test (referencia para portar a TS)
 ├── implementation_plan.md    ← roadmap de features + modelo de datos (stack reemplazado)
 ├── UI/                       ← prototipos React originales (referencia visual)
-├── tasks_opencode/           ← task specs + WORKFLOW.md + STATE.md (ver "Cómo trabajamos")
-└── app/                      ← LA APP (React + Vite + Capacitor) — la construye opencode
+├── tasks_opencode/           ← historial de specs + STATE.md (bitácora de trabajo, ver abajo)
+└── app/                      ← LA APP (React + Vite + Capacitor)
 ```
 
-## Cómo trabajamos — flujo de dos IAs
+## Cómo trabajamos
 
-El desarrollo se reparte entre dos agentes. **Detalle operativo en `tasks_opencode/WORKFLOW.md`.**
+Claude Code investiga, planifica y ejecuta directo sobre el repo — ya no hay un agente ejecutor
+separado (el flujo previo de dos IAs vía `opencode` quedó discontinuado; `tasks_opencode/`
+se conserva como bitácora histórica y se puede seguir usando para registrar specs/estado de
+trabajo grande, pero no es obligatorio por task).
 
-1. **Facundo** define la intención.
-2. **Opus** (este agente) investiga, escribe el plan y **task specs autocontenidos** en
-   `tasks_opencode/` (un `.md` numerado por task: objetivo · contexto/archivos · pasos ·
-   criterios de aceptación · cómo verificar · fuera de alcance).
-3. **opencode** (agente ejecutor) lee `tasks_opencode/`, implementa y marca estado en `STATE.md`.
-4. **Opus** revisa el diff contra los criterios de aceptación: aprueba o pide correcciones.
-5. Se itera hasta verde; recién entonces se avanza al siguiente lote (y, cuando aplique, se
-   genera el APK).
-
-Reglas del flujo:
-- **opencode ejecuta tasks; no decide arquitectura.** Si un task es ambiguo, se corrige el spec,
-  no se improvisa.
-- **Opus es el dueño de la gobernanza:** `CLAUDE.md`, `specs/`, `decisions/` y los task specs los
-  escribe Opus, no opencode.
+Reglas de trabajo:
 - **Spec-first.** Antes de codear una feature, verificar contra `/specs`. Si la spec es ambigua,
   **preguntar — no asumir**.
-- **Smoke test en navegador OBLIGATORIO** antes de marcar `LISTO PARA REVIEW`, para todo task que
-  toque UI o el camino web de SQLite. Verde en `build`/`test`/`lint` **NO alcanza** (justo así se
-  coló el bug de "empresas vacías": todo compilaba, pero nadie corrió el flujo en el navegador).
-  opencode debe: (1) `npm run dev` y recorrer el flujo afectado; (2) confirmar **cero errores en la
-  consola** del navegador (sobre todo init de SQLite/seed) y que los datos **se ven** (no listas
-  vacías); (3) si hay persistencia, capturar algo y **recargar** verificando que sobrevive; (4)
-  anotar en `STATE.md` qué recorrió y el resultado. Opus **no aprueba** un task de UI sin esa
-  evidencia. (No aplica a tasks de lógica pura cubiertos por unit tests, p.ej. el motor de cálculo.)
+- **Smoke test en navegador OBLIGATORIO** antes de dar por terminado cualquier cambio que toque UI
+  o el camino web de SQLite. Verde en `build`/`test`/`lint` **NO alcanza** (justo así se coló el
+  bug de "empresas vacías": todo compilaba, pero nadie corrió el flujo en el navegador). Recorrer:
+  (1) `npm run dev` y el flujo afectado; (2) confirmar **cero errores en la consola** del navegador
+  (sobre todo init de SQLite/seed) y que los datos **se ven** (no listas vacías); (3) si hay
+  persistencia, capturar algo y **recargar** verificando que sobrevive. (No aplica a cambios de
+  lógica pura cubiertos por unit tests, p.ej. el motor de cálculo.)
 
 ## Reglas de negocio — NUNCA negociar
 
@@ -99,7 +88,6 @@ el código está mal.
 ## Comandos
 
 ```bash
-# App (se completan cuando opencode cree app/)
 cd app && npm install
 cd app && npm run dev          # navegador (SQLite fallback web)
 cd app && npm run build
@@ -128,6 +116,26 @@ pull de catálogo). Contexto de retoma en `tasks_opencode/RETOMA_2026-07-01.md`.
 
 Responder en **español**. Términos de dominio en español (medida, presión, desecho, remanente,
 RTD MOVI, eje, posición).
+
+## Cómo explicar fixes y bugs a Facundo
+
+Facundo no es programador — explicarle un bug/fix en términos de código (nombres de archivo,
+funciones, "race condition", "snapshot", etc.) no sirve. Para CUALQUIER fix o bug, explicar en
+castellano llano, sin jerga técnica, con esta estructura:
+
+1. **Qué pasaba antes** (el problema, en términos de la app real: qué vería o no vería un
+   inspector, qué dato se guardaría mal, etc.) — no en términos de código.
+2. **Qué se cambió** para arreglarlo, en una idea simple (una analogía o comparación cotidiana
+   ayuda más que precisión técnica).
+3. **Cuándo importa de verdad** — con qué frecuencia pasa, en qué caso concreto se nota, y en qué
+   casos NO pasa nada (para que no piense que todo se rompe todo el tiempo).
+4. Si el fix pudo afectar velocidad/experiencia: decirlo explícitamente y con la magnitud real
+   (ej. "solo tarda de más en este caso puntual, como mucho X segundos").
+
+Nada de "P1"/"P2", nombres de archivo, ni fragmentos de código salvo que Facundo los pida
+explícitamente. Si hace falta profundidad técnica para otra sesión de Claude (seguimiento,
+`STATE.md`, etc.), esa sí puede ir técnica — pero lo que se le dice a Facundo en el chat siempre
+en este formato simple.
 
 ## Design Context
 

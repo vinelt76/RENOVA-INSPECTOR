@@ -3,15 +3,6 @@ import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
 import { empresaRepo } from '../db/repos/empresaRepo';
 
-// Umbrales de referencia — HOY constantes de código (deuda documentada en
-// inspeccionRepo.ts y en la auditoría Excel×App §10.4), NO vienen todavía de una
-// tabla `rtd_thresholds` por empresa/medida. Se guardan como snapshot para que el
-// detalle en Supabase muestre contra qué umbral se calculó ESTADO RTD, sin implicar
-// que sea el modelo final por empresa.
-const RTD_PARA_CAMBIO = 4;
-const RTD_PROXIMO_CAMBIO = 7;
-const RTD_NORMAL = 8; // reglas_negocio.md §2 — informativo
-
 export interface PushResult {
   ok: boolean;
   /** true = no se intentó enviar porque Supabase no está configurado (sin .env) */
@@ -67,9 +58,11 @@ export async function pushInspeccionToSupabase(cabeceraId: string): Promise<Push
         valve_cap: n.tapa_valvula,
         not_measured: n.presion === null, // "SIN MEDIR" implícito — ver auditoría §10.1
         tire_anomaly: n.anomalia,
-        rtd_for_change: RTD_PARA_CAMBIO,
-        rtd_next_change: RTD_PROXIMO_CAMBIO,
-        rtd_normal: RTD_NORMAL,
+        // Snapshot de umbrales (task_16): el umbral vigente al momento en que SE CALCULÓ
+        // esta fila, no el umbral actual de la empresa — histórico reproducible.
+        rtd_for_change: n.rtd_cambio_snap,
+        rtd_next_change: n.rtd_proximo_snap,
+        rtd_normal: n.rtd_normal_snap,
         scrap: n.desecho === 1,
         rtd_status: n.estado_rtd,
       })),

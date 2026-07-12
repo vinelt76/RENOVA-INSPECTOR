@@ -46,7 +46,20 @@ export interface InspeccionNeumatico {
   idi: number | null;
   estado_rtd: string | null;
   desecho: number;
+  /** Umbral rtd_cambio contra el que se calculó estado_rtd (task_16) — reproducibilidad histórica. */
+  rtd_cambio_snap: number | null;
+  rtd_proximo_snap: number | null;
+  rtd_normal_snap: number | null;
+  isa_peso_snap: number | null;
   updated_at: string;
+}
+
+export interface UmbralRtd {
+  empresa_id: string;
+  medida: string;
+  rtd_cambio: number;
+  rtd_proximo: number;
+  rtd_normal: number;
 }
 
 export interface CatMarca {
@@ -104,4 +117,7 @@ export interface SyncQueue {
   op: string;
   created_at: string;
   enviado: number;
+  intentos: number;
+  ultimo_error: string | null;
+  next_retry_at: string | null;
 }

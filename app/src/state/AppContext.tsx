@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { empresaRepo } from '../db/repos/empresaRepo';
 import { initApp } from '../db/sqlite';
 import { pullEmpresas } from '../sync/pullEmpresas';
+import { pullUmbrales } from '../sync/pullUmbrales';
+import { drainSyncQueue } from '../sync/drainQueue';
 import { AppContext, type AppState } from './context';
 
 const EMPRESA_KEY = 'renova_empresa_id';
@@ -40,13 +42,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } else {
         setState(s => ({ ...s, initialized: true }));
       }
+      // Drenar lo que haya quedado pendiente de una sesión anterior (task_17).
+      drainSyncQueue().catch(e => console.warn('drainSyncQueue error:', e));
     })();
+
+    // Al recuperar conectividad, reintentar la cola sin esperar al próximo guardado.
+    const onOnline = () => { drainSyncQueue().catch(e => console.warn('drainSyncQueue error:', e)); };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
   }, []);
 
   const setEmpresa = useCallback(async (id: string) => {
     localStorage.setItem(EMPRESA_KEY, id);
     const emp = await empresaRepo.getById(id);
     setState(s => ({ ...s, empresaId: id, empresa: emp, unidadNumero: null, unidadConfig: null, cabeceraId: null }));
+    // Best-effort, no bloquea la navegación: sin red sigue el umbral local/sembrado.
+    pullUmbrales(id).then(res => {
+      if (!res.ok && res.error) console.warn('pullUmbrales:', res.error);
+    }).catch(e => console.warn('pullUmbrales error:', e));
   }, []);
 
   const setUnidad = useCallback((numero: string, config: string, tipoVehiculo: string) => {

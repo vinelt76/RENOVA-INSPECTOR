@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 // listInspeccionesPorPlaca usa get_unidad_preload() (RPC SECURITY DEFINER,
-// supabase/migrations/20260710120000_preload_unidad_rpc.sql) en vez de leer
+// supabase/migrations/20260711000000_preload_rpc_vehicle_metadata.sql) en vez de leer
 // v_inspection_dashboard_rows directo: desde que RLS quedó activa
 // (20260710090000_dashboard_public_rls.sql) esa vista solo es legible por
 // `authenticated` con profiles, y la app móvil todavía lee como `anon` sin
@@ -67,6 +67,10 @@ export interface UnidadPreloadRow {
   inspected_on: string;
   odometer_km: number | null;
   unit_photo_url: string | null;
+  /** Real, desde units.vehicle_type — task_15. */
+  vehicle_type: string | null;
+  /** Real, desde vehicle_configs.notation — task_15. */
+  notation: string | null;
   position_number: number;
   tire_code: string | null;
   casing_code: string | null;

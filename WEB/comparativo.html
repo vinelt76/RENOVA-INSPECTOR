@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>RENOVA — Rendimiento Comparativo</title>
+<!--
+  PANTALLA RENDIMIENTO COMPARATIVO — compara marca/modelo/diseño/condición/
+  medida/ruta/tipo de ruta/asientos/eje/posición usando v_comparison_cycle_rows
+  (Supabase, RLS por empresa). Todas las métricas se calculan en SQL; esta
+  pantalla solo agrupa y presenta.
+
+  Reglas de negocio que respeta:
+    · SIEMPRE muestra el tamaño de muestra (n) por grupo y permite definir un
+      mínimo configurable; los grupos por debajo del mínimo se marcan como
+      muestra insuficiente, nunca se ocultan ni se presentan como concluyentes.
+    · Si la dimensión elegida no es la única variable que difiere entre los
+      grupos (medida, posición/eje o tipo de ruta distintos dentro del mismo
+      grupo), se advierte explícitamente — nunca se compara en silencio.
+    · "% de descartes" es la proporción de ciclos descartados del grupo; RENOVA
+      no definió un umbral de "prematuro" en las reglas de negocio, así que
+      esta pantalla NO inventa ese criterio y lo etiqueta como lo que es.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
+<style>
+  :root{
+    --screen-dark:#07111C; --field-dark:#111E2E; --navy-brand:#15233f;
+    --border-dark:#1B2D42; --label-blue:#7AABCC; --value-ice:#F0F8FF;
+    --ember-orange:#F06822; --signal-yellow:#f4b821; --verified-green:#1f9d6b;
+    --discard-red:#c0453a;
+    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
+    --display:'Bebas Neue',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--screen-dark); color:var(--value-ice);
+    font-family:var(--mono); font-weight:700; -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums; padding-bottom:42px;
+  }
+  header{
+    background:var(--navy-brand); padding:18px 16px 16px; position:sticky; top:0; z-index:20;
+    border-bottom:4px solid transparent;
+    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+  }
+  .head-row{max-width:1360px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .brand .logo{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.06em}
+  .brand .logo b{color:var(--ember-orange);font-weight:400}
+  .brand .screen-name{font-family:var(--display);font-size:19px;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
+  .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
+  .nav{display:flex;gap:8px;flex-wrap:wrap}
+  .nav a{
+    color:var(--label-blue); text-decoration:none; border:2px solid var(--border-dark);
+    background:var(--field-dark); border-radius:8px; padding:9px 12px;
+    font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  }
+  .nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
+  main{max-width:1360px;margin:0 auto;padding:16px}
+
+  .toolbar{display:flex;align-items:flex-end;justify-content:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .selector{display:flex;flex-direction:column;gap:6px}
+  .selector label{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue)}
+  select,.selector input{
+    appearance:none;-webkit-appearance:none;background:var(--field-dark);color:var(--value-ice);
+    font-family:var(--mono);font-weight:800;font-size:13px;border:2px solid var(--border-dark);
+    border-radius:8px;padding:10px 38px 10px 12px;min-width:200px;
+  }
+  .selector input{min-width:90px;padding:10px 12px}
+  .selector .hint{font-size:9px;color:var(--label-blue);opacity:.8;max-width:220px;line-height:1.4}
+
+  .warnbox{
+    border:2px solid var(--signal-yellow); background:rgba(244,184,33,.08); border-radius:12px;
+    padding:12px 14px; margin-bottom:16px; font-size:11px; font-weight:700; color:var(--signal-yellow); line-height:1.6;
+  }
+  .warnbox b{color:var(--value-ice)}
+
+  .table-card{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;overflow:hidden}
+  .table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;background:var(--navy-brand);padding:13px 16px;border-bottom:2px solid var(--border-dark)}
+  .table-head h2{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .table-head .count{font-size:11px;color:var(--label-blue)}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:1280px}
+  th{
+    text-align:left;padding:10px 10px 8px;border-bottom:2px solid var(--border-dark);
+    color:var(--label-blue);font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;
+  }
+  td{padding:10px;border-bottom:1px solid rgba(27,45,66,.65);font-size:12px;font-weight:700;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  tr.insufficient{opacity:.55}
+  td.dim{color:var(--label-blue)}
+  td.group-name{color:var(--value-ice);font-weight:800}
+  .n-chip{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px;
+    border:2px solid var(--border-dark);color:var(--label-blue);
+  }
+  .n-chip.low{border-color:var(--discard-red);color:var(--discard-red)}
+  .mixed-flag{
+    display:inline-block;margin-left:6px;font-size:9px;font-weight:800;letter-spacing:.04em;
+    color:var(--signal-yellow);border:1px solid var(--signal-yellow);border-radius:4px;padding:1px 5px;
+  }
+  .empty{border:2px dashed var(--border-dark);border-radius:12px;padding:18px;color:var(--label-blue);font-size:12px;line-height:1.5}
+  footer{
+    max-width:1360px;margin:26px auto 0;padding:0 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
+  }
+  @media (max-width:780px){.head-row{align-items:flex-start}.nav{width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="logo">RENOVA<b>.</b></div>
+      <div class="screen-name">RENDIMIENTO COMPARATIVO</div>
+      <div class="subtitle">Compará marca, diseño, medida, ruta, eje y más — siempre con tamaño de muestra</div>
+    </div>
+    <nav class="nav" aria-label="Pantallas">
+      <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+      <a href="instalacion.html">Instalación</a>
+      <a href="inventario.html">Inventario</a>
+      <a href="rendimiento.html">Rendimiento</a>
+      <a class="active" href="comparativo.html">Comparativo</a>
+      <a href="importar.html">Importar</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="selector">
+      <label for="dimSelect">Comparar por</label>
+      <select id="dimSelect">
+        <option value="brand_name">Marca</option>
+        <option value="model_name">Modelo</option>
+        <option value="retread_design">Diseño de reencauche</option>
+        <option value="condition">Condición / N° de ciclo</option>
+        <option value="size_name">Medida</option>
+        <option value="route_name">Ruta</option>
+        <option value="route_type_name">Tipo de ruta</option>
+        <option value="seats_count">N° de asientos</option>
+        <option value="dominant_axle_type">Tipo de eje</option>
+        <option value="dominant_position">Posición</option>
+      </select>
+    </div>
+    <div class="selector">
+      <label for="minSample">Muestra mínima</label>
+      <input id="minSample" type="number" min="1" step="1" value="3">
+      <div class="hint">Grupos con menos ciclos que este mínimo se marcan como muestra insuficiente.</div>
+    </div>
+  </div>
+
+  <div id="warnings"></div>
+
+  <section class="table-card">
+    <div class="table-head">
+      <h2 id="tableTitle">Comparativo por marca</h2>
+      <div class="count" id="rowCount">0 grupos</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th id="dimHeader">Marca</th>
+            <th>N° ciclos</th><th>N° neumáticos</th><th>N° instalaciones</th>
+            <th>Km recorridos</th><th>Km/mm mediana</th><th>Km/mm promedio</th>
+            <th>Km ciclo prom.</th><th>Km vida prom.</th>
+            <th>Costo/km ciclo</th><th>Costo/km vida</th>
+            <th>% descartes</th><th>Causa principal</th><th>Reencauches prom.</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Datos reales de Supabase (v_comparison_cycle_rows, RLS por empresa) · las métricas se calculan en SQL, no en el navegador.
+</footer>
+
+<script>
+"use strict";
+let CYCLES = [];
+const nf = new Intl.NumberFormat("es-PE");
+const nf1 = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat("es-PE", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+const km = v => v == null ? "—" : nf.format(Math.round(Number(v))) + " km";
+const mm = v => v == null ? "—" : nf1.format(Number(v)) + " mm";
+const money = v => v == null ? "—" : "$ " + nf2.format(Number(v));
+const pct = v => v == null ? "—" : nf1.format(Number(v)) + "%";
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const DIM_LABELS = {
+  brand_name: "Marca", model_name: "Modelo", retread_design: "Diseño de reencauche",
+  condition: "Condición", size_name: "Medida", route_name: "Ruta",
+  route_type_name: "Tipo de ruta", seats_count: "N° de asientos",
+  dominant_axle_type: "Tipo de eje", dominant_position: "Posición",
+};
+
+function median(nums){
+  const arr = nums.filter(v => v != null).slice().sort((a,b) => a-b);
+  if(!arr.length) return null;
+  const mid = Math.floor(arr.length / 2);
+  return arr.length % 2 ? arr[mid] : (arr[mid-1] + arr[mid]) / 2;
+}
+function avg(nums){
+  const arr = nums.filter(v => v != null);
+  return arr.length ? arr.reduce((a,b) => a+Number(b), 0) / arr.length : null;
+}
+function dedupeByCasing(rows){
+  const seen = new Set();
+  return rows.filter(r => {
+    if(seen.has(r.casing_id)) return false;
+    seen.add(r.casing_id);
+    return true;
+  });
+}
+
+function groupBy(rows, dim){
+  const groups = new Map();
+  for(const r of rows){
+    const raw = r[dim];
+    const key = raw == null || raw === "" ? "(sin dato)" : String(raw);
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  return groups;
+}
+
+function buildRow(name, rows, minSample){
+  const n = rows.length;
+  const casings = dedupeByCasing(rows);
+  const nCasings = casings.length;
+  const nInstalaciones = rows.reduce((s,r) => s + (r.installations_count || 0), 0);
+  const kmRecorridos = rows.reduce((s,r) => s + Number(r.cycle_km || 0), 0);
+  const kmPerMmValues = rows.map(r => r.km_per_mm).filter(v => v != null).map(Number);
+  const cycleKmValues = rows.map(r => r.cycle_km).filter(v => v != null).map(Number);
+  const lifetimeKmValues = casings.map(r => r.lifetime_km).filter(v => v != null).map(Number);
+  const costPerKmValues = rows.map(r => r.cost_per_km).filter(v => v != null).map(Number);
+  const lifetimeCostPerKmValues = casings.map(r => r.lifetime_cost_per_km).filter(v => v != null).map(Number);
+  const nDiscarded = rows.filter(r => r.is_discarded).length;
+  const pctDescartes = n ? (nDiscarded / n) * 100 : null;
+  const retreadsValues = casings.map(r => r.retreads_reached).filter(v => v != null).map(Number);
+
+  const causeCounts = {};
+  rows.forEach(r => { if(r.final_discard_cause){ causeCounts[r.final_discard_cause] = (causeCounts[r.final_discard_cause]||0)+1; } });
+  const topCause = Object.entries(causeCounts).sort((a,b) => b[1]-a[1])[0];
+
+  const positionMixed = rows.some(r => r.position_mixed);
+  const routeMixed = rows.some(r => r.route_mixed || r.route_quality === "mixed");
+  const sizesInGroup = new Set(rows.map(r => r.size_name).filter(Boolean));
+  const posInGroup = new Set(rows.map(r => r.dominant_position).filter(v => v != null));
+  const axleInGroup = new Set(rows.map(r => r.dominant_axle_type).filter(Boolean));
+  const routeTypeInGroup = new Set(rows.map(r => r.route_type_name).filter(Boolean));
+
+  return {
+    name, n, nCasings, nInstalaciones, kmRecorridos,
+    kmPerMmMedian: median(kmPerMmValues), kmPerMmAvg: avg(kmPerMmValues),
+    cycleKmAvg: avg(cycleKmValues), lifetimeKmAvg: avg(lifetimeKmValues),
+    costPerKmAvg: avg(costPerKmValues), lifetimeCostPerKmAvg: avg(lifetimeCostPerKmValues),
+    pctDescartes, topCause: topCause ? `${topCause[0]} (${topCause[1]})` : "—",
+    retreadsAvg: avg(retreadsValues),
+    insufficient: n < minSample,
+    positionMixed, routeMixed,
+    sizesInGroup, posInGroup, axleInGroup, routeTypeInGroup,
+  };
+}
+
+function renderWarnings(dim, rows){
+  const warnings = [];
+  const distinctSizes = new Set(rows.map(r => r.size_name).filter(Boolean));
+  const distinctPos = new Set(rows.map(r => r.dominant_position).filter(v => v != null));
+  const distinctRouteType = new Set(rows.map(r => r.route_type_name).filter(Boolean));
+
+  if(dim !== "size_name" && distinctSizes.size > 1){
+    warnings.push(`Esta comparación mezcla <b>${distinctSizes.size} medidas distintas</b>. El rendimiento (km/mm) no es directamente comparable entre medidas diferentes: usalo como referencia, no como ranking.`);
+  }
+  if(dim !== "dominant_position" && dim !== "dominant_axle_type" && distinctPos.size > 1){
+    warnings.push(`Esta comparación mezcla <b>${distinctPos.size} posiciones/ejes distintos</b> (direccional, tracción, libre tienen desgaste muy diferente). Compará por posición o eje para una lectura más justa.`);
+  }
+  if(dim !== "route_type_name" && dim !== "route_name" && distinctRouteType.size > 1){
+    warnings.push(`Esta comparación mezcla <b>${distinctRouteType.size} tipos de ruta distintos</b>. El rendimiento en Costa y Sierra no es comparable sin ajustar por tipo de ruta.`);
+  }
+  const noRouteData = rows.every(r => r.route_quality === "none" || r.route_quality == null);
+  if((dim === "route_name" || dim === "route_type_name") && noRouteData){
+    warnings.push(`No hay asignaciones de ruta cargadas todavía: esta dimensión va a mostrar solo "(sin dato)".`);
+  }
+  warnings.push(`"% de descartes" es la proporción de ciclos descartados del grupo. RENOVA no definió un umbral de "descarte prematuro" en las reglas de negocio — esta pantalla no lo inventa.`);
+
+  document.getElementById("warnings").innerHTML = warnings.length
+    ? `<div class="warnbox">${warnings.map(w => `⚠ ${w}`).join("<br><br>")}</div>`
+    : "";
+}
+
+function render(){
+  const dim = document.getElementById("dimSelect").value;
+  const minSample = Math.max(1, Number(document.getElementById("minSample").value) || 1);
+  document.getElementById("tableTitle").textContent = `Comparativo por ${DIM_LABELS[dim].toLowerCase()}`;
+  document.getElementById("dimHeader").textContent = DIM_LABELS[dim];
+
+  if(!CYCLES.length){
+    document.getElementById("rowCount").textContent = "0 grupos";
+    document.getElementById("rows").innerHTML = `<tr><td colspan="14"><div class="empty">Sin ciclos de vida registrados todavía.</div></td></tr>`;
+    document.getElementById("warnings").innerHTML = "";
+    return;
+  }
+
+  renderWarnings(dim, CYCLES);
+
+  const groups = groupBy(CYCLES, dim);
+  const built = [...groups.entries()]
+    .map(([name, rows]) => buildRow(name, rows, minSample))
+    .sort((a,b) => b.n - a.n);
+
+  document.getElementById("rowCount").textContent = `${built.length} grupo${built.length === 1 ? "" : "s"}`;
+  document.getElementById("rows").innerHTML = built.map(g => `
+    <tr class="${g.insufficient ? "insufficient" : ""}">
+      <td class="group-name">${esc(g.name)}${g.positionMixed ? '<span class="mixed-flag" title="El grupo mezcla varias posiciones/ejes">POSICIÓN MIXTA</span>' : ""}${g.routeMixed ? '<span class="mixed-flag" title="El grupo mezcla varias rutas">RUTA MIXTA</span>' : ""}</td>
+      <td><span class="n-chip ${g.insufficient ? "low" : ""}">${g.n}${g.insufficient ? " · insuf." : ""}</span></td>
+      <td class="dim">${g.nCasings}</td>
+      <td class="dim">${g.nInstalaciones}</td>
+      <td>${km(g.kmRecorridos)}</td>
+      <td>${g.kmPerMmMedian == null ? "—" : nf1.format(g.kmPerMmMedian) + " km/mm"}</td>
+      <td class="dim">${g.kmPerMmAvg == null ? "—" : nf1.format(g.kmPerMmAvg) + " km/mm"}</td>
+      <td>${km(g.cycleKmAvg)}</td>
+      <td>${km(g.lifetimeKmAvg)}</td>
+      <td>${money(g.costPerKmAvg)}</td>
+      <td class="dim">${money(g.lifetimeCostPerKmAvg)}</td>
+      <td>${pct(g.pctDescartes)}</td>
+      <td class="dim">${esc(g.topCause)}</td>
+      <td class="dim">${g.retreadsAvg == null ? "—" : nf1.format(g.retreadsAvg)}</td>
+    </tr>`).join("");
+}
+
+function renderNoData(message){
+  CYCLES = [];
+  document.getElementById("rowCount").textContent = "0 grupos";
+  document.getElementById("rows").innerHTML = `<tr><td colspan="14"><div class="empty">${esc(message)}</div></td></tr>`;
+  document.getElementById("warnings").innerHTML = "";
+}
+
+async function load(){
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    renderNoData("Supabase no configurado. No se muestran datos locales.");
+    window.RenovaSupabase && RenovaSupabase.showBadge("empty");
+    return;
+  }
+  try{
+    await RenovaSupabase.requireAuth();
+    const rows = await RenovaSupabase.fetchView("v_comparison_cycle_rows", { select: "*", limit: "5000" });
+    CYCLES = rows;
+    render();
+    const session = await RenovaSupabase.getSession();
+    RenovaSupabase.showBadge("supabase", session?.user?.email || "");
+  }catch(err){
+    console.warn("Comparativo: no se pudo cargar Supabase.", err);
+    renderNoData("No se pudo cargar el comparativo desde Supabase.");
+    RenovaSupabase.showBadge("empty");
+  }
+}
+
+document.getElementById("dimSelect").addEventListener("change", render);
+document.getElementById("minSample").addEventListener("input", render);
+renderNoData("Cargando comparativo desde Supabase...");
+onRenovaSupabaseReady(load);
+</script>
+</body>
+</html>

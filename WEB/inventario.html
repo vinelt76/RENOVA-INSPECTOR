@@ -6,11 +6,9 @@
 <title>RENOVA — Inventario</title>
 <!--
   PANTALLA INVENTARIO — vista de consulta para el JEFE DE FLOTA / almacén.
-  Autocontenida: abrir directamente en el navegador. Datos de DEMOSTRACIÓN (mock).
-
-  Otra pantalla principal del dashboard web (NO modal, NO overlay, NO sección de
-  Inspección ni de Rendimiento). Lista ÚNICAMENTE neumáticos que NO están
-  instalados en ninguna unidad.
+  Datos REALES de Supabase (v_inventory_status, v_removal_cause_ranking),
+  protegidos por RLS de empresa. La reinstalación llama al RPC transaccional
+  reinstall_tire() (solo usuarios con rol de taller).
 
   Un solo componente con DOS estados, alternados por el switch superior — mismo
   patrón visual del switch de Rendimiento (activo = naranja sólido):
@@ -19,26 +17,26 @@
     · "Descartado"    → neumáticos dados de baja definitivamente. SOLO consulta,
                         sin acciones. Estado FINAL.
 
-  Reglas que respeta este prototipo:
-    · El ESTADO del neumático decide dónde aparece. No hay fuente de datos nueva:
-      una sola lista TIRES; status ∈ {"inventario","descartado"} (e "instalado"
-      cuando se reinstala, que lo saca de esta vista). No se duplican datos.
-    · Reinstalar REUTILIZA el evento de Instalación existente (aquí representado
-      por su formulario). Exige Unidad, Posición, Km Instalación y RTD Instalación;
-      no permite reinstalar sin esos datos. Tras reinstalar, el neumático deja de
-      aparecer en Inventario.
+  Reglas que respeta esta pantalla:
+    · El ESTADO del neumático (inventory_status de v_inventory_status) decide
+      dónde aparece: in_inventory / discarded / installed (este último no se
+      lista acá). No se duplican datos.
+    · Reinstalar llama a reinstall_tire(), que exige Unidad, Posición, Km
+      Instalación y RTD Instalación; el servidor valida posición libre y rol.
+      Tras reinstalar, el neumático deja de aparecer en Inventario.
     · Descartado es FINAL: sin reinstalar, editar, cambiar causa/foto, restaurar
       ni eliminar.
-    · El # Serie/Código es clickeable en AMBAS vistas → abre el Historial de
-      Neumático (misma vista interna que en Inspección/Rendimiento; aquí su
-      interacción queda preparada, el contenido detallado es de otra pantalla).
-    · Análisis agregado: ranking de causas de retiro, calculado SOLO sobre
-      neumáticos con causa registrada. Filtros simples (marca/medida/diseño/estado).
-      Resumen preventivo, no un dashboard de rendimiento.
+    · El # Serie/Código es clickeable en AMBAS vistas → navega al Historial de
+      Neumático real (historial-neumatico.html?serie=CODE&from=inventario).
+    · Análisis agregado: ranking de causas de retiro (v_removal_cause_ranking),
+      calculado SOLO sobre neumáticos con causa registrada.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="supabase-config.public.js"></script>
+<script src="renova-ready.js"></script>
+<script type="module" src="supabase-demo.js"></script>
 <style>
   :root{
     /* Paleta RENOVA (DESIGN.md) */
@@ -83,7 +81,15 @@
     border-bottom:4px solid transparent;
     border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
   }
-  .head-inner{max-width:1080px;margin:0 auto}
+  .head-inner{max-width:1080px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .nav{display:flex;gap:8px;flex-wrap:wrap}
+  .nav a{
+    color:var(--label-blue); text-decoration:none; border:2px solid var(--border-dark);
+    background:var(--field-dark); border-radius:8px; padding:9px 12px;
+    font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  }
+  .nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
+  @media (max-width:780px){.head-inner{align-items:flex-start}.nav{width:100%}}
   .brand .logo{
     font-family:var(--display);font-size:32px;line-height:1;
     letter-spacing:.06em;color:var(--value-ice);
@@ -437,6 +443,14 @@
       <div class="screen-name">INVENTARIO DE NEUMÁTICOS</div>
       <div class="subtitle">Neumáticos fuera de servicio, disponibles para reinstalación o descartados definitivamente.</div>
     </div>
+    <nav class="nav" aria-label="Pantallas">
+      <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+      <a href="instalacion.html">Instalación</a>
+      <a class="active" href="inventario.html">Inventario</a>
+      <a href="rendimiento.html">Rendimiento</a>
+      <a href="comparativo.html">Comparativo</a>
+      <a href="importar.html">Importar</a>
+    </nav>
   </div>
 </header>
 
@@ -487,29 +501,9 @@
 </main>
 
 <footer>
-  Datos de demostración · Vista de consulta (Inventario) para jefe de flota / almacén.<br>
+  Datos reales de Supabase (RLS por empresa) · Vista de consulta (Inventario) para jefe de flota / almacén.<br>
   Inventario lista, consulta y permite reinstalar. Descartado es un estado final: solo se consulta.
 </footer>
-
-<!-- Modal Historial — interacción preparada; contenido de otra pantalla -->
-<div class="scrim" id="histScrim" onclick="if(event.target===this) closeHistory()">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="histTitle">
-    <div class="sheet-head">
-      <div>
-        <div class="sheet-title" id="histTitle">HISTORIAL DEL NEUMÁTICO</div>
-        <div class="sheet-sub" id="histSub"></div>
-      </div>
-      <button class="sheet-close" onclick="closeHistory()" aria-label="Cerrar historial">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <div class="sheet-placeholder">
-      El Historial de Neumático (instalaciones, reencauches, rotaciones, retiros y
-      descartes) es la misma vista interna que se abre desde Inspección y Rendimiento.
-      <span>Vista compartida · no se duplica aquí</span>
-    </div>
-  </div>
-</div>
 
 <!-- Modal Reinstalar — evento de Instalación reutilizado -->
 <div class="scrim" id="reinstScrim" onclick="if(event.target===this) closeReinstalar()">
@@ -565,6 +559,55 @@
   </div>
 </div>
 
+<!-- Modal Reencauchar — cierra el ciclo actual y abre R(n+1) -->
+<div class="scrim" id="retreadScrim" onclick="if(event.target===this) closeReencauchar()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="retreadTitle">
+    <div class="sheet-head">
+      <div>
+        <div class="sheet-title" id="retreadTitle">REENCAUCHAR</div>
+        <div class="sheet-sub">Cierra el ciclo actual y abre el siguiente (R1, R2…) · el casco conserva su historia</div>
+      </div>
+      <button class="sheet-close" onclick="closeReencauchar()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="reinstalar-target">
+      <div class="rt-label">Casco a reencauchar</div>
+      <div class="rt-serie" id="retreadSerie"></div>
+      <div class="rt-meta" id="retreadMeta"></div>
+    </div>
+
+    <form id="retreadForm" onsubmit="submitReencauchar(event)" novalidate>
+      <div class="form-field" id="rt-ffDesign">
+        <label for="rtDesign">Diseño de reencauche <span class="req">*</span></label>
+        <input id="rtDesign" type="text" placeholder="Ej. KMD01">
+        <div class="err">Ingresá el diseño de reencauche.</div>
+      </div>
+      <div class="form-field" id="rt-ffDate">
+        <label for="rtDate">Fecha del reencauche <span class="req">*</span></label>
+        <input id="rtDate" type="date">
+        <div class="err">Ingresá la fecha.</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="rtOtd">OTD (mm)</label>
+          <input id="rtOtd" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ej. 16.0">
+        </div>
+        <div class="form-field">
+          <label for="rtCost">Costo</label>
+          <input id="rtCost" type="number" inputmode="decimal" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="form-field">
+        <label for="rtCurrency">Moneda</label>
+        <input id="rtCurrency" type="text" value="PEN" maxlength="3">
+      </div>
+      <button class="btn-submit" type="submit">Confirmar reencauche</button>
+    </form>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast" role="status" aria-live="polite">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
@@ -573,96 +616,57 @@
 
 <script>
 /* =========================================================================
-   FUENTE DE DATOS ÚNICA (mock).
-   El ESTADO decide dónde aparece cada neumático — no hay listas separadas:
-     status "inventario" → En Inventario (reinstalable)
-     status "descartado" → Descartado (baja definitiva, solo consulta)
-     status "instalado"  → montado en una unidad → NO aparece en esta vista
-                           (así queda un neumático tras reinstalarlo con éxito)
-
-   Campos crudos del neumático (viven en el registro de Inventario en producción):
-     serie, marca, diseno, medida, estado (N/R1/R2), costo
-   Contexto de salida (del evento de retiro/desinstalación):
-     ultimaUnidad   → última unidad donde estuvo instalado (o null)
-     fechaRetiro    → fecha en que salió de la unidad hacia inventario (o null)
-   Solo descartado:
-     causa          → causa de retiro registrada (para el ranking)
-     fotoDano       → miniatura del daño (data-uri) o null
-     fechaDescarte  → fecha de baja definitiva (o null)
-
-   Nota: 'causa' también puede existir en un neumático de inventario si su retiro
-   se registró con causa; el ranking suma TODAS las causas registradas.
+   FUENTE DE DATOS: Supabase (v_inventory_status, v_removal_cause_ranking).
+   El campo inventory_status decide dónde aparece cada neumático:
+     "in_inventory" → En Inventario (reinstalable)
+     "discarded"    → Descartado (baja definitiva, solo consulta)
+     "installed"    → montado en una unidad → NO aparece en esta vista
    ========================================================================= */
+let TIRES = [];          // normalizado desde v_inventory_status
+let RANKING = [];         // desde v_removal_cause_ranking
+let UNITS = [];            // desde la tabla units (empresa del usuario)
+let POSITIONS_BY_CONFIG = {}; // config_id -> [position_number,...] (tire_positions)
 
-// Miniatura de daño (SVG inline como data-uri — sin assets externos).
-function damageThumb(kind){
-  const g = {
-    corte:  ['#241014','#c0453a'],
-    banda:  ['#241a10','#d98a2b'],
-    flanco: ['#1a1020','#a05ac0'],
-  }[kind] || ['#141b24','#4E7CA8'];
-  const svg =
-    `<svg xmlns='http://www.w3.org/2000/svg' width='46' height='46' viewBox='0 0 46 46'>`+
-    `<rect width='46' height='46' fill='${g[0]}'/>`+
-    `<circle cx='23' cy='23' r='15' fill='none' stroke='#0a0f16' stroke-width='9'/>`+
-    `<path d='M12 30 L21 18 L26 26 L34 15' fill='none' stroke='${g[1]}' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/>`+
-    `</svg>`;
-  return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+function normalizeTire(r){
+  const inv = r.inventory_status === "in_inventory" ? "inventario"
+            : r.inventory_status === "discarded" ? "descartado"
+            : "instalado";
+  return {
+    id: r.casing_id,
+    lifeCycleId: r.current_life_cycle_id,
+    status: inv,
+    serie: r.code || "(sin código)",
+    marca: r.brand_name || "—",
+    diseno: r.retread_design || r.model_name || "—",
+    medida: r.size_name || "—",
+    estado: r.condition || "—",
+    costo: r.cost != null ? Number(r.cost) : null,
+    lastRemovalReason: r.last_removal_reason || null,
+    ultimaUnidad: r.last_unit_plate ? `${r.last_unit_plate}${r.last_position_number ? " · P" + r.last_position_number : ""}` : null,
+    fechaRetiro: r.last_removed_at || null,
+    causa: r.last_removal_discard_cause || null,
+    fotoDano: r.discard_photo_url || null,
+    fechaDescarte: r.discarded_at || null,
+  };
 }
 
-let TIRES = [
-  // ── En Inventario (retirados / en retén, reinstalables) ──
-  { id:"t1", status:"inventario", serie:"MB-4471", marca:"MICHELIN", diseno:"X MULTI ENERGY",
-    medida:"295/80R22.5", estado:"R1", costo:420, ultimaUnidad:"B-118 · P4", fechaRetiro:"2026-06-18",
-    causa:"Desgaste irregular" },
-  { id:"t2", status:"inventario", serie:"BR-2093", marca:"BRIDGESTONE", diseno:"R269",
-    medida:"295/80R22.5", estado:"N", costo:780, ultimaUnidad:"B-204 · P2", fechaRetiro:"2026-06-25",
-    causa:null },
-  { id:"t3", status:"inventario", serie:"GY-8812", marca:"GOODYEAR", diseno:"KMA01",
-    medida:"315/80R22.5", estado:"R2", costo:390, ultimaUnidad:"B-118 · P7", fechaRetiro:"2026-05-30",
-    causa:"Baja presión recurrente" },
-  { id:"t4", status:"inventario", serie:"KH-1500", marca:"KUMHO", diseno:"KMD01",
-    medida:"295/80R22.5", estado:"R1", costo:405, ultimaUnidad:null, fechaRetiro:null,
-    causa:null },
-  { id:"t5", status:"inventario", serie:"MB-6620", marca:"MICHELIN", diseno:"X MULTI Z",
-    medida:"295/80R22.5", estado:"N", costo:865, ultimaUnidad:"C-030 · P6", fechaRetiro:"2026-07-01",
-    causa:"Desgaste irregular" },
-
-  // ── Descartado (baja definitiva, solo consulta) ──
-  { id:"t6", status:"descartado", serie:"MB-3308", marca:"MICHELIN", diseno:"X MULTI ENERGY",
-    medida:"295/80R22.5", estado:"R2", costo:410, ultimaUnidad:"B-118 · P3",
-    causa:"Corte profundo en flanco", fotoDano:damageThumb("flanco"), fechaDescarte:"2026-06-12" },
-  { id:"t7", status:"descartado", serie:"BR-7741", marca:"BRIDGESTONE", diseno:"R269",
-    medida:"315/80R22.5", estado:"R1", costo:395, ultimaUnidad:"B-204 · P5",
-    causa:"Separación de banda", fotoDano:damageThumb("banda"), fechaDescarte:"2026-06-20" },
-  { id:"t8", status:"descartado", serie:"GY-5567", marca:"GOODYEAR", diseno:"ARMOR MAX MSA",
-    medida:"295/80R22.5", estado:"N", costo:820, ultimaUnidad:"C-030 · P1",
-    causa:"Corte lateral", fotoDano:damageThumb("corte"), fechaDescarte:"2026-05-28" },
-  { id:"t9", status:"descartado", serie:"KH-9004", marca:"KUMHO", diseno:"KMD01",
-    medida:"295/80R22.5", estado:"R1", costo:400, ultimaUnidad:"B-118 · P5",
-    causa:"Corte lateral", fotoDano:damageThumb("corte"), fechaDescarte:"2026-06-15" },
-  { id:"t10", status:"descartado", serie:"MB-1120", marca:"MICHELIN", diseno:"X MULTI Z",
-    medida:"295/80R22.5", estado:"R2", costo:415, ultimaUnidad:"B-204 · P4",
-    causa:"Desgaste irregular", fotoDano:null, fechaDescarte:"2026-06-30" },
-  { id:"t11", status:"descartado", serie:"BR-4402", marca:"BRIDGESTONE", diseno:"R269",
-    medida:"295/80R22.5", estado:"N", costo:770, ultimaUnidad:"C-030 · P2",
-    causa:"Corte lateral", fotoDano:damageThumb("corte"), fechaDescarte:"2026-07-02" },
-  { id:"t12", status:"descartado", serie:"GY-3391", marca:"GOODYEAR", diseno:"KMA01",
-    medida:"315/80R22.5", estado:"R1", costo:388, ultimaUnidad:"B-118 · P6",
-    causa:"Baja presión recurrente", fotoDano:null, fechaDescarte:"2026-06-08" },
-];
-
-/* Unidades destino para la reinstalación (evento de Instalación).
-   Posiciones derivadas de la configuración de bus (specs/catalogo_patron.md §3). */
-const CONFIG_POS = {
-  "2-4":   ["P1","P2","P3","P4","P5","P6"],
-  "2-4-2": ["P1","P2","P3","P4","P5","P6","P7","P8"],
-};
-const UNITS = [
-  { plate:"B-118", empresa:"Transportes Cielo", config:"2-4-2" },
-  { plate:"B-204", empresa:"Transportes Cielo", config:"2-4" },
-  { plate:"C-030", empresa:"Andes Express",     config:"2-4" },
-];
+async function loadUnitsAndPositions(){
+  const { data: units, error: uErr } = await RenovaSupabase.supabase
+    .from("units").select("id,plate,config_id").order("plate");
+  if(uErr) throw uErr;
+  UNITS = units || [];
+  const configIds = [...new Set(UNITS.map(u => u.config_id))];
+  if(configIds.length){
+    const { data: positions, error: pErr } = await RenovaSupabase.supabase
+      .from("tire_positions").select("config_id,position_number")
+      .in("config_id", configIds).order("position_number");
+    if(pErr) throw pErr;
+    POSITIONS_BY_CONFIG = {};
+    (positions || []).forEach(p => {
+      (POSITIONS_BY_CONFIG[p.config_id] ||= []).push(p.position_number);
+    });
+  }
+}
 
 /* =========================================================================
    ESTADO DE UI
@@ -769,10 +773,15 @@ function cardInventario(t){
         ${factsBlock(t, rows)}
       </div>
       <div class="tcard-foot">
+        ${t.lastRemovalReason === "retread" ? `
+        <button class="btn-reinstalar" type="button" onclick="openReencauchar('${t.id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M4 12h16"/></svg>
+          Reencauchar
+        </button>` : `
         <button class="btn-reinstalar" type="button" onclick="openReinstalar('${t.id}')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6"/><path d="M20 10a8 8 0 0 0-14-3M4 14a8 8 0 0 0 14 3"/></svg>
           Reinstalar
-        </button>
+        </button>`}
       </div>
     </article>`;
 }
@@ -842,9 +851,7 @@ function renderGrid(){
    ========================================================================= */
 function renderRanking(){
   const mount = document.getElementById("ranking");
-  const counts = {};
-  TIRES.forEach(t => { if(t.causa){ counts[t.causa] = (counts[t.causa]||0) + 1; } });
-  const ranked = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  const ranked = RANKING.map(r => [r.cause, Number(r.cases)]).sort((a,b) => b[1]-a[1]);
 
   // "Suficientes causas": al menos 2 causas distintas registradas.
   if(ranked.length < 2){
@@ -888,20 +895,13 @@ function clearFilters(){
 }
 
 /* =========================================================================
-   HISTORIAL — misma vista interna que Inspección/Rendimiento (interacción
-   preparada; el contenido no se duplica aquí).
+   HISTORIAL — navega a la vista real (historial-neumatico.html), que
+   consulta las mismas vistas de Supabase por código de casco.
    ========================================================================= */
 function openHistory(id){
   const t = TIRES.find(x => x.id === id);
   if(!t) return;
-  document.getElementById("histSub").innerHTML =
-    `<b>#${esc(t.serie)}</b> · ${esc(t.marca)} ${esc(t.diseno)} · ${esc(t.medida)} · ${t.estado}`;
-  document.getElementById("histScrim").classList.add("open");
-  document.body.style.overflow = "hidden";
-}
-function closeHistory(){
-  document.getElementById("histScrim").classList.remove("open");
-  document.body.style.overflow = "";
+  location.href = `historial-neumatico.html?serie=${encodeURIComponent(t.serie)}&from=inventario`;
 }
 
 /* =========================================================================
@@ -921,10 +921,10 @@ function openReinstalar(id){
   form.reset();
   ["ffUnidad","ffPosicion","ffKm","ffRtd"].forEach(f => document.getElementById(f).classList.remove("invalid"));
 
-  // Poblar unidades
+  // Poblar unidades (reales, de la empresa del usuario logueado)
   const selU = document.getElementById("inUnidad");
   selU.innerHTML = `<option value="">Seleccionar unidad…</option>` +
-    UNITS.map(u => `<option value="${esc(u.plate)}">${esc(u.plate)} · ${esc(u.empresa)} · Bus ${esc(u.config)}</option>`).join("");
+    UNITS.map(u => `<option value="${esc(u.id)}">${esc(u.plate)}</option>`).join("");
   document.getElementById("inPosicion").innerHTML = `<option value="">Seleccionar posición…</option>`;
 
   document.getElementById("reinstScrim").classList.add("open");
@@ -936,24 +936,24 @@ function closeReinstalar(){
   reinstId = null;
 }
 function onUnidadChange(){
-  const plate = document.getElementById("inUnidad").value;
-  const unit = UNITS.find(u => u.plate === plate);
+  const unitId = document.getElementById("inUnidad").value;
+  const unit = UNITS.find(u => u.id === unitId);
   const selP = document.getElementById("inPosicion");
-  const positions = unit ? (CONFIG_POS[unit.config] || []) : [];
+  const positions = unit ? (POSITIONS_BY_CONFIG[unit.config_id] || []) : [];
   selP.innerHTML = `<option value="">Seleccionar posición…</option>` +
-    positions.map(p => `<option value="${p}">${p}</option>`).join("");
+    positions.map(p => `<option value="${p}">P${p}</option>`).join("");
 }
 
-function submitReinstalar(ev){
+async function submitReinstalar(ev){
   ev.preventDefault();
-  const unidad = document.getElementById("inUnidad").value;
+  const unitId = document.getElementById("inUnidad").value;
   const posicion = document.getElementById("inPosicion").value;
   const km = document.getElementById("inKm").value;
   const rtd = document.getElementById("inRtd").value;
 
   // Validación: todos obligatorios (no permite reinstalar sin estos datos).
   const checks = [
-    ["ffUnidad",   !!unidad],
+    ["ffUnidad",   !!unitId],
     ["ffPosicion", !!posicion],
     ["ffKm",       km !== "" && Number(km) >= 0],
     ["ffRtd",      rtd !== "" && Number(rtd) >= 0],
@@ -965,21 +965,100 @@ function submitReinstalar(ev){
   });
   if(!ok) return;
 
-  // Éxito: el neumático pasa a estar INSTALADO → sale del Inventario.
-  // El historial conserva el periodo anterior (fechaRetiro/ultimaUnidad) y
-  // registra la nueva instalación (unidad/posición/km/rtd).
   const t = TIRES.find(x => x.id === reinstId);
-  if(t){
-    t.status = "instalado";
-    t.reinstalacion = { unidad, posicion, km:Number(km), rtd:Number(rtd), fecha:new Date().toISOString().slice(0,10) };
+  if(!t) return;
+  const submitBtn = document.querySelector("#reinstForm .btn-submit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Guardando…";
+  try{
+    const { error } = await RenovaSupabase.supabase.rpc("reinstall_tire", {
+      p_life_cycle_id: t.lifeCycleId,
+      p_unit_id: unitId,
+      p_position: Number(posicion),
+      p_installed_at: new Date().toISOString().slice(0,10),
+      p_odometer: Number(km),
+      p_rtd_mm: Number(rtd),
+    });
+    if(error) throw error;
+    const unit = UNITS.find(u => u.id === unitId);
+    closeReinstalar();
+    await reloadAll();
+    showToast(`<b>#${esc(t.serie)}</b> reinstalado en ${esc(unit ? unit.plate : "")} · P${posicion}`);
+  }catch(err){
+    console.warn("Reinstalar:", err);
+    alert(err.message || "No se pudo reinstalar el neumático. Verificá tu rol y que la posición siga libre.");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Confirmar instalación";
   }
-  const serie = t ? t.serie : "";
-  closeReinstalar();
-  renderCounts();
-  fillFilterOptions();
-  renderGrid();
-  renderRanking();
-  showToast(`<b>#${esc(serie)}</b> reinstalado en ${esc(unidad)} · ${esc(posicion)}`);
+}
+
+/* =========================================================================
+   REENCAUCHAR — retread_casing(): cierra el ciclo actual y abre R(n+1).
+   ========================================================================= */
+let retreadId = null;
+function openReencauchar(id){
+  const t = TIRES.find(x => x.id === id);
+  if(!t) return;
+  retreadId = id;
+  document.getElementById("retreadSerie").innerHTML = `<span class="hash">#</span>${esc(t.serie)}`;
+  document.getElementById("retreadMeta").textContent = `${t.marca} · ${t.medida} · condición actual ${t.estado}`;
+  const form = document.getElementById("retreadForm");
+  form.reset();
+  document.getElementById("rtCurrency").value = "PEN";
+  document.getElementById("rtDate").value = new Date().toISOString().slice(0,10);
+  ["rt-ffDesign","rt-ffDate"].forEach(f => document.getElementById(f).classList.remove("invalid"));
+  document.getElementById("retreadScrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeReencauchar(){
+  document.getElementById("retreadScrim").classList.remove("open");
+  document.body.style.overflow = "";
+  retreadId = null;
+}
+
+async function submitReencauchar(ev){
+  ev.preventDefault();
+  const design = document.getElementById("rtDesign").value.trim();
+  const date = document.getElementById("rtDate").value;
+  const checks = [
+    ["rt-ffDesign", !!design],
+    ["rt-ffDate", !!date],
+  ];
+  let ok = true;
+  checks.forEach(([f, valid]) => {
+    document.getElementById(f).classList.toggle("invalid", !valid);
+    if(!valid) ok = false;
+  });
+  if(!ok) return;
+
+  const t = TIRES.find(x => x.id === retreadId);
+  if(!t) return;
+  const submitBtn = document.querySelector("#retreadForm .btn-submit");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Guardando…";
+  try{
+    const otd = document.getElementById("rtOtd").value;
+    const cost = document.getElementById("rtCost").value;
+    const { data, error } = await RenovaSupabase.supabase.rpc("retread_casing", {
+      p_casing_id: t.id,
+      p_retread_design: design,
+      p_started_at: date,
+      p_otd_mm: otd ? Number(otd) : null,
+      p_cost: cost ? Number(cost) : null,
+      p_currency: document.getElementById("rtCurrency").value.trim() || "PEN",
+    });
+    if(error) throw error;
+    closeReencauchar();
+    await reloadAll();
+    showToast(`<b>#${esc(t.serie)}</b> pasó a condición ${esc(data?.condition || "")}. Ya puede reinstalarse.`);
+  }catch(err){
+    console.warn("Reencauchar:", err);
+    alert(err.message || "No se pudo reencauchar el neumático.");
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Confirmar reencauche";
+  }
 }
 
 /* =========================================================================
@@ -996,20 +1075,56 @@ function showToast(html){
 
 /* Escape cierra cualquier modal abierto */
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape"){ closeHistory(); closeReinstalar(); }
+  if(e.key === "Escape"){ closeReinstalar(); closeReencauchar(); }
 });
 
 /* =========================================================================
-   INIT
+   CARGA DE DATOS REALES (Supabase) + ESTADOS SIN DATOS / ERROR
    ========================================================================= */
-function init(){
+function renderNoData(message){
+  TIRES = []; RANKING = [];
+  document.getElementById("grid").innerHTML = `<div class="empty">${esc(message)}</div>`;
+  document.getElementById("ranking").innerHTML = `<div class="rank-empty">${esc(message)}</div>`;
+  renderCounts();
+  fillFilterOptions();
+}
+
+async function reloadAll(){
+  const [invRes, rankRes] = await Promise.all([
+    RenovaSupabase.fetchView("v_inventory_status", { select: "*" }),
+    RenovaSupabase.fetchView("v_removal_cause_ranking", { select: "*" }),
+  ]);
+  TIRES = invRes.filter(r => r.inventory_status !== "installed").map(normalizeTire);
+  RANKING = rankRes;
+  await loadUnitsAndPositions();
   renderCounts();
   renderTabs();
   fillFilterOptions();
   renderGrid();
   renderRanking();
 }
-init();
+
+async function init(){
+  if(!(window.RenovaSupabase && RenovaSupabase.enabled)){
+    renderNoData("Supabase no configurado. No se muestran datos locales.");
+    return;
+  }
+  try{
+    await RenovaSupabase.requireAuth();
+    await reloadAll();
+    const session = await RenovaSupabase.getSession();
+    RenovaSupabase.showBadge("supabase", session?.user?.email || "");
+    RenovaSupabase.onDataChange(
+      ["tire_installations", "tire_removals", "tire_life_cycles", "tire_casings"],
+      () => reloadAll().catch(err => console.warn("Inventario: refresh en vivo falló.", err))
+    );
+  }catch(err){
+    console.warn("Inventario: no se pudo cargar Supabase.", err);
+    renderNoData("No se pudo cargar el inventario desde Supabase.");
+    RenovaSupabase.showBadge("empty");
+  }
+}
+onRenovaSupabaseReady(init);
 </script>
 </body>
 </html>

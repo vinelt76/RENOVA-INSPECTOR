@@ -1,0 +1,17 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/app/android/**": true,
+    "**/.git/**": true,
+    "**/app/dist/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/app/android": true,
+    "**/app/dist": true
+  },
+  "files.exclude": {
+    "**/app/android/app/build": true,
+    "**/app/android/.gradle": true
+  }
+}

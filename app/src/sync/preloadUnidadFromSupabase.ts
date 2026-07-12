@@ -3,7 +3,10 @@ import { unidadRepo } from '../db/repos/unidadRepo';
 import { empresaRepo } from '../db/repos/empresaRepo';
 import { listInspeccionesPorPlaca, type UnidadPreloadRow } from './readInspecciones';
 
-function inferConfig(rows: UnidadPreloadRow[]): string {
+// Fallback SOLO si el servidor no devolvió vehicle_type/notation (no debería pasar:
+// ambas columnas son NOT NULL en units/vehicle_configs). Antes de task_15 esto era
+// el camino normal (adivinar); ahora es una red de seguridad, con warning.
+function inferConfigFallback(rows: UnidadPreloadRow[]): string {
   const maxPos = Math.max(0, ...rows.map(r => r.position_number));
   if (maxPos >= 8) return '2-4-2';
   if (maxPos >= 6) return '2-4';
@@ -22,13 +25,22 @@ export async function preloadUnidadFromSupabase(empresaId: string, plate: string
   const latestDate = rows[0].inspected_on;
   const latestRows = rows.filter(r => r.inspected_on === latestDate);
   const head = latestRows[0];
-  const config = inferConfig(latestRows);
   const odometer = Number(head.odometer_km ?? 0);
+
+  let tipoVehiculo = head.vehicle_type;
+  let config = head.notation;
+  if (!tipoVehiculo || !config) {
+    console.warn(
+      `preloadUnidadFromSupabase: servidor no devolvió vehicle_type/notation para ${plate} — usando fallback adivinado`
+    );
+    tipoVehiculo = tipoVehiculo ?? 'BUS';
+    config = config ?? inferConfigFallback(latestRows);
+  }
 
   await unidadRepo.upsert({
     numero: head.plate,
     empresa_id: empresaId,
-    tipo_vehiculo: 'BUS',
+    tipo_vehiculo: tipoVehiculo,
     configuracion: config,
     odometro_ultimo: odometer,
     ultima_fecha: latestDate,
@@ -47,6 +59,7 @@ export async function preloadUnidadFromSupabase(empresaId: string, plate: string
 
   for (const row of latestRows) {
     await inspeccionRepo.upsertNeumatico({
+      empresa_id: empresaId,
       cabecera_id: cabecera.id,
       posicion: row.position_number,
       codigo: row.tire_code ?? row.casing_code,

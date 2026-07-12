@@ -53,35 +53,37 @@ Según `reglas_negocio.md`, estos valores son **parámetros**, no constantes. La
 
 ---
 
-## 3. Estado REAL hoy (la deuda — esto es lo que conviene tener presente)
+## 3. Estado REAL hoy (actualizado — task_16, 2026-07-11)
 
-A pesar de que §2 dice "configurable", **hoy nada de eso es configurable en runtime**. La app MVP usa
-valores fijos:
-
-- **Umbrales RTD hardcodeados.** `app/src/db/repos/inspeccionRepo.ts:8-9`:
-  `DEFAULT_RTD_CAMBIO = 4`, `DEFAULT_RTD_PROXIMO = 7`. Es exactamente el "NUNCA hardcodear 4/7" que advierte
-  `CLAUDE.md`; está como deuda consciente, con `TODO`.
-- **No existen las tablas `umbral_rtd` / `umbral_presion`.** El schema (`schema.ts`) no las tiene; no hay
-  capa de configuración por empresa.
-- **El seed ya contempla umbrales por neumático.** `seed.ts` usa `n.umbral_cambio ?? 4` /
-  `n.umbral_proximo ?? 7` (y los datos demo pueden traer `umbral_cambio/proximo/normal`). O sea: el dato de
-  origen ya admite umbrales variables, pero la app no los consume de forma configurable.
-- **Estado de presión / VUR / tasa / ISA: implementados pero NO conectados a la UI.**
-  `calcularEstadoPresion`, `calcularVur`, `calcularTasaDesgaste`, `calcularIsaPeso` existen en
-  `calculations.ts` con tests, pero ninguna pantalla los muestra todavía. La inspección hoy solo persiste y
-  muestra RTD MOVI / IDI / estado RTD.
+- **Umbrales RTD ya son configurables por empresa/medida (cerrado).** Tabla local `umbral_rtd`
+  (`app/src/db/sqlite.ts`, migración v3) + `app/src/db/repos/umbralRepo.ts`; se pull-ean desde
+  `rtd_thresholds` en Supabase (ya aplicada, migración `20260706120000`) vía RPC
+  `get_umbrales_rtd` (`app/src/sync/pullUmbrales.ts`), disparado al seleccionar empresa. Ya no
+  quedan `4`/`7` como constantes de flujo en `inspeccionRepo.ts` ni en `pushInspeccion.ts`.
+- **Snapshot reproducible.** Cada fila de `inspeccion_neumatico` guarda `rtd_cambio_snap` /
+  `rtd_proximo_snap` / `rtd_normal_snap` / `isa_peso_snap` — el umbral CONTRA el que se calculó
+  `estado_rtd`, no el vigente al momento de leer. Esto es lo que viaja en el push a
+  `save_inspection` (antes eran constantes de módulo).
+- **`umbral_presion` existe pero sigue INERTE.** Se creó la tabla (paridad de diseño) pero
+  ningún código la lee ni la escribe — `calcularEstadoPresion` sigue sin invocarse desde ningún
+  flujo. Motivo: la referencia CALIENTE sigue sin definirse (ver §1).
+- **Estado de presión / VUR / tasa / ISA agregado: implementados pero NO conectados a la UI.**
+  `calcularEstadoPresion`, `calcularVur`, `calcularTasaDesgaste` existen en `calculations.ts` con
+  tests, pero ninguna pantalla los muestra todavía. `calcularIsaPeso` sí se usa, pero solo para el
+  snapshot por fila (`isa_peso_snap`) — no hay ISA agregado en UI.
 
 ### Resumen de una línea
-> **Estructura de fórmulas = fija y correcta.** **Parametrización por empresa = diseñada pero no
-> implementada** (hoy todo corre con defaults fijos). Llevar los umbrales a configuración por empresa es
-> trabajo de **fase futura**; en esta fase **solo se documenta** (decisión de Facundo, 2026-06-27).
+> **Estructura de fórmulas = fija y correcta. Umbrales RTD = configurables y en producción**
+> (task_16, 2026-07-11). **Presión/VUR/tasa/ISA agregado = siguen sin conectarse a la UI**,
+> bloqueados en parte por CALIENTE sin definir.
 
 ---
 
-## 4. Cuándo cerrar la deuda (fase futura, no ahora)
-- Diseñar `umbral_rtd` / `umbral_presion` (por empresa + medida + eje) y sembrarlas desde el catálogo.
-- Reemplazar el `4/7` hardcodeado de `inspeccionRepo.ts` por lectura de esas tablas.
+## 4. Cuándo cerrar lo que queda (fase futura, no ahora)
 - Conectar presión/VUR/tasa/ISA a la UI cuando el flujo lo requiera.
-- Confirmar y documentar la referencia de presión **CALIENTE** antes de habilitar su cálculo.
+- Confirmar y documentar la referencia de presión **CALIENTE** antes de habilitar su cálculo
+  (recién ahí tiene sentido activar `umbral_presion`).
+- UI de administración de umbrales por empresa (hoy solo se pull-ean de Supabase; no hay pantalla
+  para editarlos desde la app).
 
 Ver también: `decisions/0004-catalog-sync.md` (versionado del catálogo) y `specs/reglas_negocio.md`.
