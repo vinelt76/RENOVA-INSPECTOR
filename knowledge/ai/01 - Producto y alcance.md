@@ -15,7 +15,7 @@ RENOVA inspecciona neumáticos de buses y hoy reemplaza un proceso basado en Exc
 
 - **Inspector de campo:** selecciona empresa/unidad, registra odómetro, identidad del neumático, RTD, presión, válvula y anomalías.
 - **Jefe de flota:** consulta cobertura, alertas, estado por unidad/fecha y rendimiento.
-- **Taller:** instala, retira, transfiere, reinstala y manda cascos a reencauche.
+- **Taller:** instala, retira, transfiere y registra la salida de cascos a reencauche.
 - **Administrador/supervisor:** configura empresas, usuarios, umbrales y catálogos; esta operación aún no tiene una consola completa.
 
 ## Alcance que existe
@@ -26,11 +26,12 @@ RENOVA inspecciona neumáticos de buses y hoy reemplaza un proceso basado en Exc
 - Sincronización durable de inspecciones a Supabase.
 - Umbrales RTD por empresa/medida y snapshot histórico por medición.
 - Dashboards HTML autenticados para inspecciones, flota, rendimiento e historial.
-- Operaciones web de inventario/taller y atribución de rutas incorporadas el 2026-07-12.
+- Operaciones web de taller (instalar, retirar y trasladar) y atribución de rutas incorporadas el 2026-07-12.
 
 ## Fuera o incompleto
 
 - La app móvil todavía usa acceso `anon`; no hay login de inspector implementado extremo a extremo.
+- No hay pantalla separada de Inventario ni Comparativo; fueron retiradas por decisión de producto el 2026-07-12.
 - Pull/versionado completo de todos los catálogos no está cerrado.
 - Presión CALIENTE no tiene regla confirmada.
 - Reporte Excel final por empresa y automatizaciones externas siguen siendo evolución futura.
@@ -47,4 +48,3 @@ RENOVA inspecciona neumáticos de buses y hoy reemplaza un proceso basado en Exc
 6. Interfaz industrial, legible al sol, con objetivos táctiles grandes.
 
 Ver [[09 - Diseno y UX]] y [[10 - Roadmap deuda y riesgos]].
-

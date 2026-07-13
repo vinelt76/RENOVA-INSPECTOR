@@ -47,9 +47,9 @@ sources: [DESIGN.md, PRODUCT.md, design-principle.md, app/src/index.css, app/src
 
 ## Alineación 2026-07-12
 
-`inventario.html`, `instalacion.html`, `historial-neumatico.html` y `comparativo.html` fueron
-normalizados contra `DESIGN.md` y las pantallas de Inspecciones/Rendimiento: naranja como
-máxima severidad (sin rojo), botones primarios naranja con texto navy, hovers con tokens de
-paleta y amarillo para confirmaciones sin reutilizar el verde reservado. Las cuatro comparten
-`WEB/renova-office-shell.css` como fuente única para tokens, fondo, header, marca y navegación;
-los formularios y bloques internos no deben volver a usar `screen-dark` como superficie.
+Las superficies web vigentes fueron alineadas contra `DESIGN.md` y las pantallas de
+Inspecciones/Rendimiento: naranja como máxima severidad (sin rojo), botones primarios naranja
+con texto navy y hovers limitados a los tokens de paleta. `instalacion.html` e
+`historial-neumatico.html` comparten `WEB/renova-office-shell.css` para tokens, fondo, header,
+marca y navegación. `inventario.html` y `comparativo.html` fueron retirados el mismo día y no
+son superficies vigentes.

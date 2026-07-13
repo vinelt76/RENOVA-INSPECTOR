@@ -10,7 +10,7 @@ sources: [CLAUDE.md, PRODUCT.md, DESIGN.md, tasks_opencode/STATE.md, git]
 > [!IMPORTANT]
 > Fecha de corte: **2026-07-12**. Esta base resume el repo, pero no reemplaza la lectura del código que se vaya a modificar. Si una nota contradice una migración o el código actual, manda el código y la nota debe corregirse.
 
-RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas peruanas. El inspector captura en Android aun sin señal; SQLite conserva el trabajo; Supabase consolida la operación; los dashboards web muestran inspecciones, estado, rendimiento, inventario y taller.
+RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas peruanas. El inspector captura en Android aun sin señal; SQLite conserva el trabajo; Supabase consolida la operación; los dashboards web muestran inspecciones, historial, rendimiento y operaciones de taller.
 
 ## Lectura mínima para una IA nueva
 
@@ -53,4 +53,3 @@ RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas p
 - Dashboard/taller: [[07 - Web dashboards y taller]].
 - UI: [[09 - Diseno y UX]].
 - Planificación: [[10 - Roadmap deuda y riesgos]] y [[12 - Decisiones e historia]].
-

@@ -9,7 +9,7 @@ sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, 
 
 ## Prioridad inmediata
 
-1. Validar E2E las migraciones/UI del 12 de julio: taller, rutas y comparativo.
+1. Validar E2E las migraciones/UI vigentes del 12 de julio: taller y rutas.
 2. Cerrar el paquete de calidad de task 18: probar `pushInspeccion` directamente, decidir/implementar partición de bundles y verificar build.
 3. Corregir la documentación histórica solo mediante notas de auditoría; no reescribir la bitácora como si nunca hubiera existido.
 4. Probar APK en dispositivo real: SQLite nativo, cámara, pérdida/recuperación de red y cierre del día.
@@ -25,6 +25,7 @@ sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, 
 - Pull/versionado/borrado de catálogos no está completo.
 - `vite.config.ts` no tiene `manualChunks`; el punto de task 18 sigue abierto.
 - Hay documentos run/STATE con afirmaciones vencidas.
+- Inventario/Comparativo retirados no deben reaparecer por copiar documentación o commits históricos.
 
 ## Decisiones bloqueantes
 
@@ -33,6 +34,7 @@ sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, 
 - Estrategia final de login/sesión offline para inspectores.
 - Versionado y eliminación segura de catálogo.
 - Criterio de “producto listo” para taller/rutas, más allá de que exista SQL/UI.
+- Flujo de creación del ciclo siguiente tras un retiro por reencauche; el RPC actual solo cierra el ciclo saliente.
 
 ## Evolución prevista
 
@@ -51,4 +53,3 @@ sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, 
 - Fórmulas distintas entre app, SQL y HTML.
 - Operación de taller que deja intervalos abiertos o dos neumáticos en una posición.
 - Datos legacy sin cola/snapshots.
-

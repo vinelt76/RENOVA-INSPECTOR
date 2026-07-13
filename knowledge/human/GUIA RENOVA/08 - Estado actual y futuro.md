@@ -17,19 +17,21 @@ sources: [git, app/src, WEB, supabase/migrations, tasks_opencode/STATE.md]
 - Cola durable con reintentos y protecciones contra pérdida.
 - Supabase con separación por empresa para usuarios web.
 - Tableros de inspección, flota, rendimiento e historial.
-- Pantallas/RPCs de taller, rutas y comparaciones agregadas al código.
+- Pantalla/RPCs de taller para instalar, retirar y trasladar, más rutas temporales.
+- Inventario y Comparativo retirados intencionalmente del producto web.
 - Automatización para APK y publicación web.
 
 ## Hay que terminar o validar
 
 - Login propio del inspector en la app móvil.
-- Prueba completa de taller, rutas y comparativo con base real y roles.
+- Prueba completa de taller y rutas con base real y roles.
 - Envío automático justo al vencer la espera, aunque nadie toque la app.
 - Evitar algunos reenvíos innecesarios al precargar.
 - Completar sincronización/versionado de catálogos.
 - Regla de presión CALIENTE.
 - Acordar la fórmula final de porcentaje de desgaste.
 - Reporte Excel definitivo y consola administrativa.
+- Definir el flujo futuro para abrir R1/R2 después de retirar por reencauche.
 - Probar APK en condiciones reales de campo.
 
 ## Plan a futuro razonable
@@ -46,4 +48,3 @@ sources: [git, app/src, WEB, supabase/migrations, tasks_opencode/STATE.md]
 Una tarea que dice “pendiente” puede haber sido ejecutada sin actualizar la tabla. Primero mirar el programa y las migraciones; la tarea sirve para entender la intención y la historia.
 
 Seguir con [[09 - Links para seguir aprendiendo]].
-
