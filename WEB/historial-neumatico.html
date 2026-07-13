@@ -9,12 +9,11 @@
   datos REALES de Supabase (v_casing_history_summary, v_casing_installations,
   v_casing_inspections), protegidos por RLS de empresa.
 
-  Es una VISTA APARTE, referenciada por LINK desde Inventario/Inspección/Rendimiento:
+  Es una VISTA APARTE, referenciada por LINK desde Inspección/Rendimiento:
   al hacer clic en el # Serie / Código de un neumático, esas pantallas navegan aquí
   pasando el código en la URL:
       historial-neumatico.html?serie=NEU-04533&from=rendimiento
       historial-neumatico.html?serie=NEU-04533&from=inspeccion
-      historial-neumatico.html?serie=NEU-04533&from=inventario
   Un solo historial, una sola lógica, referenciado desde todos los orígenes.
 
   Reglas respetadas:
@@ -45,10 +44,11 @@
 
     --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
     --display:'Bebas Neue',sans-serif;
+    color-scheme:dark;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
+  html{height:100%}
   body{
     background:var(--screen-dark);
     color:var(--value-ice);
@@ -63,23 +63,23 @@
   /* ───────────────── Header ───────────────── */
   header{
     background:var(--navy-brand);
-    padding:16px 16px 14px;
+    padding:18px 16px 16px;
     position:sticky;top:0;z-index:20;
     border-bottom:4px solid transparent;
     border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
   }
   .head-inner{max-width:860px;margin:0 auto}
   .brand .logo{
-    font-family:var(--display);font-size:30px;line-height:1;
+    font-family:var(--display);font-size:32px;line-height:1;
     letter-spacing:.06em;color:var(--value-ice);
   }
   .brand .logo b{color:var(--ember-orange);font-weight:400}
   .brand .screen-name{
-    font-family:var(--display);font-size:18px;line-height:1;
+    font-family:var(--display);font-size:19px;line-height:1;
     letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
   }
 
-  main{max-width:860px;margin:0 auto;padding:16px}
+  main{max-width:860px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
 
   /* Botón volver (según origen) */
   .th-back{
@@ -90,7 +90,7 @@
     padding:10px 14px;cursor:pointer;margin-bottom:16px;text-decoration:none;
     transition:border-color .15s ease-out,color .15s ease-out,transform .12s ease-out;
   }
-  .th-back:hover{color:var(--value-ice);border-color:#294263}
+  .th-back:hover{color:var(--value-ice);border-color:var(--label-blue)}
   .th-back:active{transform:scale(.97)}
   .th-back:focus-visible{outline:none;border-color:var(--ember-orange)}
   .th-back svg{width:14px;height:14px}
@@ -169,13 +169,14 @@
 
   footer{
     max-width:860px;margin:28px auto 0;padding:0 16px;
-    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;line-height:1.6;
   }
 
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important;animation:none!important}
   }
 </style>
+<link rel="stylesheet" href="renova-office-shell.css">
 </head>
 <body>
 

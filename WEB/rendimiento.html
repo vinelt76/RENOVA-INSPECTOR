@@ -79,6 +79,7 @@
 
     --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
     --display:'Bebas Neue',sans-serif;
+    color-scheme:dark;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
@@ -90,6 +91,7 @@
     font-weight:700;
     -webkit-font-smoothing:antialiased;
     font-variant-numeric:tabular-nums;
+    display:flex;flex-direction:column;min-height:100vh;
     padding-bottom:48px;
   }
   .num{font-variant-numeric:tabular-nums}
@@ -120,7 +122,7 @@
     color:var(--label-blue);margin-top:8px;
   }
   .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
-  .screen-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .screen-nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
   .screen-nav a{
     color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
     background:var(--field-dark);border-radius:8px;padding:10px 12px;
@@ -145,7 +147,7 @@
   .unit-picker select:focus{outline:none;border-color:var(--ember-orange)}
 
   /* ───────────────── Layout ───────────────── */
-  main{max-width:1280px;margin:0 auto;padding:16px}
+  main{max-width:1280px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
 
   /* ───────────────── Selector de eje (tabs) ───────────────── */
   .selector-block{margin-bottom:16px}
@@ -351,7 +353,7 @@
 
   footer{
     max-width:1280px;margin:28px auto 0;padding:0 16px;
-    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;line-height:1.6;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;line-height:1.6;
   }
 
   @media (max-width:560px){
@@ -381,9 +383,7 @@
       <nav class="screen-nav" aria-label="Pantallas">
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="instalacion.html">Instalación</a>
-        <a href="inventario.html">Inventario</a>
         <a class="active" href="rendimiento.html">Rendimiento</a>
-        <a href="comparativo.html">Comparativo</a>
         <a href="importar.html">Importar</a>
       </nav>
       <div class="unit-picker">
@@ -396,7 +396,7 @@
 
 <main>
   <!-- 1. Seleccionar eje -->
-  <div class="selector-block">
+  <div class="selector-block" id="axleSelectorBlock">
     <div class="selector-label">Eje</div>
     <div class="axle-tabs" id="axleTabs" role="tablist" aria-label="Seleccionar eje"></div>
   </div>
@@ -405,7 +405,7 @@
   <div id="summaryMount"></div>
 
   <!-- 3. Seleccionar posición dentro del eje -->
-  <div class="selector-block">
+  <div class="selector-block" id="posSelectorBlock">
     <div class="selector-label">Posición del eje</div>
     <div class="pos-pills" id="posPills" role="tablist" aria-label="Seleccionar posición"></div>
   </div>
@@ -1016,6 +1016,8 @@ function renderAll(){
     renderNoData("Cargando datos del Excel desde Supabase...");
     return;
   }
+  document.getElementById("axleSelectorBlock").style.display = "";
+  document.getElementById("posSelectorBlock").style.display = "";
   renderAxleTabs();
   renderPills();
   renderCard();
@@ -1024,12 +1026,13 @@ function renderAll(){
 
 function renderNoData(message){
   renderUnitOptions();
+  document.getElementById("axleSelectorBlock").style.display = "none";
+  document.getElementById("posSelectorBlock").style.display = "none";
   document.getElementById("axleTabs").innerHTML = "";
   document.getElementById("posPills").innerHTML = "";
   document.getElementById("summaryMount").innerHTML =
     `<section class="summary-card"><div class="empty">${message}</div></section>`;
-  document.getElementById("cardMount").innerHTML =
-    `<section class="tire-card"><div class="empty">${message}</div></section>`;
+  document.getElementById("cardMount").innerHTML = "";
 }
 
 /* =========================================================================

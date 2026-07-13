@@ -57,6 +57,7 @@
 
     --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
     --display:'Bebas Neue',sans-serif;
+    color-scheme:dark;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
@@ -68,6 +69,7 @@
     font-weight:700;
     -webkit-font-smoothing:antialiased;
     font-variant-numeric:tabular-nums;
+    display:flex;flex-direction:column;min-height:100vh;
     padding-bottom:40px;
   }
   .num{font-variant-numeric:tabular-nums}
@@ -99,7 +101,7 @@
     color:var(--label-blue);margin-top:8px;
   }
   .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
-  .screen-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .screen-nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
   .screen-nav a{
     color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
     background:var(--field-dark);border-radius:8px;padding:10px 12px;
@@ -124,7 +126,7 @@
   .date-picker select:focus{outline:none;border-color:var(--ember-orange)}
 
   /* ───────────────── Layout ───────────────── */
-  main{max-width:1200px;margin:0 auto;padding:16px}
+  main{max-width:1200px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
 
   /* ───────────────── KPIs: panel gráfico de flota ─────────────────
      Reemplaza las 5 stat cards de texto por un panel único (total +
@@ -255,7 +257,7 @@
 
   footer{
     max-width:1200px;margin:24px auto 0;padding:0 16px;
-    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;
   }
 
   @media (max-width:520px){
@@ -284,9 +286,7 @@
       <nav class="screen-nav" aria-label="Pantallas">
         <a class="active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="instalacion.html">Instalación</a>
-        <a href="inventario.html">Inventario</a>
         <a href="rendimiento.html">Rendimiento</a>
-        <a href="comparativo.html">Comparativo</a>
         <a href="importar.html">Importar</a>
       </nav>
       <div class="date-picker">
@@ -421,7 +421,7 @@ function renderNoData(message){
     `<div class="fleet-overview"><div class="fo-total">
       <div class="fo-total-value num">0</div>
       <div class="fo-total-label">Unidades inspeccionadas</div>
-      <div class="fo-total-sub">${message}</div>
+      <div class="fo-total-sub">Sin datos</div>
     </div></div>`;
   document.getElementById("gridTitle").textContent = "Unidades inspeccionadas · 0";
   document.getElementById("fleetGrid").innerHTML =

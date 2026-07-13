@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "docs:check": "node scripts/sync-project-docs.mjs --check",
+    "docs:status": "node scripts/sync-project-docs.mjs --status",
+    "docs:sync": "node scripts/sync-project-docs.mjs"
+  },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8"
   }

@@ -30,7 +30,6 @@ npx serve -l 8080
 |---|---|
 | `rendimiento.html` | http://localhost:8080/rendimiento.html |
 | `instalacion.html` | http://localhost:8080/instalacion.html |
-| `inventario.html` | http://localhost:8080/inventario.html |
 | `historial-neumatico.html` | http://localhost:8080/historial-neumatico.html |
 | `importar.html` | http://localhost:8080/importar.html |
 | `INSPECCIONES POR FECHA.html` | http://localhost:8080/INSPECCIONES%20POR%20FECHA.html |

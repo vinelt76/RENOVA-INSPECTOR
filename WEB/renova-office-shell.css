@@ -1,0 +1,100 @@
+/* Carcasa compartida de las superficies web RENOVA.
+   DESIGN.md y las pantallas Inspecciones/Rendimiento son la referencia. */
+:root {
+  --screen-dark: #07111C;
+  --field-dark: #111E2E;
+  --navy-brand: #15233f;
+  --border-dark: #1B2D42;
+  --label-blue: #7AABCC;
+  --value-ice: #F0F8FF;
+  --ember-orange: #F06822;
+  --signal-yellow: #f4b821;
+  --verified-green: #1f9d6b;
+  --mono: 'JetBrains Mono', 'IBM Plex Mono', SFMono-Regular, Menlo, monospace;
+  --display: 'Bebas Neue', sans-serif;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--screen-dark);
+  color: var(--value-ice);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: var(--navy-brand);
+  padding: 18px 16px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 4px solid transparent;
+  border-image: repeating-linear-gradient(45deg, var(--ember-orange) 0 6px, transparent 6px 12px) 4;
+}
+
+.brand .logo {
+  color: var(--value-ice);
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .06em;
+}
+
+.brand .logo b {
+  color: var(--ember-orange);
+  font-weight: 400;
+}
+
+.brand .screen-name {
+  color: var(--signal-yellow);
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .12em;
+  margin-top: 4px;
+}
+
+.nav,
+.screen-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.nav a,
+.screen-nav a {
+  color: var(--label-blue);
+  background: var(--field-dark);
+  border: 2px solid var(--border-dark);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.nav a.active,
+.screen-nav a.active {
+  color: var(--ember-orange);
+  border-color: var(--ember-orange);
+}
+
+@media (max-width: 780px) {
+  .nav,
+  .screen-nav {
+    width: 100%;
+  }
+}

@@ -17,14 +17,17 @@
     --screen-dark:#07111C; --field-dark:#111E2E; --navy-brand:#15233f;
     --border-dark:#1B2D42; --label-blue:#7AABCC; --value-ice:#F0F8FF;
     --ember-orange:#F06822; --signal-yellow:#f4b821; --verified-green:#1f9d6b;
+    --critical:var(--ember-orange);
     --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
     --display:'Bebas Neue',sans-serif;
+    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     background:var(--screen-dark); color:var(--value-ice);
     font-family:var(--mono); font-weight:700; -webkit-font-smoothing:antialiased;
     font-variant-numeric:tabular-nums; padding-bottom:42px;
+    display:flex;flex-direction:column;min-height:100vh;
   }
   header{
     background:var(--navy-brand); padding:18px 16px 16px; position:sticky; top:0; z-index:20;
@@ -36,14 +39,14 @@
   .brand .logo b{color:var(--ember-orange);font-weight:400}
   .brand .screen-name{font-family:var(--display);font-size:19px;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
   .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
-  .nav{display:flex;gap:8px;flex-wrap:wrap}
+  .nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
   .nav a{
     color:var(--label-blue); text-decoration:none; border:2px solid var(--border-dark);
-    background:var(--field-dark); border-radius:8px; padding:9px 12px;
+    background:var(--field-dark); border-radius:8px; padding:10px 12px;
     font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
   }
   .nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
-  main{max-width:1280px;margin:0 auto;padding:16px}
+  main{max-width:1280px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
   .toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .selector{display:flex;flex-direction:column;gap:6px}
   .selector label{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue)}
@@ -53,15 +56,21 @@
     border-radius:8px;padding:10px 38px 10px 12px;min-width:180px;
   }
   .summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
-  .metric{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;padding:14px}
+  .metric{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:8px;padding:14px}
   .metric .k{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
-  .metric .v{font-size:24px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice)}
+  .metric .v{font-size:28px;font-weight:800;line-height:1;margin-top:8px;color:var(--value-ice)}
   .metric .s{font-size:10px;color:var(--label-blue);margin-top:6px;line-height:1.4}
   .table-card{background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;overflow:hidden}
   .table-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;background:var(--navy-brand);padding:13px 16px;border-bottom:2px solid var(--border-dark)}
   .table-head h2{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
   .table-head .count{font-size:11px;color:var(--label-blue)}
-  .table-wrap{overflow-x:auto}
+  .table-wrap{
+    overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--border-dark) var(--field-dark);
+  }
+  .table-wrap::-webkit-scrollbar{height:8px}
+  .table-wrap::-webkit-scrollbar-track{background:var(--field-dark)}
+  .table-wrap::-webkit-scrollbar-thumb{background:var(--border-dark);border-radius:4px}
+  .table-wrap::-webkit-scrollbar-thumb:hover{background:var(--label-blue)}
   table{width:100%;border-collapse:collapse;min-width:1040px}
   th{
     text-align:left;padding:10px 10px 8px;border-bottom:2px solid var(--border-dark);
@@ -72,12 +81,16 @@
   td.dim{color:var(--label-blue)}
   .code{color:var(--ember-orange);font-weight:800}
   .empty{border:2px dashed var(--border-dark);border-radius:12px;padding:18px;color:var(--label-blue);font-size:12px;line-height:1.5}
+  footer{
+    max-width:1280px;margin:22px auto 0;padding:0 16px 16px;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;line-height:1.6;
+  }
   @media (max-width:780px){.summary{grid-template-columns:1fr 1fr}.head-row{align-items:flex-start}.nav{width:100%}}
 
   /* ───────── Acciones + botón primario ───────── */
   .btn-primary{
     font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
-    color:#fff;background:var(--ember-orange);border:0;border-radius:10px;padding:11px 16px;cursor:pointer;
+    color:var(--navy-brand);background:var(--ember-orange);border:0;border-radius:10px;padding:11px 16px;cursor:pointer;
     display:inline-flex;align-items:center;gap:8px;transition:filter .15s ease-out,transform .12s ease-out;
   }
   .btn-primary:hover{filter:brightness(1.08)}
@@ -89,12 +102,12 @@
     color:var(--label-blue);background:transparent;border:2px solid var(--border-dark);border-radius:7px;
     padding:6px 9px;cursor:pointer;transition:border-color .15s,color .15s;white-space:nowrap;
   }
-  .btn-mini:hover{color:var(--value-ice);border-color:#294263}
+  .btn-mini:hover{color:var(--value-ice);border-color:var(--label-blue)}
   .btn-mini.danger:hover{color:var(--ember-orange);border-color:var(--ember-orange)}
 
-  /* ───────── Modal genérico (sheet), igual patrón que inventario.html ───────── */
+  /* ───────── Modal genérico (sheet) ───────── */
   .scrim{
-    position:fixed;inset:0;background:rgba(4,9,16,.72);
+    position:fixed;inset:0;background:rgba(7,17,28,.72);
     display:none;align-items:flex-end;justify-content:center;z-index:60;
   }
   .scrim.open{display:flex}
@@ -126,7 +139,7 @@
   }
   .form-field label .req{color:var(--ember-orange);margin-left:3px}
   .form-field select,.form-field input,.form-field textarea{
-    width:100%;appearance:none;-webkit-appearance:none;background:var(--screen-dark);color:var(--value-ice);
+    width:100%;appearance:none;-webkit-appearance:none;background:var(--field-dark);color:var(--value-ice);
     font-family:var(--mono);font-weight:700;font-size:14px;border:2px solid var(--border-dark);border-radius:10px;
     padding:11px 13px;transition:border-color .15s ease-out;
   }
@@ -137,37 +150,38 @@
     background-repeat:no-repeat;background-position:right 14px center;
   }
   .form-field select:focus,.form-field input:focus,.form-field textarea:focus{outline:none;border-color:var(--ember-orange)}
-  .form-field.invalid select,.form-field.invalid input{border-color:var(--discard-red,#c0453a)}
-  .form-field .err{font-size:10px;font-weight:800;color:#c0453a;margin-top:7px;display:none}
+  .form-field.invalid select,.form-field.invalid input{border-color:var(--critical)}
+  .form-field .err{font-size:10px;font-weight:800;color:var(--critical);margin-top:7px;display:none}
   .form-field.invalid .err{display:block}
   .form-field.hidden{display:none}
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
   .form-note{font-size:10px;font-weight:700;color:var(--label-blue);line-height:1.5;margin:-6px 0 16px}
   .btn-submit{
     width:100%;font-family:var(--mono);font-weight:800;font-size:14px;letter-spacing:.08em;text-transform:uppercase;
-    color:#fff;background:var(--ember-orange);border:0;border-radius:11px;padding:15px 14px;cursor:pointer;margin-top:6px;
+    color:var(--navy-brand);background:var(--ember-orange);border:0;border-radius:11px;padding:15px 14px;cursor:pointer;margin-top:6px;
     transition:filter .15s ease-out,transform .12s ease-out;
   }
   .btn-submit:hover{filter:brightness(1.08)}
   .btn-submit:disabled{opacity:.6;cursor:default}
   .target-card{
-    background:var(--screen-dark);border:2px solid var(--border-dark);border-radius:10px;
+    background:var(--navy-brand);border:2px solid var(--border-dark);border-radius:10px;
     padding:12px 14px;margin-bottom:18px;
   }
   .target-card .t-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
   .target-card .t-value{font-size:15px;font-weight:800;color:var(--value-ice);margin-top:5px}
   .toast{
     position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
-    background:var(--navy-brand);border:2px solid var(--verified-green);border-radius:12px;padding:13px 18px;z-index:80;
+    background:var(--navy-brand);border:2px solid var(--signal-yellow);border-radius:12px;padding:13px 18px;z-index:80;
     display:flex;align-items:center;gap:11px;opacity:0;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4);
     transition:opacity .25s ease-out,transform .25s ease-out;max-width:calc(100% - 32px);
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  .toast svg{width:18px;height:18px;color:var(--verified-green);flex:none}
+  .toast svg{width:18px;height:18px;color:var(--signal-yellow);flex:none}
   .toast .t-text{font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--value-ice);line-height:1.4}
-  .toast.error{border-color:#c0453a}
-  .toast.error svg{color:#c0453a}
+  .toast.error{border-color:var(--critical)}
+  .toast.error svg{color:var(--critical)}
 </style>
+<link rel="stylesheet" href="renova-office-shell.css">
 </head>
 <body>
 <header>
@@ -180,9 +194,7 @@
     <nav class="nav" aria-label="Pantallas">
       <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a class="active" href="instalacion.html">Instalación</a>
-      <a href="inventario.html">Inventario</a>
       <a href="rendimiento.html">Rendimiento</a>
-      <a href="comparativo.html">Comparativo</a>
       <a href="importar.html">Importar</a>
     </nav>
   </div>
@@ -225,6 +237,11 @@
     </div>
   </section>
 </main>
+
+<footer>
+  Datos reales de Supabase (RLS por empresa) · Instalación, retiro y traslado escriben directo a producción.<br>
+  Trasladar = retiro en origen + instalación en destino en una sola operación.
+</footer>
 
 <!-- Modal: Nueva instalación desde cero -->
 <div class="scrim" id="instScrim" onclick="if(event.target===this) closeInstalar()">
@@ -518,7 +535,7 @@ function renderNoData(message){
   INSTALLATIONS = [];
   document.getElementById("unitSelect").innerHTML = `<option value="">Sin datos</option>`;
   document.getElementById("positionSelect").innerHTML = `<option value="">Sin datos</option>`;
-  document.getElementById("summary").innerHTML = `<div class="empty" style="grid-column:1/-1">${message}</div>`;
+  document.getElementById("summary").innerHTML = "";
   document.getElementById("rowCount").textContent = "0 filas";
   document.getElementById("rows").innerHTML = `<tr><td colspan="14"><div class="empty">${message}</div></td></tr>`;
 }

@@ -51,7 +51,7 @@ jobs:
         # la SPA, que sigue sirviéndose en la raíz.
         run: |
           mkdir -p app/dist/web
-          cp WEB/*.html WEB/*.js app/dist/web/
+          cp WEB/*.html WEB/*.js WEB/*.css app/dist/web/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -38,8 +38,17 @@ calcula salud y (a futuro) genera reportes Excel por empresa.
 ├── implementation_plan.md    ← roadmap de features + modelo de datos (stack reemplazado)
 ├── UI/                       ← prototipos React originales (referencia visual)
 ├── tasks_opencode/           ← historial de specs + STATE.md (bitácora de trabajo, ver abajo)
+├── knowledge/                ← contexto canónico para IA y guía humana; se sincroniza a Obsidian
 └── app/                      ← LA APP (React + Vite + Capacitor)
 ```
+
+### Contexto rápido para una IA nueva
+
+Después de este archivo, leer `knowledge/ai/00 - LEER PRIMERO.md`. Esa base enlaza arquitectura,
+datos, flujos, estado, roadmap, diseño y runbooks sin exigir releer todo el repo. Los archivos
+en `knowledge/` son la fuente versionada; `npm run docs:sync` publica copias navegables en los
+vaults de Obsidian. Si una nota contradice el código o la última migración, manda el código y
+la nota debe actualizarse.
 
 ## Cómo trabajamos
 
@@ -94,23 +103,37 @@ cd app && npm run build
 cd app && npm test             # tests del data layer / calculations.ts
 cd app && npx cap sync         # sincronizar al proyecto nativo
 cd app && npx cap add android  # generar proyecto Android (APK tras review)
+npm run docs:check             # valida notas, wikilinks y posibles secretos
+npm run docs:sync -- --dry-run # muestra qué se copiará a Obsidian
+npm run docs:sync              # sincroniza los dos vaults
 ```
 
 ## Estado actual
 
-**Lotes 1–4 completos** (app funcional, APK-ready, proyecto Android commiteado, CI/CD activo).
-**En curso: LOTE 5** (`tasks_opencode/STATE.md`, sección Lote 5) — orden 12→11→13→14:
-fix del crash al re-buscar unidad, alineación al design system (`DESIGN.md`), acordeón de
-datos de neumático + auto-avance entre posiciones, y **Supabase fase 1** (auth + push sync +
-pull de catálogo). Contexto de retoma en `tasks_opencode/RETOMA_2026-07-01.md`.
+**Corte verificado: 2026-07-12.** La app React/Capacitor, SQLite offline-first, proyecto Android,
+CI/CD, sincronización con Supabase, RLS de dashboards, Realtime y umbrales RTD configurables ya
+están implementados. La cola de sync es durable y protege contra reintentos, datos legacy y
+ediciones mientras un push está en vuelo. La última bitácora registra 44 tests verdes; volver a
+ejecutarlos antes de tomar ese número como estado presente.
+
+El 2026-07-12 se agregaron migraciones y superficies web para operaciones transaccionales de
+taller y rutas/asignaciones temporales. Están implementadas en código, pero requieren una
+validación E2E repetible antes de tratarlas como proceso de campo cerrado. Las pantallas
+Inventario y Comparativo (con sus RPCs/vistas exclusivas `reinstall_tire`, `retread_casing`,
+`v_removal_cause_ranking`, `v_comparison_cycle_rows`) se retiraron del dashboard web y de
+Supabase el mismo día — decisión de producto, no un bug. `tasks_opencode/STATE.md` es bitácora
+histórica: varias filas antiguas que dicen `PENDIENTE` quedaron desactualizadas frente al
+código. Estado detallado y deuda vigente: `knowledge/ai/02 - Estado actual.md` y
+`knowledge/ai/10 - Roadmap deuda y riesgos.md`.
 
 ## Decisiones abiertas que bloquean implementación futura
 
 | Decisión | Estado | Dónde se cierra |
 |---|---|---|
 | Ajuste de presión en CALIENTE | **ABIERTA** — nunca especificada | `specs/reglas_negocio.md` |
-| Estrategia de sync con servidor | **DECIDIDA fase 1** (2026-07-01): Supabase, push por `sync_queue`, LWW por `updated_at`, sesión persistida offline | `tasks_opencode/task_14_supabase_sync_fase1.md`; actualizar `decisions/0003` al implementar |
-| Versioning del catálogo desde servidor | **ABIERTA** (fase 2; en fase 1 el pull solo agrega, nunca borra) | `decisions/0004-catalog-sync.md` |
+| Identidad/login del inspector móvil | **ABIERTA** — la app opera con acceso `anon` acotado; dashboards sí usan Auth | `decisions/0003-jwt-offline.md` |
+| Estrategia de sync con servidor | **IMPLEMENTADA fase 1**: `sync_queue` durable, RPC idempotente, backoff y LWW/guards por versión | `app/src/sync/`; `tasks_opencode/STATE.md` Lote 6 |
+| Versioning del catálogo desde servidor | **ABIERTA** (el pull/versionado/borrado completo no está cerrado) | `decisions/0004-catalog-sync.md` |
 
 ## Idioma
 

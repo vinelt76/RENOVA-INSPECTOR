@@ -64,6 +64,7 @@
     --normal:var(--verified-green);
     --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
     --display:'Bebas Neue',sans-serif;
+    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -71,6 +72,7 @@
     background:var(--screen-dark);color:var(--value-ice);font-family:var(--mono);
     font-weight:700;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
     padding-bottom:40px;
+    display:flex;flex-direction:column;min-height:100vh;
   }
   .num{font-variant-numeric:tabular-nums}
 
@@ -84,7 +86,7 @@
   .brand .logo b{color:var(--ember-orange);font-weight:400}
   .brand .screen-name{font-family:var(--display);font-size:19px;line-height:1;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
   .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
-  .screen-nav{display:flex;gap:8px;flex-wrap:wrap}
+  .screen-nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
   .screen-nav a{
     color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
     background:var(--field-dark);border-radius:8px;padding:10px 12px;
@@ -92,7 +94,7 @@
   }
   .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
 
-  main{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:22px}
+  main{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:22px;flex:1 0 auto;width:100%}
 
   .panel{
     background:var(--field-dark);border:2px solid var(--border-dark);border-radius:14px;
@@ -174,7 +176,7 @@
 
   footer{
     max-width:1200px;margin:24px auto 0;padding:0 16px;
-    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--border-dark);text-align:center;
+    font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;
   }
 </style>
 </head>

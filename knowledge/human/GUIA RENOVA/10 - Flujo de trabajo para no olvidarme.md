@@ -1,0 +1,87 @@
+---
+title: "Flujo de trabajo para no olvidarme"
+updated: 2026-07-12
+status: vigente
+sources: [scripts/sync-project-docs.mjs, CLAUDE.md, knowledge/ai/14]
+---
+
+# Flujo de trabajo para no olvidarme
+
+## La idea corta
+
+El programa cambia primero. Después se actualizan las explicaciones en `knowledge/`. Al final se copian a Obsidian.
+
+**Obsidian es la copia cómoda para leer. La fuente que se conserva con el proyecto está en `knowledge/`.**
+
+## Al empezar una sesión
+
+Desde la carpeta principal del proyecto:
+
+```bash
+npm run docs:status
+```
+
+Esto compara el proyecto con la última vez que se mandaron las notas a Obsidian.
+
+- **PEQUEÑOS:** se pueden acumular hasta terminar la sesión.
+- **IMPORTANTES:** cambió una zona delicada como sync, base, reglas, dependencias o Supabase.
+- **ENORMES:** cambiaron muchos archivos, varias zonas delicadas o una cantidad grande de contenido.
+
+## Mientras se trabaja
+
+No hace falta sincronizar por cada color, texto o arreglo pequeño. Conviene actualizar las notas cuando cambia alguna de estas cosas:
+
+- cómo viaja o se guarda un dato;
+- estructura de la base;
+- reglas o fórmulas;
+- pantallas o pasos importantes;
+- permisos/usuarios/empresas;
+- arquitectura, dependencias o despliegue;
+- qué está terminado y qué falta.
+
+## Al terminar una sesión importante
+
+1. Actualizar las notas correspondientes dentro de `knowledge/ai` y `knowledge/human`.
+2. Dejar escrito qué funcionaba antes si explica una decisión importante. No hace falta guardar copias completas de todo.
+3. Validar:
+
+```bash
+npm run docs:check
+```
+
+4. Mirar qué se va a copiar:
+
+```bash
+npm run docs:sync -- --dry-run
+```
+
+5. Sincronizar:
+
+```bash
+npm run docs:sync
+```
+
+6. Confirmar que quedó al día:
+
+```bash
+npm run docs:status
+```
+
+Debe responder que la documentación está al día.
+
+## Cuándo hacerlo sí o sí
+
+- Después de un cambio grande.
+- Antes de pasar el proyecto a otra IA.
+- Antes de una demo o entrega.
+- Cuando `docs:status` diga IMPORTANTES o ENORMES.
+- Aunque no haya grandes cambios, una revisión semanal evita que se acumule demasiado.
+
+## Qué conserva y qué reemplaza
+
+`docs:sync` reemplaza en Obsidian las notas que administra. No toca contraseñas, `.obsidian/`, comandos personales ni otras notas manuales. Las versiones anteriores de las notas se recuperan desde Git si fueron guardadas en un commit; las decisiones importantes también deben quedar resumidas en la nota de historia.
+
+## Regla simple para recordar
+
+> Si el cambio haría que otra persona explique mal cómo funciona RENOVA, hay que actualizar la documentación antes de sincronizar.
+
