@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './state/AppContext';
 import { useApp } from './state/useApp';
 import EmpresaScreen from './screens/EmpresaScreen';
@@ -36,11 +36,13 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const Router = import.meta.env.BASE_URL === '/' ? BrowserRouter : HashRouter;
+
   return (
-    <BrowserRouter>
+    <Router>
       <AppProvider>
         <AppRoutes />
       </AppProvider>
-    </BrowserRouter>
+    </Router>
   );
 }

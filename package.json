@@ -2,7 +2,8 @@
   "scripts": {
     "docs:check": "node scripts/sync-project-docs.mjs --check",
     "docs:status": "node scripts/sync-project-docs.mjs --status",
-    "docs:sync": "node scripts/sync-project-docs.mjs"
+    "docs:sync": "node scripts/sync-project-docs.mjs",
+    "deploy:bundle": "cd app && npm run build && cd .. && node scripts/prepare-static-hosting.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8"

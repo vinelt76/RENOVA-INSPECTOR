@@ -5,6 +5,7 @@ app/.vite/
 app/coverage/
 app/.env
 app/.env.local
+deploy-static/
 
 # Capacitor / iOS (proyecto nativo generado)
 app/ios/
