@@ -8,6 +8,7 @@
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
 <script type="module" src="supabase-demo.js"></script>
+<link rel="stylesheet" href="tire-change/tire-change.css">
 </head>
 <body>
 <style>
@@ -524,8 +525,59 @@ main{flex:1;display:flex;min-height:0}
       <div class="src-note" id="src-note"><span class="dot y"></span>FUENTE: CARGANDO DATOS DEL EXCEL</div>
     </aside>
 
+    <!-- Modo Cambios: estado de taller separado de la inspección histórica. -->
+    <aside class="tire-change-panel" id="modo-cambios" hidden aria-hidden="true" aria-labelledby="tab-cambios">
+      <section class="tc-card">
+        <div class="tc-card-head">
+          <div>
+            <div class="tc-eyebrow">ESTADO ACTUAL · TALLER</div>
+            <h2>CAMBIOS DE NEUMÁTICOS</h2>
+          </div>
+          <span class="tc-readonly-badge">BORRADOR</span>
+        </div>
+        <p class="tc-status" id="cambios-status" role="status" aria-live="polite">
+          Entrá a Cambios para cargar el estado actual de la unidad.
+        </p>
+        <button class="tc-retry" id="cambios-retry" type="button" hidden>Reintentar carga</button>
+      </section>
+
+      <section class="tc-card" id="cambios-details" hidden>
+        <div class="tc-eyebrow">POSICIÓN SELECCIONADA</div>
+        <div class="tc-selected-value num" id="cambios-selected-position">POSICIÓN —</div>
+        <div class="tc-selected-identity" id="cambios-selected-identity">—</div>
+        <span class="tc-selected-state" id="cambios-selected-state">—</span>
+      </section>
+
+      <section class="tc-card">
+        <div class="tc-eyebrow">RESUMEN DEL BORRADOR</div>
+        <div class="tc-metrics">
+          <div class="tc-metric">
+            <span class="tc-metric-value num" id="cambios-position-count">0</span>
+            <span class="tc-metric-label">POSICIONES</span>
+          </div>
+          <div class="tc-metric">
+            <span class="tc-metric-value num" id="cambios-inventory-count">0</span>
+            <span class="tc-metric-label">DISPONIBLES</span>
+          </div>
+          <div class="tc-metric">
+            <span class="tc-metric-value num" id="cambios-draft-count">0</span>
+            <span class="tc-metric-label">MOVIMIENTOS</span>
+          </div>
+        </div>
+      </section>
+
+      <div id="cambios-workspace"></div>
+    </aside>
+
     <!-- ================= ESCENARIO 3D ================= -->
     <div class="stage" id="stage">
+      <div class="mode-tabs" role="tablist" aria-label="Modo del diagrama">
+        <button class="mode-tab" id="tab-inspeccion" type="button" role="tab"
+          aria-selected="true" aria-controls="panel">Inspección</button>
+        <button class="mode-tab" id="tab-cambios" type="button" role="tab"
+          aria-selected="false" aria-controls="modo-cambios" tabindex="-1">Cambios</button>
+      </div>
+
       <div class="stage-eyebrow">
         <span class="t1">GEMELO DIGITAL · BAHÍA 01</span>
         <span class="t2">VISTA DE UNIDAD</span>
@@ -589,6 +641,7 @@ main{flex:1;display:flex;min-height:0}
       <svg id="connector"></svg>
 
       <div class="pos-dock" id="pos-dock"></div>
+      <div class="pos-dock tire-change-dock" id="cambios-pos-dock" hidden></div>
     </div>
   </main>
 
@@ -1065,6 +1118,7 @@ function init(){
 }
 init();
 </script>
+<script type="module" src="tire-change/cambios-controller.js"></script>
 
 </body>
 </html>

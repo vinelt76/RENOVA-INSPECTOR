@@ -1,0 +1,14 @@
+{
+  "name": "renova-tire-change",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Modo Cambios de Neumáticos — módulos ES y pruebas para el dashboard WEB de RENOVA. Ver README.md.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.9"
+  }
+}

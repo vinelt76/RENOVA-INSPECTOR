@@ -1,8 +1,8 @@
 ---
 title: "Decisiones e historia"
-updated: 2026-07-12
+updated: 2026-07-14
 status: vigente
-sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode]
+sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md]
 ---
 
 # Decisiones e historia
@@ -22,6 +22,12 @@ sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode]
 
 Hubo un enfoque previo con Flutter + FastAPI + Railway, reemplazado por el stack actual. `tasks_opencode/` refleja un flujo anterior entre agentes y estados en el momento de cada lote; no es un tablero vivo confiable sin auditarlo contra el repo.
 
+El 2026-07-14 quedó cerrada una decisión operativa para probar Cambios de neumáticos sin ensuciar la
+flota real: usar una unidad dedicada `QA-CN16` con neumáticos `QA-TEST`, incluida una posición vacía,
+una identidad intencionalmente inconsistente y un neumático disponible en inventario. Esa guía de
+prueba vive en `tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md` y sirve como runbook reproducible para
+smokes reales del modo taller.
+
 ## ADRs
 
 - ADR 0001: tenancy row-level.
@@ -32,4 +38,3 @@ Hubo un enfoque previo con Flutter + FastAPI + Railway, reemplazado por el stack
 ## Principio para futuras decisiones
 
 Preferir cambios que preserven hechos históricos, funcionen sin red y centralicen reglas compartidas. Una alternativa más simple en demo no es aceptable si puede perder una inspección, mezclar empresas o hacer imposible explicar después por qué apareció un estado.
-

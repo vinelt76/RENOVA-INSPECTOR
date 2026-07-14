@@ -15,7 +15,7 @@
      RenovaSupabase.showBadge(mode, detail) → pill fija "DATOS: …" abajo a la derecha
      RenovaSupabase.onDataChange(tables, cb) → unsubscribe()  (Realtime, debounced 400ms)
 */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.3";
 
 const cfg = window.RENOVA_SUPABASE || null;
 const enabled = !!(cfg && cfg.url && cfg.anonKey);

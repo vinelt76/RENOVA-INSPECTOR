@@ -1,8 +1,8 @@
 ---
 title: "Tableros y taller"
-updated: 2026-07-12
+updated: 2026-07-14
 status: vigente
-sources: [WEB, supabase/migrations/20260712*]
+sources: [WEB, WEB/tire-change, supabase/migrations/20260712*, supabase/migrations/20260714*, tasks_cambios_neumaticos_ui/REVISION_FINAL.md]
 ---
 
 # Tableros y taller
@@ -27,6 +27,22 @@ Estas acciones se hacen como una sola operación en Supabase. Es como una transf
 
 Un retiro puede indicar que el neumático va a reencauche, pero la creación del siguiente ciclo R1/R2 no forma parte del RPC actual.
 
+## Cambios de neumáticos (varios movimientos de golpe)
+
+Dentro del tablero **Por unidad** ahora hay dos modos: **Inspección** y **Cambios**. En el modo
+Cambios, el taller ve el mismo dibujo del bus pero puede armar una lista de movimientos —mandar
+un neumático a retén, descartarlo (con foto obligatoria), montar uno del inventario en una
+posición vacía o intercambiar dos— y recién al final confirmar todo junto.
+
+Ese "todo junto" es una sola operación: o entran los cuatro movimientos o no entra ninguno, como
+la transferencia bancaria. Si mientras armabas la lista alguien cambió la unidad por otro lado, el
+sistema avisa "el estado de la unidad cambió" y no aplica nada a medias. Si se corta internet, el
+borrador queda guardado y podés reintentar sin duplicar nada.
+
+El 14 de julio se probó de punta a punta con un bus de prueba real (`QA-CN16`) haciendo los
+cuatro tipos de movimiento a la vez: funcionó, la foto de descarte se guardó y el estado quedó
+bien tras recargar la página.
+
 ## Lo que se retiró
 
 Las pantallas separadas de **Inventario** y **Comparativo** se eliminaron el 12 de julio por una decisión de producto. También se quitaron las operaciones exclusivas de reinstalar/reencauchar desde Inventario y la vista de comparación. No fue una pérdida accidental de archivos.
@@ -39,6 +55,8 @@ Una unidad puede cambiar de ruta. Por eso la ruta no se pega para siempre a la f
 
 ## Estado prudente
 
-El código de taller y rutas existe desde el 12 de julio. Antes de usarlo como proceso definitivo hay que repetir pruebas completas contra la base real y con los distintos roles.
+El código de taller y rutas existe desde el 12 de julio. El modo Cambios de neumáticos ya pasó su
+prueba real de punta a punta el 14 de julio; para instalación/retiro/traslado y rutas todavía
+conviene repetir pruebas con los distintos roles antes de darlo por proceso definitivo.
 
 Seguir con [[06 - Diccionario en criollo]].

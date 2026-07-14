@@ -1,8 +1,8 @@
 ---
 title: "Estado actual y futuro"
-updated: 2026-07-12
+updated: 2026-07-14
 status: vigente
-sources: [git, app/src, WEB, supabase/migrations, tasks_opencode/STATE.md]
+sources: [git, app/src, WEB, WEB/tire-change, supabase/migrations, tasks_opencode/STATE.md, tasks_cambios_neumaticos_ui/REVISION_FINAL.md]
 ---
 
 # Estado actual y futuro
@@ -18,6 +18,12 @@ sources: [git, app/src, WEB, supabase/migrations, tasks_opencode/STATE.md]
 - Supabase con separación por empresa para usuarios web.
 - Tableros de inspección, flota, rendimiento e historial.
 - Pantalla/RPCs de taller para instalar, retirar y trasladar, más rutas temporales.
+- Modo **Cambios de neumáticos** en el tablero por unidad: arma varios movimientos (retén,
+  descarte con foto, montaje, intercambio) y los confirma juntos en una sola operación. Probado
+  de punta a punta con base real el 14 de julio.
+- Guía de prueba de campo para ese modo: levantar `WEB/` en local, abrir la unidad `QA-CN16` en
+  `?mode=cambios`, probar una posición vacía, una identidad marcada para revisar y confirmar el
+  lote con odómetro. Quedó documentado para repetir la prueba sin improvisar.
 - Inventario y Comparativo retirados intencionalmente del producto web.
 - Automatización para APK y publicación web.
 

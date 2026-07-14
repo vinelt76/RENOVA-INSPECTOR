@@ -1,8 +1,8 @@
 ---
 title: "Web, dashboards y taller"
-updated: 2026-07-12
+updated: 2026-07-13
 status: vigente
-sources: [WEB, supabase/migrations/20260710*, supabase/migrations/20260712*]
+sources: [WEB, supabase/migrations/20260710*, supabase/migrations/20260712*, supabase/migrations/20260714*, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_cambios_neumaticos/REVISION_FINAL.md]
 ---
 
 # Web, dashboards y taller
@@ -23,6 +23,12 @@ y las vistas `v_removal_cause_ranking`/`v_comparison_cycle_rows`) se retiraron d
 web y de Supabase — decisión del negocio, no un bug. `v_inventory_status` se conservó porque
 `historial-neumatico.html` depende de ella.
 
+El modo **Cambios de neumáticos** ya tiene pantalla: vive en `WEB/tire-change/` (módulos ES
+puros + `cambios-controller.js`) e se integra en `Inspecciones por unidad.html` como un segundo
+modo del gemelo digital. Un selector accesible **Inspección / Cambios** (persistido en
+`?mode=cambios`, sin recarga) alterna panel, dock y selección sin tocar el flujo histórico de
+Inspección. Sus contratos siguen en `tasks_cambios_neumaticos/CONTRATOS_UI.md`.
+
 ## Patrón común
 
 - `supabase-config.public.js` contiene configuración pública, nunca secretos.
@@ -39,6 +45,29 @@ Las escrituras complejas no se hacen como varias llamadas desde el navegador. Lo
 - Retirar: cierra instalación con motivo y fuente de odómetro.
 - Transferir: cierra origen y abre destino atómicamente.
 
+Para confirmar varios movimientos de una unidad, la UI usa
+`confirm_tire_change_batch`, no encadena los RPCs anteriores. El flujo implementado es:
+
+1. Leer el diagrama completo desde `v_unit_position_state`, incluidas posiciones vacías.
+2. Buscar ciclos montables en `v_tire_inventory_available`.
+3. Mantener retiros a retén, descartes, montajes e intercambios como un borrador local.
+4. Generar una sola vez el `batch_id` y confirmar todo el lote con la RPC.
+5. Recargar ambas vistas tras el éxito; ante `[estado_desactualizado]`, descartar el borrador y
+   pedir al usuario que lo reconstruya sobre el estado vigente.
+
+La confirmación es transaccional e idempotente: aplica todos los movimientos o ninguno, y un
+reintento con el mismo `batch_id` no duplica historia. La empresa se deriva de la sesión y el
+backend exige rol de taller.
+
+El render de posiciones vacías/estados provisionales y la captura/subida de la foto obligatoria
+de descarte a Storage (bucket privado `tire-discard-photos`, ruta `<company>/<batch_id>/<seq>`)
+ya están implementados. El smoke real E2E se ejecutó con una sesión de taller sobre una unidad
+de prueba dedicada (`QA-CN16`, empresa MÓVIL BUS): lote mixto de los cuatro tipos —retén,
+descarte con foto real, intercambio y montaje desde inventario— confirmado con una sola RPC,
+persistencia verificada tras recarga, borrador editable restaurado y manejo del estado
+concurrente (banner "el estado de la unidad cambió" + bloqueo del retiro sobre posición vacía sin
+perder el borrador). Ver `tasks_cambios_neumaticos_ui/REVISION_FINAL.md`.
+
 ## Rutas
 
 La ruta es temporal, no un texto fijo en `units`. `unit_route_assignments` conserva vigencia desde/hasta; `v_installation_route_attribution` atribuye rendimiento según solapamiento temporal.
@@ -46,4 +75,3 @@ La ruta es temporal, no un texto fijo en `units`. `unit_route_assignments` conse
 ## Regla de evolución
 
 Los HTML nacieron como prototipos con mocks y algunas fórmulas duplicadas. El destino es presentación fina sobre vistas/RPCs auditados. No eliminar fallbacks ni cálculos viejos hasta demostrar paridad y luego hacerlo en un cambio explícito.
-
