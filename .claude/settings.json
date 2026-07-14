@@ -1,5 +1,19 @@
 {
   "enabledPlugins": {
-    "codex@openai-codex": true
+    "claude-code-setup@claude-plugins-official": false,
+    "codex@openai-codex": false
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | { read -r f; case \"$f\" in *docs/*.xlsx|*docs/*.xls|*docs/*.docx) echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Fuente real de solo lectura: no modificar.\"}}' ;; *supabase-config.local.js) echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Archivo local sensible: editarlo manualmente.\"}}' ;; esac; }"
+          }
+        ]
+      }
+    ]
   }
 }

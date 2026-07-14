@@ -87,7 +87,7 @@
 ### Implicación obligatoria de la flota completa → **seed-once con `app_meta`**
 Con ~500 unidades + sus neumáticos, `runSeed()` corriendo en **cada arranque** (hoy lo hace) penaliza el
 inicio. Se agrega al alcance: tabla `app_meta(key,value)` con `seed_version`; el seed solo corre si la
-versión cambió. (Esto saca del backlog el ítem de `mimoanalisi §1.2`, ahora **necesario**.)
+versión cambió. (Esto recupera un ítem de la auditoría histórica, ahora **necesario**.)
 
 ### Buscador alfanumérico (app)
 `UnidadScreen.handleSearch` quita `replace(/[^0-9]/g,'')` y el `inputMode="numeric"`; `unidadRepo.search`
@@ -114,7 +114,7 @@ puramente cosmético.
 "god component" `InspeccionScreen`, reagrupar los 17 props de `FormBody`, debounce de `persistDb`,
 Tailwind (prohibido por stack). Se documentan como backlog.
 
-> Esto absorbe casi todo `mimoanalisi.md` (lo valioso), dejándolo obsoleto como documento suelto.
+> Esto absorbió lo valioso de la auditoría histórica; el documento suelto quedó obsoleto y fue retirado.
 
 ## Lo que NO cambia / fuera de alcance
 - **Fórmulas y umbrales** (RTD/presión/estado): NO se tocan (fase posterior, una por una).

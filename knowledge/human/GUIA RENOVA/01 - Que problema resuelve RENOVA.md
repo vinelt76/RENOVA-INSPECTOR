@@ -2,7 +2,7 @@
 title: "Qué problema resuelve RENOVA"
 updated: 2026-07-12
 status: vigente
-sources: [PRODUCT.md, specs/flujo_inspeccion.md, implementation_plan.md]
+sources: [PRODUCT.md, specs/flujo_inspeccion.md]
 ---
 
 # Qué problema resuelve RENOVA

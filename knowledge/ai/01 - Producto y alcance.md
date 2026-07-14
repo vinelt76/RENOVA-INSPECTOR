@@ -2,7 +2,7 @@
 title: "Producto y alcance"
 updated: 2026-07-12
 status: vigente
-sources: [PRODUCT.md, CLAUDE.md, specs/flujo_inspeccion.md, implementation_plan.md]
+sources: [PRODUCT.md, CLAUDE.md, specs/flujo_inspeccion.md]
 ---
 
 # Producto y alcance

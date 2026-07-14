@@ -2,8 +2,8 @@
 
 ## Objetivo
 Reducir deuda de mantenibilidad de bajo riesgo: borrar código muerto y deduplicar 3 piezas idénticas
-copiadas entre pantallas. **Cero cambios de comportamiento.** (Tomado de `mimoanalisi.md` §1.3, §2.2-2.4,
-§2.8 — solo los ítems baratos y seguros; el resto de ese documento queda como backlog, no se ejecuta.)
+copiadas entre pantallas. **Cero cambios de comportamiento.** (Tomado de una auditoría histórica ya
+retirada: solo los ítems baratos y seguros; el resto quedó como backlog, no se ejecuta.)
 
 ## Contexto
 Verificado por Opus:
@@ -38,6 +38,6 @@ npm run build && npm test && npm run lint && npm run dev
 ```
 
 ## Fuera de alcance
-- Todo lo "grande" de `mimoanalisi.md`: migraciones versionadas, `app_meta` para no re-sembrar, separar
+- Todo lo "grande" de la auditoría retirada: migraciones versionadas, `app_meta` para no re-sembrar, separar
   `AppContext`, romper el "god component", agrupar props de FormBody, debounce de `persistDb`, y
   **Tailwind/cambios de stack** (esto último prohibido por CLAUDE.md). Queda como backlog.

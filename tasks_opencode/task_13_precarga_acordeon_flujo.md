@@ -8,7 +8,8 @@ eso: datos identitarios del neumático (código, marca, modelo, medida, reencauc
 condición) **colapsados por defecto** cuando vienen precargados, y captura de medición con el
 mínimo de toques.
 
-Ideas aprobadas por Facundo (de `IDEAS SUELTAS.txt`, mensajes del 1/jul/2026):
+Ideas aprobadas por Facundo en mensajes del 1/jul/2026; el resumen vigente está en
+`knowledge/ai/09 - Diseno y UX.md`:
 
 1. **Acordeón "datos del neumático"**: por defecto se muestra solo un resumen compacto
    (código + marca + medida en una línea, estilo tarjeta resumen). Tocarlo expande "como una

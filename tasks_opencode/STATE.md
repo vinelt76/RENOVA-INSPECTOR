@@ -376,7 +376,7 @@ sin smoke test real en navegador.**
 
 Origen: al usar la app, Facundo detectó que la inspección nace **en blanco** (no precarga la anterior);
 un fork confirmó además un **bug bloqueante de selección** y que **CIVA/CTA no tienen unidades**. En
-paralelo llegó una auditoría de calidad (`tasks_opencode/mimoanalisi.md`). Opus hizo el triage:
+paralelo llegó una auditoría de calidad suelta, luego retirada. Opus hizo el triage:
 mantener foco en lo funcional, absorber solo la deuda alineada y archivar el resto como backlog.
 
 **Decisiones de Facundo (2026-06-27):** precarga = heredar TODO editable · verificación DB = script
@@ -413,13 +413,13 @@ pueden ir en cualquier momento; 06 conviene tras 07 para auditar la base ya comp
   autocomplete CIVA "4"→419/423/478/479, CTA "3"→3, Cruz del Sur "7"→7216/7244; **0 errores/warnings de
   consola**. `npm run build` verde.
 
-**Backlog (NO ejecutar este lote — de `mimoanalisi.md`):** migraciones versionadas, `app_meta` para no
+**Backlog (NO ejecutar este lote — de la auditoría luego retirada):** migraciones versionadas, `app_meta` para no
 re-sembrar, debounce `persistDb`, separar `AppContext`, romper el "god component", agrupar props de
 FormBody, y **Tailwind/cambios de stack** (prohibido por CLAUDE.md). 6ta empresa **Flores** = decisión
 pendiente de Facundo.
 
-> `mimoanalisi.md` NO es un task ejecutable (no tiene formato WORKFLOW). opencode no debe tomarlo como
-> mandato; es referencia de deuda técnica. Conviene moverlo a un `backlog/` fuera de `tasks_opencode/`.
+> Esa auditoría NO era un task ejecutable (no tenía formato WORKFLOW). Sus puntos útiles quedaron
+> absorbidos por los planes y tasks posteriores; el archivo suelto fue retirado.
 
 ---
 
@@ -771,9 +771,11 @@ APK           → PENDIENTE (sigue sin `app/android/`)
 # 🆕 LOTE 5 — Bug de búsqueda + design system + flujo de captura + Supabase fase 1 (2026-07-01)
 
 > Specs escritos por Opus/Fable (2026-07-01) a partir del feedback de campo de Facundo
-> (`IDEAS SUELTAS.txt`), `DESIGN.md`/`PRODUCT.md` (sistema de diseño documentado) y la decisión
+> (ideas de campo hoy resumidas en `knowledge/ai/09 - Diseno y UX.md`),
+> `DESIGN.md`/`PRODUCT.md` (sistema de diseño documentado) y la decisión
 > de usar **Supabase** como backend de sync/auth (fase 1).
-> Contexto de retoma: `tasks_opencode/RETOMA_2026-07-01.md`.
+> El contexto puntual de retoma de esa fecha fue retirado por obsoleto. Para estado vigente usar
+> `knowledge/ai/02 - Estado actual.md` y `knowledge/ai/10 - Roadmap deuda y riesgos.md`.
 
 Orden de ejecución: 12 → 11 → 13 → 14 (cada uno depende del anterior aprobado).
 

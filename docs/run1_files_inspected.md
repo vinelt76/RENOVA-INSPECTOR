@@ -55,7 +55,7 @@ Fecha: 2026-07-06 · Alcance: mapeo de datos y fórmulas para el borrador de esq
 | `specs/reglas_negocio.md` | Fuente de verdad de fórmulas y umbrales (§1–§11). |
 | `specs/flujo_inspeccion.md` | Flujo UX del inspector; campos aún no implementados (temperatura, sin medir, anomalía aro, foto de desecho). |
 | `specs/catalogo_patron.md`, `reference/catalogo_patron.json` | Catálogo PATRON real. |
-| `implementation_plan.md` | Modelo de datos original (stack reemplazado, modelo vigente): umbral_rtd, umbral_presion, usuario, vehiculo.estado. |
+| Plan inicial retirado | Su stack quedó reemplazado; las decisiones rescatadas viven en `specs/`, `decisions/` y `knowledge/ai/12 - Decisiones e historia.md`. |
 | `tasks_opencode/task_14_supabase_sync_fase1.md` | Decisiones de sync fase 1: LWW por updated_at, app_user, RLS por empresa, pull aditivo de catálogo. |
 | `decisions/0001-tenancy.md` … `0004-catalog-sync.md` | ADRs de tenancy, paridad de cálculo, JWT offline, catálogo. |
 | `CLAUDE.md`, `DESIGN.md`, `PRODUCT.md` | Constitución, sistema visual, producto. |

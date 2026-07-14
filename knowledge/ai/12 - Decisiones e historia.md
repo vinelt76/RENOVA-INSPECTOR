@@ -2,7 +2,7 @@
 title: "Decisiones e historia"
 updated: 2026-07-12
 status: vigente
-sources: [decisions, implementation_plan.md, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode]
+sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode]
 ---
 
 # Decisiones e historia
@@ -20,7 +20,7 @@ sources: [decisions, implementation_plan.md, docs/ARCHITECTURE_DECISIONS.md, tas
 
 ## Historia que no debe confundirse con vigencia
 
-`implementation_plan.md` describe Flutter + FastAPI + Railway. Su roadmap y preguntas de dominio conservan valor, pero ese stack fue reemplazado. `tasks_opencode/` refleja un flujo anterior entre agentes y estados en el momento de cada lote; no es un tablero vivo confiable sin auditarlo contra el repo.
+Hubo un enfoque previo con Flutter + FastAPI + Railway, reemplazado por el stack actual. `tasks_opencode/` refleja un flujo anterior entre agentes y estados en el momento de cada lote; no es un tablero vivo confiable sin auditarlo contra el repo.
 
 ## ADRs
 

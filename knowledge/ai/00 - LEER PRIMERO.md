@@ -1,6 +1,6 @@
 ---
 title: "RENOVA INSPECTOR - Leer primero"
-updated: 2026-07-12
+updated: 2026-07-13
 status: vigente
 sources: [CLAUDE.md, PRODUCT.md, DESIGN.md, tasks_opencode/STATE.md, git]
 ---
@@ -8,7 +8,7 @@ sources: [CLAUDE.md, PRODUCT.md, DESIGN.md, tasks_opencode/STATE.md, git]
 # RENOVA INSPECTOR - Leer primero
 
 > [!IMPORTANT]
-> Fecha de corte: **2026-07-12**. Esta base resume el repo, pero no reemplaza la lectura del código que se vaya a modificar. Si una nota contradice una migración o el código actual, manda el código y la nota debe corregirse.
+> Fecha de corte: **2026-07-13**. Esta base orienta; no reemplaza las fuentes primarias ni la lectura del código, tests y migraciones que se modificarán.
 
 RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas peruanas. El inspector captura en Android aun sin señal; SQLite conserva el trabajo; Supabase consolida la operación; los dashboards web muestran inspecciones, historial, rendimiento y operaciones de taller.
 
@@ -32,11 +32,22 @@ RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas p
 - Toda UI o persistencia web exige smoke test real, no solo build/tests.
 - No exponer `service_role`, claves secretas ni contraseñas en app, dashboards o notas.
 
-## Autoridades
+## Jerarquía de autoridad y conflictos
+
+La autoridad depende de qué se intenta determinar:
+
+1. **Comportamiento deseado:** especificaciones aprobadas en `specs/` y ADRs vigentes en `decisions/`.
+2. **Estado implementado:** migraciones remotas en orden cronológico; código/esquema local actual y tests reproducibles.
+3. **Mapa y estado resumido:** notas `status: vigente` de `knowledge/ai`, que deben citar sus fuentes.
+4. **Historia o exploración:** `docs/run*`, `tasks_opencode/`, planes, ideas y notas marcadas `historico`.
+
+El código demuestra qué ocurre hoy, pero no modifica por sí solo una regla aprobada. Si código y spec difieren, no elegir silenciosamente: registrar la evidencia y confirmar si es un bug o un cambio de negocio; después actualizar código, spec/ADR y knowledge juntos. Entre documentos contradictorios manda la fuente primaria vigente; si dos fuentes del mismo nivel siguen en conflicto, detener la decisión y pedir resolución humana. No copiar la contradicción a otra nota.
+
+## Fuentes por tema
 
 | Tema | Fuente primaria |
 |---|---|
-| Constitución del proyecto | `CLAUDE.md` |
+| Mapa permanente y restricciones | `CLAUDE.md` |
 | Reglas y fórmulas | `specs/reglas_negocio.md` |
 | Fijo vs configurable | `specs/reglas_fijas_vs_configurables.md` |
 | UX de inspección | `specs/flujo_inspeccion.md` |
@@ -44,7 +55,7 @@ RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas p
 | Esquema remoto vigente | `supabase/migrations/` en orden cronológico |
 | Esquema local | `app/src/db/sqlite.ts` y `app/src/db/schema.ts` |
 | Estado comprobable | código + tests + Git; `STATE.md` es bitácora, no autoridad absoluta |
-| Historia y alternativas | `decisions/`, `docs/run*`, `tasks_opencode/` |
+| Historia y alternativas descartadas | `docs/run*`, `tasks_opencode/`, [[12 - Decisiones e historia]] |
 
 ## Navegación por tarea
 

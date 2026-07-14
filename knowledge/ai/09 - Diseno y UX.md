@@ -1,6 +1,6 @@
 ---
 title: "Diseño y UX"
-updated: 2026-07-12
+updated: 2026-07-13
 status: vigente
 sources: [DESIGN.md, PRODUCT.md, design-principle.md, app/src/index.css, app/src/theme.ts, UI]
 ---
@@ -44,6 +44,12 @@ sources: [DESIGN.md, PRODUCT.md, design-principle.md, app/src/index.css, app/src
 - Texto pequeño o controles densos.
 - Arrays de catálogo dentro de componentes.
 - Semáforos recalculados con constantes locales distintas de Supabase.
+
+## Hipótesis de campo que requieren validación
+
+Las ideas históricas rescatables son: identidad del neumático colapsable cuando no cambió,
+autoavance o gesto entre posiciones y diagrama del vehículo en lugar de una grilla abstracta.
+No son requisitos aprobados; validar con inspectores y contra el flujo vigente antes de implementarlas.
 
 ## Alineación 2026-07-12
 
