@@ -1,8 +1,8 @@
 ---
 title: "Web, dashboards y taller"
-updated: 2026-07-13
+updated: 2026-07-14
 status: vigente
-sources: [WEB, supabase/migrations/20260710*, supabase/migrations/20260712*, supabase/migrations/20260714*, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_cambios_neumaticos/REVISION_FINAL.md]
+sources: [WEB/movimientos, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md]
 ---
 
 # Web, dashboards y taller
@@ -23,11 +23,12 @@ y las vistas `v_removal_cause_ranking`/`v_comparison_cycle_rows`) se retiraron d
 web y de Supabase — decisión del negocio, no un bug. `v_inventory_status` se conservó porque
 `historial-neumatico.html` depende de ella.
 
-El modo **Cambios de neumáticos** ya tiene pantalla: vive en `WEB/tire-change/` (módulos ES
-puros + `cambios-controller.js`) e se integra en `Inspecciones por unidad.html` como un segundo
-modo del gemelo digital. Un selector accesible **Inspección / Cambios** (persistido en
-`?mode=cambios`, sin recarga) alterna panel, dock y selección sin tocar el flujo histórico de
-Inspección. Sus contratos siguen en `tasks_cambios_neumaticos/CONTRATOS_UI.md`.
+El modo **Movimientos de neumáticos** vive en `WEB/movimientos/` (módulos ES puros +
+`movimientos-controller.js`) y se integra en `Inspecciones por unidad.html` como un segundo modo
+del gemelo digital. Un selector accesible **Inspección / Movimientos** (persistido en
+`?mode=movimientos`, sin recarga) alterna panel, dock y selección sin tocar el flujo histórico de
+Inspección. El enlace histórico `?mode=cambios` sigue abriendo Movimientos y se canonicaliza a la
+URL nueva. Sus contratos siguen en `tasks_cambios_neumaticos/CONTRATOS_UI.md`.
 
 ## Patrón común
 
@@ -58,6 +59,21 @@ Para confirmar varios movimientos de una unidad, la UI usa
 La confirmación es transaccional e idempotente: aplica todos los movimientos o ninguno, y un
 reintento con el mismo `batch_id` no duplica historia. La empresa se deriva de la sesión y el
 backend exige rol de taller.
+
+### Posiciones pendientes de línea base
+
+`v_unit_position_state` distingue una posición realmente vacía de una que conserva evidencia de
+inspección: `baseline_pending=true` significa `is_empty=true` **y** que hay una medición fuente.
+No se ofrece montaje normal desde inventario en ese caso. El formulario de primer montaje precarga
+la identidad y medición, pero una persona las confirma frente a la unidad y confirma un payload
+idempotente mediante `confirm_baseline_mount`. La OTD original del ciclo se puede ingresar si se
+conoce; queda nula cuando no se conoce y no se deriva de la RTD medida en la inspección.
+
+La instalación resultante guarda `origin='baseline'` y `source_measurement_id`. Eso declara una
+identidad confirmada, no una fecha de montaje observada. La línea base es perezosa: no hay backfill
+masivo y el indicador Q6 de `supabase/diagnostics/baseline_profile.sql` muestra el progreso por
+posición. El modo conserva `?mode=movimientos` como URL canónica; `?mode=cambios` es un alias de
+lectura que se canonicaliza sin recargar.
 
 El render de posiciones vacías/estados provisionales y la captura/subida de la foto obligatoria
 de descarte a Storage (bucket privado `tire-discard-photos`, ruta `<company>/<batch_id>/<seq>`)
