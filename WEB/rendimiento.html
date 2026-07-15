@@ -52,83 +52,40 @@
      con login. Si falta la config o la red falla, no se inventan datos. -->
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
+<script src="renova-animate.js"></script>
 <script type="module" src="supabase-demo.js"></script>
+<link rel="stylesheet" href="renova-office-shell.css">
 <style>
   :root{
-    /* Paleta RENOVA (DESIGN.md) */
-    --screen-dark:#07111C;
-    --field-dark:#111E2E;
-    --navy-brand:#15233f;
-    --border-dark:#1B2D42;
-    --label-blue:#7AABCC;
-    --value-ice:#F0F8FF;
-    --ember-orange:#F06822;
-    --signal-yellow:#f4b821;
-    --verified-green:#1f9d6b;
-
     /* Balance del eje — SEMÁNTICA PROPIA de Rendimiento (no es el semáforo de
        Inspección). Solo dos estados: balanceado (verde) / desbalance (rojo/naranja). */
-    --balance-ok:#1f9d6b;
+    --balance-ok:var(--verified-green);
     --balance-ok-bg:rgba(31,157,107,.14);
-    --balance-bad:#F06822;
+    --balance-bad:var(--ember-orange);
     --balance-bad-bg:rgba(240,104,34,.14);
 
     /* Barra neutra del gráfico posición-vs-posición: acero frío, deliberadamente
        NO verde/naranja para no confundir con estados de Inspección ni de balance. */
     --bar-steel:#4E7CA8;
-
-    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
-    --display:'Bebas Neue',sans-serif;
-    color-scheme:dark;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:var(--screen-dark);
-    color:var(--value-ice);
-    font-family:var(--mono);
-    font-weight:700;
     -webkit-font-smoothing:antialiased;
-    font-variant-numeric:tabular-nums;
-    display:flex;flex-direction:column;min-height:100vh;
     padding-bottom:48px;
   }
   .num{font-variant-numeric:tabular-nums}
 
-  /* ───────────────── Header ───────────────── */
-  header{
-    background:var(--navy-brand);
-    padding:18px 16px 16px;
-    position:sticky;top:0;z-index:20;
-    border-bottom:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
-  }
   .head-row{
     display:flex;align-items:flex-end;justify-content:space-between;
     gap:16px;flex-wrap:wrap;max-width:1280px;margin:0 auto;
-  }
-  .brand .logo{
-    font-family:var(--display);font-size:32px;line-height:1;
-    letter-spacing:.06em;color:var(--value-ice);
-  }
-  .brand .logo b{color:var(--ember-orange);font-weight:400}
-  .brand .screen-name{
-    font-family:var(--display);font-size:19px;line-height:1;
-    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
   }
   .brand .subtitle{
     font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
     color:var(--label-blue);margin-top:8px;
   }
   .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
-  .screen-nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
-  .screen-nav a{
-    color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
-    background:var(--field-dark);border-radius:8px;padding:10px 12px;
-    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  }
-  .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
   .unit-picker{display:flex;flex-direction:column;gap:6px}
   .unit-picker label{
     font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
@@ -603,33 +560,8 @@ function computeAxle(unit, axle){
   };
 }
 
-/* =========================================================================
-   ANIMACIÓN — utilidades mínimas (conteo ascendente, crecimiento de barras).
-   Respetan prefers-reduced-motion: el valor final se aplica de inmediato,
-   sin pasos intermedios, cuando el usuario lo pide.
-   ========================================================================= */
-const REDUCED_MOTION = window.matchMedia &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-function animateCount(el, to, opts={}){
-  if(!el) return;
-  const { duration = 550, format = v => Math.round(v).toString() } = opts;
-  if(REDUCED_MOTION){ el.textContent = format(to); return; }
-  const start = performance.now();
-  function tick(now){
-    const p = Math.min(1, (now - start) / duration);
-    const eased = 1 - Math.pow(1 - p, 3);
-    el.textContent = format(to * eased);
-    if(p < 1) requestAnimationFrame(tick); else el.textContent = format(to);
-  }
-  requestAnimationFrame(tick);
-}
-
-function growFill(el, pct){
-  if(!el) return;
-  if(REDUCED_MOTION){ el.style.width = pct + "%"; return; }
-  requestAnimationFrame(()=> requestAnimationFrame(()=>{ el.style.width = pct + "%"; }));
-}
+const animateCount = RenovaAnimate.count;
+const growFill = RenovaAnimate.growFill;
 
 // Posición relativa de `value` dentro de [min,max] de `values` (0–100).
 // Si todas las posiciones válidas son iguales (o hay una sola), la barra
@@ -1031,7 +963,7 @@ function renderNoData(message){
   document.getElementById("axleTabs").innerHTML = "";
   document.getElementById("posPills").innerHTML = "";
   document.getElementById("summaryMount").innerHTML =
-    `<section class="summary-card"><div class="empty">${message}</div></section>`;
+    `<section><div class="empty">${message}</div></section>`;
   document.getElementById("cardMount").innerHTML = "";
 }
 

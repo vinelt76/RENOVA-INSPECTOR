@@ -46,53 +46,25 @@
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
 <script type="module" src="supabase-demo.js"></script>
+<link rel="stylesheet" href="renova-office-shell.css">
 <style>
   :root{
-    --screen-dark:#07111C;
-    --field-dark:#111E2E;
-    --navy-brand:#15233f;
-    --border-dark:#1B2D42;
-    --label-blue:#7AABCC;
-    --value-ice:#F0F8FF;
-    --ember-orange:#F06822;
-    --signal-yellow:#f4b821;
-    --verified-green:#1f9d6b;
-    --crit:#F06822;
+    --crit:var(--ember-orange);
     --crit-bg:rgba(240,104,34,.14);
-    --warn:#f4b821;
+    --warn:var(--signal-yellow);
     --warn-bg:rgba(244,184,33,.14);
     --normal:var(--verified-green);
-    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
-    --display:'Bebas Neue',sans-serif;
-    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:var(--screen-dark);color:var(--value-ice);font-family:var(--mono);
-    font-weight:700;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased;
     padding-bottom:40px;
-    display:flex;flex-direction:column;min-height:100vh;
   }
   .num{font-variant-numeric:tabular-nums}
 
-  header{
-    background:var(--navy-brand);padding:18px 16px 16px;position:sticky;top:0;z-index:20;
-    border-bottom:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
-  }
   .head-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto}
-  .brand .logo{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.06em;color:var(--value-ice)}
-  .brand .logo b{color:var(--ember-orange);font-weight:400}
-  .brand .screen-name{font-family:var(--display);font-size:19px;line-height:1;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
   .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
-  .screen-nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
-  .screen-nav a{
-    color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
-    background:var(--field-dark);border-radius:8px;padding:10px 12px;
-    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  }
-  .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
 
   main{max-width:1200px;margin:0 auto;padding:16px;display:flex;flex-direction:column;gap:22px;flex:1 0 auto;width:100%}
 
@@ -171,8 +143,6 @@
   td.status-pending{color:var(--label-blue)}
 
   .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-
-  .empty-hint{color:var(--label-blue);font-size:12px;text-align:center;padding:20px 0}
 
   footer{
     max-width:1200px;margin:24px auto 0;padding:0 16px;
@@ -362,6 +332,8 @@ function excelDateToIso(value) {
   return null;
 }
 
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 function toNumberOrNull(v) {
   if (v === undefined || v === null || v === "") return null;
   const n = Number(v);
@@ -539,7 +511,7 @@ function renderUnmappedWarning(headers) {
   }
   unmappedWarning.innerHTML =
     `<b>⚠ Columnas del Excel no reconocidas</b> (se ignoraron, sus datos NO se importaron):<br>` +
-    headers.map(h => `<code>${h}</code>`).join("") +
+    headers.map(h => `<code>${esc(h)}</code>`).join("") +
     `<br>Si alguna de estas debería mapear a un campo (por ejemplo "Cod. Anomalía" → anomalia), avisá para agregar el alias.`;
   unmappedWarning.style.display = "block";
 }
@@ -569,11 +541,11 @@ function renderSummary(groups) {
     const hasErrors = g.errors.length > 0;
     const hasWarnings = (g.warnings ?? []).length > 0;
     return `<div class="sum-card ${hasErrors ? "has-errors" : ""}">
-      <div class="sc-plate">${g.placa || "?"}</div>
-      <div class="sc-meta">${g.empresa || "empresa desconocida"} · ${g.fecha || "sin fecha"}</div>
-      <div class="sc-meta">${g.configuration} · ${g.items.length} neumáticos${g.km != null ? " · " + g.km + " km" : ""}</div>
-      ${hasErrors ? `<div class="sc-errors">${g.errors.map(e => "⚠ " + e).join("<br>")}</div>` : ""}
-      ${hasWarnings ? `<div class="sc-warnings">${g.warnings.map(w => "· " + w).join("<br>")}</div>` : ""}
+      <div class="sc-plate">${esc(g.placa || "?")}</div>
+      <div class="sc-meta">${esc(g.empresa || "empresa desconocida")} · ${esc(g.fecha || "sin fecha")}</div>
+      <div class="sc-meta">${esc(g.configuration)} · ${g.items.length} neumáticos${g.km != null ? " · " + g.km + " km" : ""}</div>
+      ${hasErrors ? `<div class="sc-errors">${g.errors.map(e => "⚠ " + esc(e)).join("<br>")}</div>` : ""}
+      ${hasWarnings ? `<div class="sc-warnings">${g.warnings.map(w => "· " + esc(w)).join("<br>")}</div>` : ""}
     </div>`;
   }).join("");
 
@@ -593,7 +565,7 @@ sendBtn.addEventListener("click", async () => {
   resultPanel.style.display = "block";
   resultBody.innerHTML = currentGroups.map((g, i) =>
     `<tr id="resultRow${i}">
-      <td>${g.empresa}</td><td>${g.placa}</td><td>${g.fecha}</td>
+      <td>${esc(g.empresa)}</td><td>${esc(g.placa)}</td><td>${esc(g.fecha)}</td>
       <td>${g.items.length}</td><td class="status-pending">Enviando…</td>
     </tr>`).join("");
 
