@@ -201,36 +201,6 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   letter-spacing:.08em;
 }
 
-.tc-metrics{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:8px;
-  margin-top:12px;
-}
-
-.tc-metric{
-  padding:10px 8px;
-  border:2px solid var(--border);
-  border-radius:8px;
-  background:var(--screen);
-  text-align:center;
-}
-
-.tc-metric-value{
-  display:block;
-  margin-bottom:5px;
-  color:var(--ice);
-  font-size:20px;
-  font-weight:800;
-}
-
-.tc-metric-label{
-  color:var(--label);
-  font-size:8px;
-  font-weight:800;
-  letter-spacing:.08em;
-}
-
 .movimientos-dock{
   align-items:stretch;
 }
@@ -662,11 +632,7 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
     padding:14px;
   }
 
-  .tc-metrics{
-    grid-template-columns:1fr;
-  }
-
-  [data-task="task-13-summary-confirm"] [style*="grid-template-columns:1fr 1fr"]{
+[data-task="task-13-summary-confirm"] [style*="grid-template-columns:1fr 1fr"]{
     grid-template-columns:1fr !important;
   }
 
