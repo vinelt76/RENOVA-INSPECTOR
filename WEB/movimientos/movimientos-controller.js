@@ -91,9 +91,6 @@ const elements = {
   selectedPosition: document.getElementById("movimientos-selected-position"),
   selectedIdentity: document.getElementById("movimientos-selected-identity"),
   selectedState: document.getElementById("movimientos-selected-state"),
-  positionCount: document.getElementById("movimientos-position-count"),
-  inventoryCount: document.getElementById("movimientos-inventory-count"),
-  draftCount: document.getElementById("movimientos-draft-count"),
   workspace: document.getElementById("movimientos-workspace"),
   baselineOpen: document.getElementById("movimientos-baseline-open"),
 };
@@ -142,10 +139,6 @@ function renderSidebar() {
     elements.selectedState.textContent = visualState.label;
   }
   elements.baselineOpen.hidden = !(hasSelection && task08PendingPosition());
-
-  elements.positionCount.textContent = String(movimientosState.remoteState.length);
-  elements.inventoryCount.textContent = String(movimientosState.inventory.length);
-  elements.draftCount.textContent = String(movimientosState.draft.movements?.length ?? 0);
 }
 
 function render() {
