@@ -85,8 +85,6 @@ let task08RetryMode = "rpc";
 const elements = {
   stage: document.getElementById("stage"),
   dock: document.getElementById("movimientos-pos-dock"),
-  status: document.getElementById("movimientos-status"),
-  retry: document.getElementById("movimientos-retry"),
   details: document.getElementById("movimientos-details"),
   selectedPosition: document.getElementById("movimientos-selected-position"),
   selectedIdentity: document.getElementById("movimientos-selected-identity"),
@@ -105,28 +103,7 @@ function selectedRemoteRow() {
   ) ?? null;
 }
 
-function statusMessage() {
-  if (movimientosState.status === "loading") {
-    return "Cargando estado actual de taller…";
-  }
-  if (movimientosState.status === "empty") {
-    return "No hay posiciones visibles para esta unidad o tu sesión no tiene acceso.";
-  }
-  if (movimientosState.status === "error") {
-    return "No pudimos cargar el estado de taller. La inspección permanece disponible.";
-  }
-  if (movimientosState.status === "ready") {
-    return "Estado de taller cargado. Seleccioná una posición para preparar el lote.";
-  }
-  return "Entrá a Movimientos para cargar el estado actual de la unidad.";
-}
-
 function renderSidebar() {
-  elements.status.textContent = statusMessage();
-  elements.status.dataset.status = movimientosState.status;
-  elements.status.classList.toggle("is-loading", movimientosState.status === "loading");
-  elements.retry.hidden = movimientosState.status !== "error";
-
   const selectedRow = selectedRemoteRow();
   const visualState = movimientosState.projection.get(movimientosState.selected);
   const hasSelection = Boolean(selectedRow && visualState);
@@ -1081,7 +1058,6 @@ function init() {
     "renova:movimientos:request-mount",
     onTask11MountRequest,
   );
-  elements.retry.addEventListener("click", reloadMovimientosData);
   elements.baselineOpen.addEventListener("click", () => {
     task08OpenPosition(movimientosState.selected, elements.baselineOpen);
   });
