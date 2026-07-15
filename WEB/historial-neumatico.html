@@ -28,56 +28,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
+<script src="renova-format.js"></script>
 <script type="module" src="supabase-demo.js"></script>
+<link rel="stylesheet" href="renova-office-shell.css">
 <style>
-  :root{
-    /* Paleta RENOVA (DESIGN.md) */
-    --screen-dark:#07111C;
-    --field-dark:#111E2E;
-    --navy-brand:#15233f;
-    --border-dark:#1B2D42;
-    --label-blue:#7AABCC;
-    --value-ice:#F0F8FF;
-    --ember-orange:#F06822;
-    --signal-yellow:#f4b821;
-    --verified-green:#1f9d6b;
-
-    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
-    --display:'Bebas Neue',sans-serif;
-    color-scheme:dark;
-  }
-
   *{box-sizing:border-box;margin:0;padding:0}
   html{height:100%}
   body{
-    background:var(--screen-dark);
-    color:var(--value-ice);
-    font-family:var(--mono);
-    font-weight:700;
     -webkit-font-smoothing:antialiased;
-    font-variant-numeric:tabular-nums;
     padding-bottom:48px;
   }
   .num{font-variant-numeric:tabular-nums}
 
-  /* ───────────────── Header ───────────────── */
-  header{
-    background:var(--navy-brand);
-    padding:18px 16px 16px;
-    position:sticky;top:0;z-index:20;
-    border-bottom:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
-  }
   .head-inner{max-width:860px;margin:0 auto}
-  .brand .logo{
-    font-family:var(--display);font-size:32px;line-height:1;
-    letter-spacing:.06em;color:var(--value-ice);
-  }
-  .brand .logo b{color:var(--ember-orange);font-weight:400}
-  .brand .screen-name{
-    font-family:var(--display);font-size:19px;line-height:1;
-    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
-  }
 
   main{max-width:860px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
 
@@ -176,7 +139,6 @@
     *{transition:none!important;animation:none!important}
   }
 </style>
-<link rel="stylesheet" href="renova-office-shell.css">
 </head>
 <body>
 
@@ -258,13 +220,10 @@ async function loadHistorial(code){
 
 /* ───────── Formato ───────── */
 const nf = new Intl.NumberFormat("es-PE");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtKm = v => nf.format(Math.round(v));
 const fmtMm = v => (Math.round(v*10)/10).toFixed(1);
-function fmtDate(iso){
-  if(!iso) return "—";
-  const p = String(iso).split("-");
-  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : String(iso);
-}
+const fmtDate = RenovaFormat.date;
 function condClass(c){
   const k = (c || "").toLowerCase();
   if(k.includes("instalado")) return "cond-instalado";
@@ -285,7 +244,7 @@ function backLabel(){
 }
 function goBack(){
   if(document.referrer && history.length > 1){ history.back(); return; }
-  const map = { rendimiento:"rendimiento.html", inspeccion:"UI/renova_dashboard_taller_v1.html" };
+  const map = { rendimiento:"rendimiento.html", inspeccion:"Inspecciones%20por%20unidad.html" };
   location.href = map[from] || "rendimiento.html";
 }
 
@@ -302,7 +261,7 @@ function render(){
   const head = `
     <div class="th-head">
       <div class="th-title">Historial de Neumático</div>
-      <div class="th-serie num">${serie || "—"}</div>
+      <div class="th-serie num">${esc(serie || "—")}</div>
     </div>`;
 
   const h = HISTORIAL[serie];
@@ -340,12 +299,12 @@ function render(){
       <div class="th-section-title">Identidad</div>
       <div class="th-card">
         <div class="th-idgrid">
-          <div class="th-field"><div class="f-label">Serie / Código</div><div class="f-value num">${serie}</div></div>
-          <div class="th-field"><div class="f-label">Marca</div><div class="f-value">${h.marca || "—"}</div></div>
-          <div class="th-field"><div class="f-label">Diseño / Modelo</div><div class="f-value">${h.diseno || "—"}</div></div>
-          <div class="th-field"><div class="f-label">Medida</div><div class="f-value num">${h.medida || "—"}</div></div>
-          <div class="th-field"><div class="f-label">Estado actual</div><div class="f-value"><span class="th-badge estado">${h.estado || "—"}</span></div></div>
-          <div class="th-field"><div class="f-label">Condición actual</div><div class="f-value"><span class="th-badge ${condClass(h.condicion)}">${h.condicion || "—"}</span></div></div>
+          <div class="th-field"><div class="f-label">Serie / Código</div><div class="f-value num">${esc(serie || "—")}</div></div>
+          <div class="th-field"><div class="f-label">Marca</div><div class="f-value">${esc(h.marca || "—")}</div></div>
+          <div class="th-field"><div class="f-label">Diseño / Modelo</div><div class="f-value">${esc(h.diseno || "—")}</div></div>
+          <div class="th-field"><div class="f-label">Medida</div><div class="f-value num">${esc(h.medida || "—")}</div></div>
+          <div class="th-field"><div class="f-label">Estado actual</div><div class="f-value"><span class="th-badge estado">${esc(h.estado || "—")}</span></div></div>
+          <div class="th-field"><div class="f-label">Condición actual</div><div class="f-value"><span class="th-badge ${condClass(h.condicion)}">${esc(h.condicion || "—")}</span></div></div>
         </div>
       </div>
     </div>`;
@@ -358,8 +317,8 @@ function render(){
         <div class="th-stat"><div class="s-label">Última inspección</div><span class="s-value num">${fmtDate(h.lastInspectionOn)}</span></div>
         <div class="th-stat"><div class="s-label">RTD actual (mín.)</div>${rtdStr}</div>
         <div class="th-stat"><div class="s-label">PSI actual</div>${psiStr}</div>
-        <div class="th-stat"><div class="s-label">Unidad actual</div><span class="s-value">${h.unidadActual || "—"}</span></div>
-        <div class="th-stat"><div class="s-label">Posición actual</div><span class="s-value">${h.posActual || "—"}</span></div>
+        <div class="th-stat"><div class="s-label">Unidad actual</div><span class="s-value">${esc(h.unidadActual || "—")}</span></div>
+        <div class="th-stat"><div class="s-label">Posición actual</div><span class="s-value">${esc(h.posActual || "—")}</span></div>
       </div>
     </div>`;
 
@@ -372,7 +331,7 @@ function render(){
     return `
       <div class="th-inst">
         <div class="r-top">
-          <span class="r-plate">${i.placa || "—"}</span>
+          <span class="r-plate">${esc(i.placa || "—")}</span>
           <span class="r-km num">${km}</span>
         </div>
         <div class="r-dates">${fmtDate(i.desde)} → ${hasta}</div>
@@ -389,12 +348,12 @@ function render(){
   // Inspecciones pasadas — RTD = MIN de canales de remanente.
   const inspList = inspecciones.map(ins => {
     const rtd = ins.rtdMovi;
-    const obs = ins.obs ? `<div class="th-obs">${ins.obs}</div>` : "";
+    const obs = ins.obs ? `<div class="th-obs">${esc(ins.obs)}</div>` : "";
     return `
       <div class="th-insp">
         <div class="i-top">
           <span class="i-date num">${fmtDate(ins.fecha)}</span>
-          <span class="i-loc">${ins.placa || "—"} · ${ins.posicion || "—"}</span>
+          <span class="i-loc">${esc(ins.placa || "—")} · ${esc(ins.posicion || "—")}</span>
         </div>
         <div class="th-metrics">
           <div class="im"><div class="im-label">RTD actual</div><div class="im-value num">${rtd != null ? fmtMm(rtd) : "—"}<small>mm</small></div></div>
@@ -417,7 +376,7 @@ function render(){
 function renderLoading(){
   document.getElementById("view").innerHTML = `
     <button class="th-back" type="button" onclick="goBack()">Volver</button>
-    <div class="th-head"><div class="th-title">Historial de Neumático</div><div class="th-serie num">${serie || "—"}</div></div>
+    <div class="th-head"><div class="th-title">Historial de Neumático</div><div class="th-serie num">${esc(serie || "—")}</div></div>
     <div class="th-section"><div class="th-empty">Cargando historial desde Supabase…</div></div>`;
 }
 

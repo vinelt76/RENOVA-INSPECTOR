@@ -11,41 +11,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
+<script src="renova-format.js"></script>
 <script type="module" src="supabase-demo.js"></script>
+<link rel="stylesheet" href="renova-office-shell.css">
 <style>
   :root{
-    --screen-dark:#07111C; --field-dark:#111E2E; --navy-brand:#15233f;
-    --border-dark:#1B2D42; --label-blue:#7AABCC; --value-ice:#F0F8FF;
-    --ember-orange:#F06822; --signal-yellow:#f4b821; --verified-green:#1f9d6b;
     --critical:var(--ember-orange);
-    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
-    --display:'Bebas Neue',sans-serif;
-    color-scheme:dark;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
-    background:var(--screen-dark); color:var(--value-ice);
-    font-family:var(--mono); font-weight:700; -webkit-font-smoothing:antialiased;
-    font-variant-numeric:tabular-nums; padding-bottom:42px;
-    display:flex;flex-direction:column;min-height:100vh;
-  }
-  header{
-    background:var(--navy-brand); padding:18px 16px 16px; position:sticky; top:0; z-index:20;
-    border-bottom:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:42px;
   }
   .head-row{max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-  .brand .logo{font-family:var(--display);font-size:32px;line-height:1;letter-spacing:.06em}
-  .brand .logo b{color:var(--ember-orange);font-weight:400}
-  .brand .screen-name{font-family:var(--display);font-size:19px;letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px}
   .brand .subtitle{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--label-blue);margin-top:8px}
-  .nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
-  .nav a{
-    color:var(--label-blue); text-decoration:none; border:2px solid var(--border-dark);
-    background:var(--field-dark); border-radius:8px; padding:10px 12px;
-    font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
-  }
-  .nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
   main{max-width:1280px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
   .toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .selector{display:flex;flex-direction:column;gap:6px}
@@ -85,7 +64,7 @@
     max-width:1280px;margin:22px auto 0;padding:0 16px 16px;
     font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;line-height:1.6;
   }
-  @media (max-width:780px){.summary{grid-template-columns:1fr 1fr}.head-row{align-items:flex-start}.nav{width:100%}}
+  @media (max-width:780px){.summary{grid-template-columns:1fr 1fr}.head-row{align-items:flex-start}}
 
   /* ───────── Acciones + botón primario ───────── */
   .btn-primary{
@@ -181,7 +160,6 @@
   .toast.error{border-color:var(--critical)}
   .toast.error svg{color:var(--critical)}
 </style>
-<link rel="stylesheet" href="renova-office-shell.css">
 </head>
 <body>
 <header>
@@ -401,10 +379,15 @@ let selectedPosition = "all";
 let UNITS = [];
 let POSITIONS_BY_CONFIG = {};
 const nf = new Intl.NumberFormat("es-PE");
-const money = new Intl.NumberFormat("es-PE", { style:"currency", currency:"USD" });
+const moneyFormatters = {};
+function money(value, currency){
+  const code = currency || "PEN";
+  if(!moneyFormatters[code]) moneyFormatters[code] = new Intl.NumberFormat("es-PE", { style:"currency", currency:code });
+  return moneyFormatters[code].format(value);
+}
 const mm = v => v == null ? "—" : Number(v).toFixed(1) + " mm";
 const km = v => v == null ? "—" : nf.format(Math.round(Number(v))) + " km";
-const fdate = d => d ? d.split("-").reverse().join("/") : "—";
+const fdate = RenovaFormat.date;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function normalize(rows){
@@ -423,7 +406,7 @@ function normalize(rows){
       odometer_at_install:r.odometer_at_install,
       rtd_at_install_mm:r.rtd_at_install_mm,
       cost:r.cost,
-      currency:r.currency || "USD",
+      currency:r.currency || "PEN",
       last_inspection_on:r.last_inspection_on,
       km_run:r.km_run,
     }))
@@ -483,13 +466,21 @@ function renderSelectors(){
 function renderSummary(rows){
   const units = new Set(rows.map(r => r.plate)).size;
   const avgRtd = rows.length ? rows.reduce((s,r)=>s + Number(r.rtd_at_install_mm || 0),0) / rows.length : null;
-  const totalCost = rows.reduce((s,r)=>s + Number(r.cost || 0),0);
+  const totalsByCurrency = {};
+  rows.forEach(r => {
+    if(r.cost == null) return;
+    const code = r.currency || "PEN";
+    totalsByCurrency[code] = (totalsByCurrency[code] || 0) + Number(r.cost);
+  });
+  const costLabel = Object.keys(totalsByCurrency).length
+    ? Object.entries(totalsByCurrency).map(([code, total]) => money(total, code)).join(" + ")
+    : money(0, "PEN");
   const dates = rows.map(r => r.installed_at).filter(Boolean).sort();
   document.getElementById("summary").innerHTML = `
     <div class="metric"><div class="k">Instalaciones</div><div class="v">${rows.length}</div><div class="s">Filas del Excel</div></div>
     <div class="metric"><div class="k">Unidades</div><div class="v">${units}</div><div class="s">Vehículos con montaje</div></div>
     <div class="metric"><div class="k">RTD inicial prom.</div><div class="v">${avgRtd == null ? "—" : avgRtd.toFixed(1)}</div><div class="s">mm</div></div>
-    <div class="metric"><div class="k">Rango fechas</div><div class="v" style="font-size:15px">${dates.length ? fdate(dates[0]) : "—"}</div><div class="s">${dates.length ? "hasta " + fdate(dates[dates.length-1]) : "sin dato"} · costo ${money.format(totalCost)}</div></div>
+    <div class="metric"><div class="k">Rango fechas</div><div class="v" style="font-size:15px">${dates.length ? fdate(dates[0]) : "—"}</div><div class="s">${dates.length ? "hasta " + fdate(dates[dates.length-1]) : "sin dato"} · costo ${costLabel}</div></div>
   `;
 }
 
@@ -512,7 +503,7 @@ function renderRows(rows){
       <td class="dim">${fdate(r.installed_at)}</td>
       <td class="dim">${km(r.odometer_at_install)}</td>
       <td>${mm(r.rtd_at_install_mm)}</td>
-      <td>${r.cost == null ? "—" : money.format(Number(r.cost))}</td>
+      <td>${r.cost == null ? "—" : money(Number(r.cost), r.currency)}</td>
       <td class="dim">${fdate(r.last_inspection_on)}</td>
       <td>${km(r.km_run)}</td>
       <td>

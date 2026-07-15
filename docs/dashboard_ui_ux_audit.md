@@ -3,7 +3,7 @@
 ## Contexto
 
 El usuario pidió una auditoría profunda (no un rediseño) del dashboard web de flota —
-`WEB/*.html` + `WEB/tire-change/*` — evaluada contra Apple HIG, Vercel Web Interface Guidelines
+`WEB/*.html` + `WEB/movimientos/*` — evaluada contra Apple HIG, Vercel Web Interface Guidelines
 y buenas prácticas de sistemas de diseño en React, sin tocar la app móvil ni el flujo de captura
 en campo. El objetivo es entender qué complejidad pertenece al dominio (industrial, alta
 densidad de datos técnicos) y cuál fue creada por la implementación, para luego priorizar
@@ -14,19 +14,30 @@ problema real de lectura (no decoración) — se refleja en la sección 10 y en 
 
 Se leyó primero `knowledge/ai/00 - LEER PRIMERO.md`, `knowledge/ai/07 - Web dashboards y taller.md`,
 `knowledge/ai/09 - Diseno y UX.md`, `DESIGN.md` y `PRODUCT.md` como exige `CLAUDE.md`, y se leyeron
-íntegros los 6 HTML del dashboard (4.675 líneas) más los 13 módulos JS de `WEB/tire-change/`
-(el segundo modo — "Cambios" — de `Inspecciones por unidad.html`) y `renova-office-shell.css`.
+íntegros los 6 HTML del dashboard (4.675 líneas) más los 13 módulos JS de `WEB/movimientos/`
+(el segundo modo — "Movimientos" — de `Inspecciones por unidad.html`) y `renova-office-shell.css`.
 Toda afirmación de esta auditoría cita `archivo:línea`.
 
-**Nota de verificación:** esta versión corrige un error de nombres detectado en una revisión
-previa del borrador, que se refería a este módulo como "Movimientos" (`WEB/movimientos/`,
-`movimientos-controller.js`, `movimientos.css`, `?mode=movimientos`). Ese nombre no existe en el
-repo. El código y `knowledge/ai/07 - Web dashboards y taller.md:26-30` usan consistentemente
-**Cambios**: directorio `WEB/tire-change/`, controlador `cambios-controller.js`, hoja de estilos
-`tire-change.css`, parámetro `?mode=cambios` (único valor real — no existe ni existió un alias
-"movimientos", confirmado por `grep` sobre todo el repo y por `git log`, que muestra el módulo
-creado en un solo commit sin historial de rename). Todas las citas de esta sección fueron
-re-verificadas contra el código actual tras la corrección.
+**Nota de verificación (actualizada 2026-07-15):** una revisión previa de este documento llamó a
+este módulo "Cambios" (`WEB/tire-change/`, `cambios-controller.js`, `tire-change.css`,
+`?mode=cambios`) y afirmó que "Movimientos" no existía en el repo. Eso era correcto en el momento
+en que se escribió, pero un commit posterior (`tasks_puesta_en_marcha_movimientos/`,
+"renombre cambios a movimientos") renombró el módulo: hoy el nombre real y único es
+**Movimientos** — directorio `WEB/movimientos/`, controlador `movimientos-controller.js`, hoja de
+estilos `movimientos.css`, constante `MOVIMIENTOS_MODES` (`mode-toggle.js:1-4`), parámetro
+canónico `?mode=movimientos`. `?mode=cambios` sigue funcionando como alias legacy
+(`LEGACY_MOVEMENTS_MODE`, `mode-toggle.js:6`) que se canonicaliza a `movimientos`, no como el
+nombre real. `knowledge/ai/07 - Web dashboards y taller.md` ya documenta correctamente este
+nombre. Las citas de archivo/ruta de esta sección se corrigieron para reflejarlo; los prefijos de
+clase CSS (`.tc-*`) no cambiaron con el rename y siguen siendo correctos tal cual están citados.
+
+**Nota de vigencia de líneas (agregada 2026-07-15):** una implementación posterior de las Fases 1
+y 2 de esta auditoría (bug de moneda, enlace roto, `esc()`, tokens duplicados, `renova-office-shell.css`
+enlazado en las 6 páginas, formateador de fecha y utilidades de animación compartidas) modificó
+estructuralmente los 6 HTML, lo que corrió línea varios de sus hallazgos. Las citas `archivo:línea`
+de este documento reflejan el estado del código **antes** de esa implementación y deben tratarse
+como aproximadas, no como punteros exactos, al usarse para trabajo futuro sobre hallazgos aún
+pendientes (D.2 fuera de alcance de esas fases, D.3, D.6, etc.).
 
 No se modifica código en esta fase. Este documento es el entregable de auditoría en sí mismo.
 
@@ -48,7 +59,7 @@ individualmente es coherente y funcional; el problema aparece al comparar pantal
 **Fortalezas reales:**
 - Paleta semántica disciplinada y sin ambigüedad de origen (naranja = único foco/acción, verde
   = exclusivamente "completa") — se respeta en las 7 superficies revisadas.
-- El modo Cambios (`WEB/tire-change/`, segundo modo de `Inspecciones por unidad.html`) tiene el
+- El modo Movimientos (`WEB/movimientos/`, segundo modo de `Inspecciones por unidad.html`) tiene el
   nivel de accesibilidad e ingeniería de estados más alto de todo el proyecto: `aria-live` real,
   focus trap reintegrado en todos los overlays, clasificación fina de errores de red/RPC con
   recuperación específica por tipo (reintento del mismo lote, buscar en inventario, recarga
@@ -69,11 +80,11 @@ individualmente es coherente y funcional; el problema aparece al comparar pantal
    páginas — un mismo recuadro punteado con solo el texto cambiando.
 4. Un botón que no hace nada: "Enviar a Retén" / "Descartar" en modo Inspección
    (`Inspecciones por unidad.html:519-522,971,980-982,1012-1018`) solo muestra un toast — no llama
-   a ningún RPC — mientras el modo Cambios, en la misma pantalla, tiene la versión real de la
+   a ningún RPC — mientras el modo Movimientos, en la misma pantalla, tiene la versión real de la
    misma acción. Riesgo de confianza del usuario, no solo de UI.
 5. Tres sistemas de botones/badges coexisten sin jerarquía declarada: `renova-office-shell.css`
    (`.btn-primary/.btn-submit/.btn-mini`), el sistema inline de `Inspecciones por unidad.html`
-   (`.btn-accion/.badge`), y `.tc-*` de `tire-change.css` — ninguno es claramente "el" sistema.
+   (`.btn-accion/.badge`), y `.tc-*` de `movimientos.css` — ninguno es claramente "el" sistema.
 
 **Riesgo de seguir agregando funciones sin corregir la base:** cada pantalla nueva copiará el
 patrón de "redeclarar tokens + inventar mi propia clase de botón" porque es el patrón dominante
@@ -91,19 +102,28 @@ severidad Alta) — ambos superan el umbral de "esto ya afecta la confianza oper
 | Archivo | Propósito | Vista/RPC fuente | Nav completo | Enlaza `renova-office-shell.css` |
 |---|---|---|---|---|
 | `INSPECCIONES POR FECHA.html` | Estado agregado de flota por fecha | `v_fleet_unit_status` | Sí | **No** |
-| `Inspecciones por unidad.html` | Detalle unidad — modos Inspección/Cambios | `v_inspection_dashboard_rows` + `v_unit_position_state`, `v_tire_inventory_available` | Solo mode-toggle, sin nav a otras pantallas | **No** (`:11` solo enlaza `tire-change/tire-change.css`) |
+| `Inspecciones por unidad.html` | Detalle unidad — modos Inspección/Movimientos | `v_inspection_dashboard_rows` + `v_unit_position_state`, `v_tire_inventory_available` | Solo mode-toggle, sin nav a otras pantallas | **No** (`:11` solo enlaza `movimientos/movimientos.css`) |
 | `rendimiento.html` | Rendimiento por eje/posición | `v_rendimiento_dashboard_rows` | Sí | **No** — tokens redeclarados en paralelo |
 | `historial-neumatico.html` | Historial de casco, solo lectura | vistas `v_casing_*` | **No tiene `<nav>`** | Sí, pero redundante (`:33-49` redeclara todo) |
 | `instalacion.html` | Instalar/retirar/trasladar (taller) | RPCs de taller | Sí | Sí, redundante igual (`:16-24`) |
 | `importar.html` | Importación masiva Excel | `save_inspection` | Sí | **No** — reimplementa nav/header desde cero (`:79-95`) |
 
+> **Estado post-Fase 2 (2026-07-15):** la columna "Enlaza `renova-office-shell.css`" de arriba
+> describe el estado *tal como fue auditado*. Una implementación posterior (Fase 2 del backlog,
+> sección G.3) enlazó `renova-office-shell.css` como fuente única en las 6 páginas y eliminó los
+> `:root` duplicados, incluida `Inspecciones por unidad.html` (que hoy enlaza el shell además de
+> `movimientos/movimientos.css`). Los números de línea de esta fila y de las demás quedaron
+> desactualizados por ese cambio; ver "Nota de vigencia de líneas" al inicio del documento.
+
 Retiradas del dashboard (decisión de negocio, no bug — `knowledge/ai/07`): `inventario.html`,
 `comparativo.html`. No se auditan.
 
-**Módulo Cambios** (`WEB/tire-change/`, 13 módulos JS + 1 CSS, ~5.205 líneas): no es una ruta
+**Módulo Movimientos** (`WEB/movimientos/`, 13 módulos JS + 1 CSS, ~5.205 líneas): no es una ruta
 propia — es un segundo modo dentro de `Inspecciones por unidad.html`, activado por
-`?mode=cambios` (`TIRE_CHANGE_MODES.CHANGES`, `mode-toggle.js:1-3`), sin recarga; el valor por
-defecto es `inspeccion`. Arquitectura: un controlador orquestador (`cambios-controller.js`, 771
+`?mode=movimientos` (`MOVIMIENTOS_MODES.MOVEMENTS`, `mode-toggle.js:1-4`), sin recarga; el valor
+por defecto es `inspeccion`. `?mode=cambios` sigue funcionando como alias legacy que se
+canonicaliza a `movimientos` (`LEGACY_MOVEMENTS_MODE`, `mode-toggle.js:6`), no como el nombre
+real. Arquitectura: un controlador orquestador (`movimientos-controller.js`, 771
 líneas) + módulos ES puros por responsabilidad (modelo de lote `batch-model.js`, persistencia
 local `batch-store.js`, proyección del diagrama `diagram-projection.js`/`diagram-view.js`, UI de
 movimientos/inventario/confirmación `movements-ui.js`/`inventory-ui.js`/`summary-confirm.js`,
@@ -125,7 +145,7 @@ dependencia real — ver hallazgo de duplicación en D y F.
   FECHA.html` y `historial-neumatico.html`. Solo dos `<table>` reales existen en todo el
   dashboard: `instalacion.html` (14 columnas) e `importar.html` (tabla de resultado, 5 columnas).
 - Modal/sheet: bottom-sheet en `instalacion.html` (3 formularios) vs. overlay `role="dialog"` en
-  `WEB/tire-change/*` (descarte, inventario, confirmación) — dos implementaciones de modal
+  `WEB/movimientos/*` (descarte, inventario, confirmación) — dos implementaciones de modal
   distintas, ninguna comparte código con la otra.
 - Estado vacío/carga/error: un único recuadro punteado (`.empty`/`.note`/`.th-empty`) con solo el
   texto cambiando — repetido, con nombres de clase distintos, en al menos 5 páginas.
@@ -151,7 +171,7 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
   `Inspecciones por unidad.html:1127` — `historial-neumatico.html` no tiene buscador propio, y su
   botón "volver" apunta a una ruta que no existe si no hay `document.referrer` (ver D.4, hallazgo
   Alto).
-- Confirmar movimientos de neumáticos (retén, descarte, intercambio, montaje) en modo Cambios:
+- Confirmar movimientos de neumáticos (retén, descarte, intercambio, montaje) en modo Movimientos:
   flujo de hasta 6 superficies interactivas distintas por lote (ver D.3) — el más largo del
   dashboard, pero también el mejor instrumentado en feedback.
 
@@ -218,7 +238,7 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
 **Responsive**
 - Modo Inspección de `Inspecciones por unidad.html` no tiene ninguna regla responsive propia — el
   diagrama 3D fijo (1700×1100px) y el layout (`min-width:1280px`) no reflowan nunca. El mismo
-  diagrama, en modo Cambios, sí está tratado con dos breakpoints (900px, 640px) que colapsan
+  diagrama, en modo Movimientos, sí está tratado con dos breakpoints (900px, 640px) que colapsan
   el layout y ocultan el diagrama 3D en favor de chips — **una asimetría real**: la misma pantalla
   es responsive en un modo y no en el otro.
 - `.form-grid` de `instalacion.html` (2 columnas fijas, `instalacion.html:157`) no tiene override
@@ -231,7 +251,7 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
   gestión de foco (sin `.focus()`, sin `autofocus`, sin `tabindex` en todo el archivo) — el
   atributo promete un comportamiento que el código no cumple.
 - Las ruedas del diagrama 3D en modo Inspección no son focuseables por teclado (solo adquieren
-  `role`/`tabindex`/`aria-label` cuando el modo activo es Cambios, `diagram-view.js:68-71`).
+  `role`/`tabindex`/`aria-label` cuando el modo activo es Movimientos, `diagram-view.js:68-71`).
 - `historial-neumatico.html` e `importar.html` no tienen ningún `aria-live` para sus transiciones
   asíncronas (carga → dato / error) — cero ocurrencias confirmadas por grep en ambos archivos.
 - `historial-neumatico.html` e `importar.html` no tienen función de escape de HTML
@@ -295,17 +315,17 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
     código lo confirma ("Independientes del formulario de inspección diaria: no se disparan al
     guardar", `:971-972`); `enviarARetenAction()` (`:980-982`) y el confirmador de descarte
     (`:1012-1014`) solo llaman `showToast()`. Visualmente son indistinguibles de una acción real,
-    y la versión que sí funciona (RPC real) vive un clic de distancia en modo Cambios, en la
+    y la versión que sí funciona (RPC real) vive un clic de distancia en modo Movimientos, en la
     misma pantalla, para el mismo neumático.
   - Sin ninguna regla responsive: diagrama fijo a 1700×1100px, `.dash{min-width:1280px}` sin
     override — en tablet o ventana angosta el layout desborda con scroll horizontal, mientras el
-    modo Cambios de la misma pantalla sí colapsa correctamente por debajo de 900px.
-  - Las ruedas del diagrama no son focuseables por teclado en este modo (solo en Cambios).
+    modo Movimientos de la misma pantalla sí colapsa correctamente por debajo de 900px.
+  - Las ruedas del diagrama no son focuseables por teclado en este modo (solo en Movimientos).
   - No hay `<table>` ni tabla de posiciones tabular — todo es un panel de detalle de una posición
     a la vez, sin vista de conjunto de las 8 posiciones salvo el color de cada rueda.
 - **Cambios recomendados:** eliminar o rewire los botones de Retén/Descartar decorativos (o
-  reemplazarlos por un enlace directo a modo Cambios preseleccionando esa posición); extender
-  las reglas responsive ya escritas para modo Cambios a modo Inspección, ya que comparten el mismo
+  reemplazarlos por un enlace directo a modo Movimientos preseleccionando esa posición); extender
+  las reglas responsive ya escritas para modo Movimientos a modo Inspección, ya que comparten el mismo
   `#stage`/diagrama.
 - **Elementos que deben conservarse:** el diagrama 3D como identidad visual fuerte y única del
   producto (no es un grid abstracto, cumple la hipótesis de campo validada en
@@ -315,7 +335,7 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
   entre ambos modos (hoy son dos variables de estado no sincronizadas — cambiar de modo no
   conserva la posición seleccionada).
 
-### D.3 — `Inspecciones por unidad.html`, modo Cambios
+### D.3 — `Inspecciones por unidad.html`, modo Movimientos
 
 - **Objetivo:** registrar en un solo lote atómico los movimientos físicos de neumáticos de una
   unidad (retén, descarte con foto, intercambio, montaje) sin dejar estados intermedios.
@@ -349,7 +369,7 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
 > terminología "casco" vs. "neumático" citando un archivo `baseline-ui.js:143` y un "formulario de
 > línea base". Se re-verificó contra el código actual: `baseline-ui.js` no existe en el repo, y no
 > hay ninguna ocurrencia de "casco" ni de "línea base"/"baseline" en los 13 módulos JS de
-> `WEB/tire-change/`. Ese hallazgo no tiene respaldo en el estado actual del código y se elimina;
+> `WEB/movimientos/`. Ese hallazgo no tiene respaldo en el estado actual del código y se elimina;
 > si el usuario confirma que existió en otra rama o versión, debería tratarse como un ítem aparte
 > a re-investigar, no como parte de esta auditoría.
 
@@ -446,7 +466,7 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
 - **Cambios recomendados:** corregir el bug de moneda leyendo `r.currency` en vez del literal
   fijo; agregar confirmación explícita para Retirar/Trasladar; asociar `label for=` en los 22
   campos; implementar el focus trap que el `aria-modal` ya declara (reutilizar el patrón ya
-  existente y probado de `a11y.js` en `WEB/tire-change/`, no reinventar uno nuevo); colapsar
+  existente y probado de `a11y.js` en `WEB/movimientos/`, no reinventar uno nuevo); colapsar
   `.form-grid` a 1 columna bajo el breakpoint existente de 780px; agregar enlace a historial por
   fila.
 - **Elementos que deben conservarse:** el patrón de "tarjeta objetivo" (qué casco/unidad/posición
@@ -499,12 +519,12 @@ relación entre sí (520, 560, 640, 760, 780, 900px) repartidos en 5 archivos di
 | Componente | Problema | Ubicación | Recomendación | Prioridad | Esfuerzo |
 |---|---|---|---|---|---|
 | Tokens de color/tipografía | Redeclarados idénticos en 6 lugares en vez de una fuente única | `renova-office-shell.css` + `:root` inline en cada HTML | Enlazar `renova-office-shell.css` en todas las páginas y eliminar los `:root` locales | Alto | Medio |
-| Botones/badges | 3 sistemas sin jerarquía declarada (`.btn-primary` shell vs. `.btn-accion` inline vs. `.tc-*`) | `renova-office-shell.css`, `Inspecciones por unidad.html:520-531`, `tire-change.css:152-172` | Elegir el sistema del shell como canónico; migrar o alias los otros dos | Alto | Alto |
-| Botón "Retén"/"Descartar" (modo Inspección) | Decorativo, no persiste, indistinguible visualmente de una acción real | `Inspecciones por unidad.html:519-522,971,980-982,1012-1018` | Eliminar o redirigir a modo Cambios preseleccionando la posición | Crítico | Bajo |
+| Botones/badges | 3 sistemas sin jerarquía declarada (`.btn-primary` shell vs. `.btn-accion` inline vs. `.tc-*`) | `renova-office-shell.css`, `Inspecciones por unidad.html:520-531`, `movimientos.css:152-172` | Elegir el sistema del shell como canónico; migrar o alias los otros dos | Alto | Alto |
+| Botón "Retén"/"Descartar" (modo Inspección) | Decorativo, no persiste, indistinguible visualmente de una acción real | `Inspecciones por unidad.html:519-522,971,980-982,1012-1018` | Eliminar o redirigir a modo Movimientos preseleccionando la posición | Crítico | Bajo |
 | Formateo de moneda | Hardcodeado a USD, ignora el campo `currency` real (PEN) | `instalacion.html:404,426` | Leer `r.currency` por fila | Crítico | Bajo |
 | Estados vacío/carga/error | Mismo recuadro punteado para 3 significados distintos | `INSPECCIONES POR FECHA.html`, `rendimiento.html`, `historial-neumatico.html`, `instalacion.html` | Componente único con variante de icono/color por tipo de estado | Alto | Medio |
-| Modales de `instalacion.html` | `aria-modal="true"` sin focus trap real, sin `label for=` en 22 campos | `instalacion.html:246-389` | Reutilizar `createFocusTrap` de `WEB/tire-change/a11y.js`; asociar labels | Alto | Medio |
-| Diagrama 3D del bus (modo Inspección) | Sin reglas responsive propias, ruedas no focuseables por teclado | `Inspecciones por unidad.html` (inline `<style>`, script ~1082) | Extender las reglas responsive y de accesibilidad ya escritas para modo Cambios | Alto | Medio |
+| Modales de `instalacion.html` | `aria-modal="true"` sin focus trap real, sin `label for=` en 22 campos | `instalacion.html:246-389` | Reutilizar `createFocusTrap` de `WEB/movimientos/a11y.js`; asociar labels | Alto | Medio |
+| Diagrama 3D del bus (modo Inspección) | Sin reglas responsive propias, ruedas no focuseables por teclado | `Inspecciones por unidad.html` (inline `<style>`, script ~1082) | Extender las reglas responsive y de accesibilidad ya escritas para modo Movimientos | Alto | Medio |
 | Tabs de eje/posición | Patrón ARIA `tablist` incompleto (falta `aria-controls`, roving tabindex) | `rendimiento.html:683-708` | Completar el patrón siguiendo el ya correcto de `mode-toggle.js` | Medio | Bajo |
 | Formateador de fecha | Duplicado con robustez distinta (`fdate` vs `fmtDate`) | `instalacion.html:407`, `historial-neumatico.html:263-267` | Un solo helper compartido, usar la versión defensiva | Medio | Bajo |
 | Animaciones de conteo/barra | `animateCount`/`growFill` duplicados casi idénticos | `INSPECCIONES POR FECHA.html:439-459`, `rendimiento.html:614-632` | Extraer a un `.js` compartido, patrón ya usado por `supabase-demo.js`/`renova-ready.js` | Medio | Bajo |
@@ -536,18 +556,18 @@ sola fuente, sin redeclaración):
 - **Espaciado:** materializar la escala que `DESIGN.md` ya define en su frontmatter
   (`spacing.xs:8px … 2xl:24px`) como CSS custom properties en el shell — hoy no existe como
   variable en ningún `.css`, todo es píxel suelto. Reemplaza los valores repetidos de padding
-  encontrados en `tire-change.css` y en los `<style>` inline de cada página.
+  encontrados en `movimientos.css` y en los `<style>` inline de cada página.
 - **Radios:** `DESIGN.md` ya define `rounded.xs..4xl` — mismo tratamiento, materializar como
   variables en vez de repetir `border-radius:8px`/`14px`/etc. sueltos en cada archivo.
 - **Breakpoints:** definir 2 valores estándar (p. ej. `768px` tablet, `480px` móvil) que
-  reemplacen los 6 valores actuales sin relación (520/560/640/760/780/900px); el modo Cambios ya
+  reemplacen los 6 valores actuales sin relación (520/560/640/760/780/900px); el modo Movimientos ya
   demostró que 900/640 funciona para el layout más complejo del dashboard — usar esos como base.
 - **Estados (loading/error/empty):** un componente único con 3 variantes visuales distintas
   (icono + color, no solo texto) que reemplace `.empty`/`.note`/`.th-empty` en las 5 páginas que
   hoy los duplican con nombres distintos.
 - **Botones/badges:** consolidar en el sistema del shell (`.btn-primary/.btn-submit/.btn-mini`)
   como canónico; los sistemas `.btn-accion`/`.tc-*` deberían extenderlo o quedar documentados
-  como variante intencional (p. ej. `.tc-*` si se decide que el modo Cambios necesita su propia
+  como variante intencional (p. ej. `.tc-*` si se decide que el modo Movimientos necesita su propia
   densidad por ser una superficie operativa distinta) — decisión a validar con el usuario, no
   a imponer unilateralmente dado que tocar esto afecta CSS ya probado en producción.
 - **Z-index/elevación:** ya gobernado por `DESIGN.md §4` (capas tonales, sombra solo para
@@ -581,14 +601,14 @@ a lo que `DESIGN.md` ya especifica — el trabajo es de **implementación**, no 
 - **Desactivar o redirigir los botones decorativos "Retén"/"Descartar" de modo Inspección.**
   Archivos: `Inspecciones por unidad.html:519-522,971,980-982,1012-1018`. Criterio de aceptación:
   ningún botón visible en la pantalla aparenta persistir un dato sin persistirlo — o se elimina, o
-  se redirige a la acción real de modo Cambios. Riesgo: medio (tocar la pantalla más grande del
+  se redirige a la acción real de modo Movimientos. Riesgo: medio (tocar la pantalla más grande del
   dashboard); probar ambos modos tras el cambio. Dependencias: ninguna.
 - **Confirmación explícita para Retirar/Trasladar en `instalacion.html`.** Criterio: ninguna
   acción que cierre/mueva una instalación se ejecuta sin un paso de confirmación separado del
   formulario mismo. Riesgo: medio (cambia el flujo de un RPC ya en producción, probar
   exhaustivamente). Dependencias: ninguna.
 - **Focus trap real en los 3 modales de `instalacion.html`.** Reutilizar `createFocusTrap` de
-  `WEB/tire-change/a11y.js` (ya probado). Criterio: `Tab` no escapa del modal, `Escape` cierra,
+  `WEB/movimientos/a11y.js` (ya probado). Criterio: `Tab` no escapa del modal, `Escape` cierra,
   foco vuelve al disparador. Riesgo: bajo-medio. Dependencias: ninguna (el helper ya existe).
 
 ### 3. Unificación de componentes
@@ -599,7 +619,7 @@ a lo que `DESIGN.md` ya especifica — el trabajo es de **implementación**, no 
   actualmente gana por orden de fuente). Dependencias: ninguna, pero conviene hacerlo antes del
   ítem de botones/badges.
 - **Consolidar sistema de botones/badges** en el canónico del shell. Riesgo: alto si se toca
-  visualmente el modo Cambios sin cuidado — requiere smoke test real de los 2 modos, no solo
+  visualmente el modo Movimientos sin cuidado — requiere smoke test real de los 2 modos, no solo
   build. Dependencias: depende del ítem anterior (tokens unificados primero).
 - **Componente único de estado vacío/carga/error** con variante por tipo. Archivos: las 5 páginas
   que hoy duplican el patrón. Riesgo: bajo-medio. Dependencias: depende de tokens unificados.
@@ -620,9 +640,9 @@ tablist** en la misma pantalla. Riesgo: bajo. Dependencias: ninguna.
 - **Persistir filtros de `instalacion.html` en la URL** (unidad/posición vía query params, como
   ya hace el modo de `Inspecciones por unidad.html`). Riesgo: bajo. Dependencias: ninguna.
 - **Enlace bidireccional instalación ↔ historial de casco.** Riesgo: bajo. Dependencias: ninguna.
-- **Sincronizar posición seleccionada entre modo Inspección y modo Cambios** al alternar. Riesgo:
-  medio (tocar el orquestador `cambios-controller.js`). Dependencias: ninguna.
-- **Extender las reglas responsive/accesibilidad de modo Cambios a modo Inspección** (mismo
+- **Sincronizar posición seleccionada entre modo Inspección y modo Movimientos** al alternar. Riesgo:
+  medio (tocar el orquestador `movimientos-controller.js`). Dependencias: ninguna.
+- **Extender las reglas responsive/accesibilidad de modo Movimientos a modo Inspección** (mismo
   diagrama, mismo `#stage`). Riesgo: medio. Dependencias: ninguna.
 
 ### 6. Mejoras opcionales (visualización — alineado con la preferencia del usuario por gráficos)
@@ -634,7 +654,7 @@ mostrado como texto que hoy exige lectura secuencial en vez de comparación visu
   de cabecera (`:24`) — este ítem requiere una decisión explícita del usuario/negocio antes de
   implementarse, no debe aplicarse unilateralmente aunque sea la oportunidad más clara del
   dashboard.
-- **Distribución de tipos de movimiento** en el paso de confirmación de lote de modo Cambios
+- **Distribución de tipos de movimiento** en el paso de confirmación de lote de modo Movimientos
   (`summary-confirm.js`) — hoy es una lista secuencial de movimientos sin resumen agregado; una
   barra apilada simple ("3 descartes · 2 montajes · 1 intercambio") antes de la lista.
 - **Barra de proporción de salud del import** en `importar.html` (válidos/con error/con aviso)
@@ -659,7 +679,7 @@ guías de referencia (Apple HIG, Vercel) exigen para justificar un gráfico.
   Requiere smoke test de las 6 páginas tras el cambio de cascada CSS.
 - **Fase 3 — Sistema de tokens:** materializar espaciado y radios como CSS vars en el shell;
   estandarizar breakpoints a 2-3 valores. Requiere decidir con el usuario si `.tc-*` del modo
-  Cambios se mantiene como variante intencional o se migra al sistema canónico.
+  Movimientos se mantiene como variante intencional o se migra al sistema canónico.
 - **Fase 4 — Navegación y jerarquía:** desactivar/redirigir botones decorativos de modo
   Inspección; agregar `<nav>` a `historial-neumatico.html`; enlace bidireccional
   instalación↔historial; sincronizar selección entre modos de `Inspecciones por unidad.html`.
@@ -668,7 +688,7 @@ guías de referencia (Apple HIG, Vercel) exigen para justificar un gráfico.
   `historial-neumatico.html` y las demás oportunidades de la sección G.6.
 - **Fase 6 — Accesibilidad y responsive:** focus trap real en modales de `instalacion.html`,
   `label for=` en los 22 campos, confirmación explícita para acciones destructivas, extender
-  responsive/teclado de modo Inspección al nivel ya alcanzado por modo Cambios, completar patrón
+  responsive/teclado de modo Inspección al nivel ya alcanzado por modo Movimientos, completar patrón
   ARIA de tabs en `rendimiento.html`.
 - **Fase 7 — Refinamiento visual:** consolidación final de sistema de botones/badges una vez
   validado con el usuario qué variantes son intencionales vs. accidentales.

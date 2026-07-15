@@ -32,82 +32,38 @@
      Sin config o sin red, la pantalla no inventa datos. -->
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
+<script src="renova-animate.js"></script>
 <script type="module" src="supabase-demo.js"></script>
+<link rel="stylesheet" href="renova-office-shell.css">
 <style>
   :root{
-    /* Paleta RENOVA (DESIGN.md) */
-    --screen-dark:#07111C;
-    --field-dark:#111E2E;
-    --navy-brand:#15233f;
-    --border-dark:#1B2D42;
-    --label-blue:#7AABCC;
-    --value-ice:#F0F8FF;
-    --ember-orange:#F06822;
-    --signal-yellow:#f4b821;
-    --verified-green:#1f9d6b;
-
     /* Semáforo del negocio (DESIGN.md §8): verde Normal · amarillo Observación · naranja Crítico.
        El naranja ES la máxima severidad del sistema; no se introduce rojo. Máxima
        separación de hue entre los 3 estados => lectura rápida sobre muchas unidades. */
-    --crit:#F06822;                    /* Crítico      = ember-orange */
+    --crit:var(--ember-orange);        /* Crítico      = ember-orange */
     --crit-bg:rgba(240,104,34,.14);
-    --warn:#f4b821;                    /* Observación  = signal-yellow */
+    --warn:var(--signal-yellow);       /* Observación  = signal-yellow */
     --warn-bg:rgba(244,184,33,.14);
     --normal:var(--verified-green);    /* Normal       = verified-green */
-
-    --mono:'JetBrains Mono','IBM Plex Mono',SFMono-Regular,Menlo,monospace;
-    --display:'Bebas Neue',sans-serif;
-    color-scheme:dark;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:var(--screen-dark);
-    color:var(--value-ice);
-    font-family:var(--mono);
-    font-weight:700;
     -webkit-font-smoothing:antialiased;
-    font-variant-numeric:tabular-nums;
-    display:flex;flex-direction:column;min-height:100vh;
     padding-bottom:40px;
   }
   .num{font-variant-numeric:tabular-nums}
 
-  /* ───────────────── Header ───────────────── */
-  header{
-    background:var(--navy-brand);
-    padding:18px 16px 16px;
-    position:sticky;top:0;z-index:20;
-    /* filo inferior = "cinta de seguridad" (DESIGN.md §7) */
-    border-bottom:4px solid transparent;
-    border-image:repeating-linear-gradient(45deg,var(--ember-orange) 0 6px,transparent 6px 12px) 4;
-  }
   .head-row{
     display:flex;align-items:flex-end;justify-content:space-between;
     gap:16px;flex-wrap:wrap;max-width:1200px;margin:0 auto;
-  }
-  .brand .logo{
-    font-family:var(--display);font-size:32px;line-height:1;
-    letter-spacing:.06em;color:var(--value-ice);
-  }
-  .brand .logo b{color:var(--ember-orange);font-weight:400}
-  .brand .screen-name{
-    font-family:var(--display);font-size:19px;line-height:1;
-    letter-spacing:.12em;color:var(--signal-yellow);margin-top:4px;
   }
   .brand .subtitle{
     font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
     color:var(--label-blue);margin-top:8px;
   }
   .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
-  .screen-nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
-  .screen-nav a{
-    color:var(--label-blue);text-decoration:none;border:2px solid var(--border-dark);
-    background:var(--field-dark);border-radius:8px;padding:10px 12px;
-    font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  }
-  .screen-nav a.active{color:var(--ember-orange);border-color:var(--ember-orange)}
   .date-picker{display:flex;flex-direction:column;gap:6px}
   .date-picker label{
     font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
@@ -436,27 +392,8 @@ function renderNoData(message){
 const REDUCED_MOTION = window.matchMedia &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function animateCount(el, to, opts={}){
-  if(!el) return;
-  const { duration = 600, format = v => Math.round(v).toString() } = opts;
-  if(REDUCED_MOTION){ el.textContent = format(to); return; }
-  const start = performance.now();
-  function tick(now){
-    const p = Math.min(1, (now - start) / duration);
-    const eased = 1 - Math.pow(1 - p, 3);
-    el.textContent = format(to * eased);
-    if(p < 1) requestAnimationFrame(tick); else el.textContent = format(to);
-  }
-  requestAnimationFrame(tick);
-}
-
-// Crece una barra desde 0 hasta `pct`% sobre la propiedad CSS indicada
-// (width para barras normales, flexBasis para segmentos de un flex).
-function growFill(el, pct, prop="width"){
-  if(!el) return;
-  if(REDUCED_MOTION){ el.style[prop] = pct + "%"; return; }
-  requestAnimationFrame(()=> requestAnimationFrame(()=>{ el.style[prop] = pct + "%"; }));
-}
+const animateCount = RenovaAnimate.count;
+const growFill = RenovaAnimate.growFill;
 
 function animateRing(el, toPct, duration=700){
   if(!el) return;
