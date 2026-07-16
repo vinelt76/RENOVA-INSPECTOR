@@ -124,7 +124,7 @@ begin
     if sqlerrm not like '%causa%' then raise; end if;
   end;
   perform public.register_removal(v_cycle, current_date - 10, 'discard', 222000, 2.0,
-    'Neumático', 'https://example.com/foto.jpg', 'corte profundo');
+    'Corte profundo en flanco', 'https://example.com/foto.jpg', 'corte profundo');
   select status::text into v_txt from public.tire_casings where id = v_casing;
   if v_txt <> 'discarded' then raise exception 'T5: casco quedó %', v_txt; end if;
   select inventory_status into v_txt from public.v_inventory_status where casing_id = v_casing;

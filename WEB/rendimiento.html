@@ -891,28 +891,31 @@ function renderSummary(){
         <div class="chart-title">Rendimiento por posición · <b>Km/mm</b></div>
         ${bars}
       </div>`;
-    // Veredicto de balance Izq/Der — solo si hay datos válidos en ambos lados.
-    if(agg.lr){
-      const cls = agg.lr.balanced ? "ok" : "bad";
-      const verdict = agg.lr.balanced ? "Lados balanceados" : "Desbalance Izq/Der detectado";
-      const detail = agg.lr.balanced
-        ? `Izq ${fmtKmMm(agg.lr.izqAvg)} · Der ${fmtKmMm(agg.lr.derAvg)} km/mm · dentro del umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%)`
-        : `Izq ${fmtKmMm(agg.lr.izqAvg)} · Der ${fmtKmMm(agg.lr.derAvg)} km/mm · revisar presión, alineación o carga`;
-      chartBlock += `
-        <div class="balance ${cls}">
-          <span class="b-dot"></span>
-          <div class="b-text">
-            <div class="b-verdict">${verdict}</div>
-            <div class="b-detail">${detail}</div>
-          </div>
-          <div class="b-metric">
-            <div class="bm-value num">${fmtPct(agg.lr.diffPct)}%</div>
-            <div class="bm-label">Diferencia Izq/Der</div>
-          </div>
-        </div>`;
-    } else {
-      chartBlock += `<div class="note">No hay datos suficientes en ambos lados para evaluar el balance Izq/Der.</div>`;
-    }
+    // Bloque "Desbalance Izq/Der" retirado de la vista a pedido (2026-07-16).
+    // Se conserva sin usar por si se reubica en otra pantalla; agg.lr y
+    // AXLE_BALANCE_THRESHOLD_PERCENT siguen calculándose para no romper
+    // otras dependencias.
+    // if(agg.lr){
+    //   const cls = agg.lr.balanced ? "ok" : "bad";
+    //   const verdict = agg.lr.balanced ? "Lados balanceados" : "Desbalance Izq/Der detectado";
+    //   const detail = agg.lr.balanced
+    //     ? `Izq ${fmtKmMm(agg.lr.izqAvg)} · Der ${fmtKmMm(agg.lr.derAvg)} km/mm · dentro del umbral (${AXLE_BALANCE_THRESHOLD_PERCENT}%)`
+    //     : `Izq ${fmtKmMm(agg.lr.izqAvg)} · Der ${fmtKmMm(agg.lr.derAvg)} km/mm · revisar presión, alineación o carga`;
+    //   chartBlock += `
+    //     <div class="balance ${cls}">
+    //       <span class="b-dot"></span>
+    //       <div class="b-text">
+    //         <div class="b-verdict">${verdict}</div>
+    //         <div class="b-detail">${detail}</div>
+    //       </div>
+    //       <div class="b-metric">
+    //         <div class="bm-value num">${fmtPct(agg.lr.diffPct)}%</div>
+    //         <div class="bm-label">Diferencia Izq/Der</div>
+    //       </div>
+    //     </div>`;
+    // } else {
+    //   chartBlock += `<div class="note">No hay datos suficientes en ambos lados para evaluar el balance Izq/Der.</div>`;
+    // }
   }
 
   mount.innerHTML = `

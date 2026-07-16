@@ -165,7 +165,7 @@ begin
   v_discarded_cycle := (v_result->>'life_cycle_id')::uuid;
   perform public.register_removal(
     v_discarded_cycle, current_date - 3, 'discard', 103000, 2.0,
-    'Neumático', 'https://example.com/unit-state-test.jpg', 'unit_state_reads T4'
+    'Corte profundo en flanco', 'https://example.com/unit-state-test.jpg', 'unit_state_reads T4'
   );
 
   select count(*)

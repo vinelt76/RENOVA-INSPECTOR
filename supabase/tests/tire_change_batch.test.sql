@@ -371,7 +371,7 @@ begin
   v_cycle_discarded := (v_setup->>'life_cycle_id')::uuid;
   perform public.register_removal(
     v_cycle_discarded, current_date - 17, 'discard', 100300, 2.0,
-    'Neumático', 'https://example.com/task-05-discard.jpg', 'task_05 discarded setup'
+    'Corte profundo en flanco', 'https://example.com/task-05-discard.jpg', 'task_05 discarded setup'
   );
 
   -- B5: un ciclo descartado no puede volver a montarse.

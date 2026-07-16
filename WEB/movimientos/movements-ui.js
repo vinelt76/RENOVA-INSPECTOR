@@ -45,6 +45,13 @@ function createPhotoBatchId() {
   return globalThis.crypto.randomUUID();
 }
 
+function createSelectOption(documentObject, value, label) {
+  const option = documentObject.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  return option;
+}
+
 export function createMovementsUI({
   container,
   documentObject = globalThis.document,
@@ -94,6 +101,11 @@ export function createMovementsUI({
   if (Object.values(modal).some((element) => !element)) {
     throw new Error("No se encontró el modal de descarte reutilizable.");
   }
+
+  modal.cause.replaceChildren(
+    createSelectOption(documentObject, "", "Seleccionar anomalía crítica…"),
+    ...DISCARD_CAUSES.map((cause) => createSelectOption(documentObject, cause, cause)),
+  );
 
   modal.overlay.setAttribute("role", "dialog");
   modal.overlay.setAttribute("aria-modal", "true");

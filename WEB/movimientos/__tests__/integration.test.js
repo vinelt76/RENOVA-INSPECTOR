@@ -27,6 +27,7 @@ const INVENTORY_CYCLE = "60000000-0000-4000-8000-000000000001";
 const SECOND_INVENTORY_CYCLE = "60000000-0000-4000-8000-000000000002";
 const PHOTO_PLACEHOLDER = "https://fixtures.invalid/movimientos/discard-p2.jpg";
 const SCOPE = { userId: USER_ID, companyId: COMPANY_ID, unitId: UNIT_ID };
+const DISCARD_CAUSE = "Corte profundo en flanco";
 
 function positionRows(count = 6, { empty = [], mismatch = [] } = {}) {
   const emptyPositions = new Set(empty);
@@ -67,7 +68,7 @@ function createMixedBatch(remoteState) {
   batch.addSendToRetention(remoteState[0], { rtd_mm: 10.5, notes: "A retén" });
   batch.addDiscard(remoteState[1], {
     rtd_mm: 2,
-    discard_cause: "Neumático",
+    discard_cause: DISCARD_CAUSE,
     photo_url: PHOTO_PLACEHOLDER,
     notes: "Corte de fixture",
   });
@@ -219,13 +220,13 @@ describe("integración · movimientos, invariantes y diagrama", () => {
     expect(batch.addSendToRetention(remoteState[0], { rtd_mm: 10.5 }).ok).toBe(true);
     expect(
       batch.addDiscard(remoteState[1], {
-        discard_cause: "Neumático",
+        discard_cause: DISCARD_CAUSE,
         photo_url: PHOTO_PLACEHOLDER,
       }).ok,
     ).toBe(true);
 
     expect(batch.movements[1]).toMatchObject({
-      discard_cause: "Neumático",
+      discard_cause: DISCARD_CAUSE,
       photo_url: PHOTO_PLACEHOLDER,
     });
     expect(project(remoteState, batch.state).get(1)).toMatchObject({
@@ -367,7 +368,7 @@ describe("integración · lote mixto, persistencia y RPC", () => {
           position: 2,
           expected_life_cycle_id: POSITION_CYCLES[1],
           rtd_mm: 2,
-          discard_cause: "Neumático",
+          discard_cause: DISCARD_CAUSE,
           photo_url: PHOTO_PLACEHOLDER,
           notes: "Corte de fixture",
         },

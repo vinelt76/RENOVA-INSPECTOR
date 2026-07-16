@@ -14,12 +14,19 @@ export const BATCH_STATUS = Object.freeze({
 });
 
 export const DISCARD_CAUSES = Object.freeze([
-  "Servicio",
-  "Neumático",
-  "Conducción-Ruta",
-  "Mantenimiento Alineación",
-  "Proveedor",
-  "Otro",
+  "Carcasa fatigada",
+  "Desgarro en flanco cuerdas expuestas externo",
+  "Desgarro en flanco cuerdas expuestas interno",
+  "Exceso de rodado",
+  "Rotura de cuerda(s) radial(es) externo",
+  "Rotura de cuerda(s) radial(es) interno",
+  "Separación de paquete de cinturones con la cuerdas radiales",
+  "Separación estructural",
+  "Separación por filtración en banda de rodamiento",
+  "Separación por filtración en pestaña",
+  "Zipper en flanco",
+  "Exceso de frenado",
+  "Corte profundo en flanco",
 ]);
 
 const OPERATIONS = new Set([

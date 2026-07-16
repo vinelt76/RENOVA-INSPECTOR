@@ -3,12 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BATCH_STATUS,
   BatchValidationError,
+  DISCARD_CAUSES,
   createBatchModel,
 } from "../batch-model.js";
 
 const UNIT_ID = "0ccc3098-d4c5-4a1f-b2cf-09b384c0d500";
 const BATCH_ID = "9d0515b6-98d6-4b14-8b09-aadee10f816b";
 const BATCH_ID_2 = "7a472609-ebf8-4a91-a037-0ab07535e87f";
+const DISCARD_CAUSE = "Corte profundo en flanco";
 
 const CYCLES = {
   p1: "ec82031c-ba0f-48be-a21b-975338cb5e56",
@@ -94,7 +96,7 @@ describe("batch model · movement construction", () => {
     const batch = model();
     batch.addSendToRetention(REMOTE_STATE[0]);
     batch.addDiscard(REMOTE_STATE[1], {
-      discard_cause: "Neumático",
+      discard_cause: DISCARD_CAUSE,
       photo_url: "https://example.com/descarte.jpg",
     });
     batch.addSwap(REMOTE_STATE[3], REMOTE_STATE[4]);
@@ -137,7 +139,7 @@ describe("batch model · invariants", () => {
       "discard",
       (batch) =>
         batch.addDiscard(REMOTE_STATE[2], {
-          discard_cause: "Otro",
+          discard_cause: DISCARD_CAUSE,
           photo_url: "https://example.com/p3.jpg",
         }),
     ],
@@ -186,7 +188,7 @@ describe("batch model · invariants", () => {
     batch.addSendToRetention(REMOTE_STATE[0]);
     expectCode(
       batch.addDiscard(REMOTE_STATE[0], {
-        discard_cause: "Otro",
+        discard_cause: DISCARD_CAUSE,
         photo_url: "https://example.com/p1.jpg",
       }),
       "duplicate_origin",
@@ -240,10 +242,17 @@ describe("batch model · invariants", () => {
     );
     expectCode(
       model().addDiscard(REMOTE_STATE[0], {
-        discard_cause: "Otro",
+        discard_cause: DISCARD_CAUSE,
         photo_url: " ",
       }),
       "missing_photo_url",
+    );
+  });
+
+  it("usa solo anomalías críticas y excluye las categorías genéricas heredadas", () => {
+    expect(DISCARD_CAUSES).toContain(DISCARD_CAUSE);
+    expect(DISCARD_CAUSES).not.toEqual(
+      expect.arrayContaining(["Servicio", "Neumático", "Conducción-Ruta", "Otro"]),
     );
   });
 });
@@ -254,7 +263,7 @@ describe("batch model · payload v1 and immutable sealing", () => {
     batch.addSendToRetention(REMOTE_STATE[0], { rtd_mm: 10.5, notes: "A retén" });
     batch.addDiscard(REMOTE_STATE[1], {
       rtd_mm: 2.0,
-      discard_cause: "Neumático",
+      discard_cause: DISCARD_CAUSE,
       photo_url: "https://example.com/descarte.jpg",
       notes: "Corte profundo",
     });
@@ -303,7 +312,7 @@ describe("batch model · payload v1 and immutable sealing", () => {
           position: 2,
           expected_life_cycle_id: CYCLES.p2,
           rtd_mm: 2.0,
-          discard_cause: "Neumático",
+          discard_cause: DISCARD_CAUSE,
           photo_url: "https://example.com/descarte.jpg",
           notes: "Corte profundo",
         },

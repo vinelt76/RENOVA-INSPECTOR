@@ -601,7 +601,7 @@ begin
       jsonb_build_object(
         'seq', 2, 'op', 'discard', 'position', 24,
         'expected_life_cycle_id', v_t1_cycle, 'rtd_mm', 3,
-        'discard_cause', 'Neumático', 'photo_url', 'https://example.com/test-baseline.jpg'
+        'discard_cause', 'Corte profundo en flanco', 'photo_url', 'https://example.com/test-baseline.jpg'
       )
     )
   ));

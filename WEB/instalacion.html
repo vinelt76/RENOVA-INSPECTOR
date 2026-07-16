@@ -313,15 +313,22 @@
         <div class="form-field" id="r-ffOdo"><label>Odómetro</label><input id="r-odo" type="number" min="0"></div>
       </div>
       <div class="form-field" id="r-ffRtd"><label>RTD al retiro (mm)</label><input id="r-rtd" type="number" step="0.1" min="0"></div>
-      <div class="form-field hidden" id="r-ffCause"><label>Causa de descarte <span class="req">*</span></label>
+      <div class="form-field hidden" id="r-ffCause"><label>Anomalía crítica <span class="req">*</span></label>
         <select id="r-cause">
           <option value="">Seleccionar…</option>
-          <option value="Servicio">Servicio</option>
-          <option value="Neumático">Neumático</option>
-          <option value="Conducción-Ruta">Conducción-Ruta</option>
-          <option value="Mantenimiento Alineación">Mantenimiento Alineación</option>
-          <option value="Proveedor">Proveedor</option>
-          <option value="Otro">Otro</option>
+          <option value="Carcasa fatigada">Carcasa fatigada</option>
+          <option value="Desgarro en flanco cuerdas expuestas externo">Desgarro en flanco cuerdas expuestas externo</option>
+          <option value="Desgarro en flanco cuerdas expuestas interno">Desgarro en flanco cuerdas expuestas interno</option>
+          <option value="Exceso de rodado">Exceso de rodado</option>
+          <option value="Rotura de cuerda(s) radial(es) externo">Rotura de cuerda(s) radial(es) externo</option>
+          <option value="Rotura de cuerda(s) radial(es) interno">Rotura de cuerda(s) radial(es) interno</option>
+          <option value="Separación de paquete de cinturones con la cuerdas radiales">Separación de paquete de cinturones con la cuerdas radiales</option>
+          <option value="Separación estructural">Separación estructural</option>
+          <option value="Separación por filtración en banda de rodamiento">Separación por filtración en banda de rodamiento</option>
+          <option value="Separación por filtración en pestaña">Separación por filtración en pestaña</option>
+          <option value="Zipper en flanco">Zipper en flanco</option>
+          <option value="Exceso de frenado">Exceso de frenado</option>
+          <option value="Corte profundo en flanco">Corte profundo en flanco</option>
         </select>
         <div class="err">Un descarte necesita la causa.</div>
       </div>
