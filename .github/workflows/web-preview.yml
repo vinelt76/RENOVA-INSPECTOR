@@ -52,6 +52,9 @@ jobs:
         run: |
           mkdir -p app/dist/web
           cp WEB/*.html WEB/*.js WEB/*.css app/dist/web/
+          mkdir -p app/dist/web/inventario app/dist/web/movimientos
+          cp WEB/inventario/*.js WEB/inventario/*.css app/dist/web/inventario/
+          cp WEB/movimientos/*.js WEB/movimientos/*.css app/dist/web/movimientos/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

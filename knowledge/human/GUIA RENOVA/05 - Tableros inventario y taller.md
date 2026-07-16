@@ -1,8 +1,8 @@
 ---
 title: "Tableros y taller"
-updated: 2026-07-14
+updated: 2026-07-15
 status: vigente
-sources: [WEB, WEB/tire-change, supabase/migrations/20260712*, supabase/migrations/20260714*, tasks_cambios_neumaticos_ui/REVISION_FINAL.md]
+sources: [WEB, WEB/movimientos, WEB/inventario, supabase/migrations/20260712*, supabase/migrations/20260714*, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_pantalla_inventario/STATE.md]
 ---
 
 # Tableros y taller
@@ -13,6 +13,7 @@ sources: [WEB, WEB/tire-change, supabase/migrations/20260712*, supabase/migratio
 - **Por unidad:** baja al detalle de posiciones de un bus.
 - **Rendimiento:** calcula kilómetros, desgaste y costo/rendimiento de instalaciones.
 - **Historial:** cuenta la película completa de un casco.
+- **Inventario:** separa lo disponible en Retén de las bajas definitivas en Descartados.
 - **Importar:** carga inspecciones mediante el mismo guardado central.
 
 ## El taller
@@ -27,10 +28,10 @@ Estas acciones se hacen como una sola operación en Supabase. Es como una transf
 
 Un retiro puede indicar que el neumático va a reencauche, pero la creación del siguiente ciclo R1/R2 no forma parte del RPC actual.
 
-## Cambios de neumáticos (varios movimientos de golpe)
+## Movimientos de neumáticos (varios movimientos de golpe)
 
-Dentro del tablero **Por unidad** ahora hay dos modos: **Inspección** y **Cambios**. En el modo
-Cambios, el taller ve el mismo dibujo del bus pero puede armar una lista de movimientos —mandar
+Dentro del tablero **Por unidad** hay dos modos: **Inspección** y **Movimientos**. En Movimientos,
+el taller ve el mismo dibujo del bus pero puede armar una lista de movimientos —mandar
 un neumático a retén, descartarlo (con foto obligatoria), montar uno del inventario en una
 posición vacía o intercambiar dos— y recién al final confirmar todo junto.
 
@@ -43,11 +44,14 @@ El 14 de julio se probó de punta a punta con un bus de prueba real (`QA-CN16`) 
 cuatro tipos de movimiento a la vez: funcionó, la foto de descarte se guardó y el estado quedó
 bien tras recargar la página.
 
-## Lo que se retiró
+## Inventario actual y lo que sigue retirado
 
-Las pantallas separadas de **Inventario** y **Comparativo** se eliminaron el 12 de julio por una decisión de producto. También se quitaron las operaciones exclusivas de reinstalar/reencauchar desde Inventario y la vista de comparación. No fue una pérdida accidental de archivos.
+La pantalla actual de **Inventario** es de consulta: Retén muestra neumáticos disponibles para
+montaje y Descartados organiza las bajas definitivas. Se actualiza a partir de los movimientos
+confirmados y permite abrir el Historial por código.
 
-El estado físico de un casco sigue existiendo en la base y alimenta su Historial; simplemente ya no tiene una pantalla propia de Inventario.
+La pantalla **Comparativo** y las operaciones antiguas exclusivas de reinstalar/reencauchar desde
+Inventario siguen retiradas. Montar un neumático del Retén se hace desde Movimientos.
 
 ## Las rutas
 

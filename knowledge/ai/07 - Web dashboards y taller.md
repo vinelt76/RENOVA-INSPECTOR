@@ -1,8 +1,8 @@
 ---
 title: "Web, dashboards y taller"
-updated: 2026-07-14
+updated: 2026-07-15
 status: vigente
-sources: [WEB/movimientos, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md]
+sources: [WEB/movimientos, WEB/inventario, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/PLAN.md]
 ---
 
 # Web, dashboards y taller
@@ -16,12 +16,17 @@ sources: [WEB/movimientos, supabase/migrations/20260716100000_baseline_provenanc
 | `rendimiento.html` | Rendimiento de instalaciones | `v_rendimiento_dashboard_rows` |
 | `historial-neumatico.html` | Historia completa de un casco | vistas `v_casing_*` (incluye `v_inventory_status`) |
 | `instalacion.html` | Instalación, retiro y transferencia | vistas + RPCs de taller |
+| `inventario.html` | Consulta de Retén y Descartados | `v_tire_inventory_available`, `v_inventory_status` |
 | `importar.html` | Importar inspecciones | `save_inspection` |
 
-`inventario.html` y `comparativo.html` (junto con las RPCs `reinstall_tire`/`retread_casing`
-y las vistas `v_removal_cause_ranking`/`v_comparison_cycle_rows`) se retiraron del dashboard
-web y de Supabase — decisión del negocio, no un bug. `v_inventory_status` se conservó porque
-`historial-neumatico.html` depende de ella.
+La pantalla histórica `inventario.html` y `comparativo.html` se retiraron junto con las RPCs
+`reinstall_tire`/`retread_casing` y las vistas agregadas exclusivas. El 15 de julio se agregó una
+pantalla de Inventario nueva, de solo lectura y sin aquellas operaciones: Retén muestra todo ciclo
+montable y Descartados muestra bajas definitivas. `comparativo.html` continúa retirado.
+
+La implementación modular vive en `WEB/inventario/`, exige sesión mediante el adaptador común,
+recarga por Realtime, ofrece búsqueda tolerante a acentos y enlaza el código al Historial. La URL
+de evidencia de descarte no se muestra porque la URL firmada original es temporal.
 
 El modo **Movimientos de neumáticos** vive en `WEB/movimientos/` (módulos ES puros +
 `movimientos-controller.js`) y se integra en `Inspecciones por unidad.html` como un segundo modo

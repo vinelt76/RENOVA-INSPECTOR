@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,8 +18,18 @@ mkdirSync(outputWebDir, { recursive: true });
 
 cpSync(appDistDir, outputDir, { recursive: true });
 
-for (const entry of ['historial-neumatico.html', 'importar.html', 'instalacion.html', 'INSPECCIONES POR FECHA.html', 'Inspecciones por unidad.html', 'rendimiento.html', 'renova-office-shell.css', 'renova-ready.js', 'supabase-config.public.js', 'supabase-demo.js']) {
+for (const entry of ['historial-neumatico.html', 'importar.html', 'instalacion.html', 'inventario.html', 'INSPECCIONES POR FECHA.html', 'Inspecciones por unidad.html', 'rendimiento.html', 'renova-office-shell.css', 'renova-ready.js', 'supabase-config.public.js', 'supabase-demo.js']) {
   cpSync(path.join(webDir, entry), path.join(outputWebDir, entry));
+}
+
+for (const directory of ['inventario', 'movimientos']) {
+  const sourceDirectory = path.join(webDir, directory);
+  const outputDirectory = path.join(outputWebDir, directory);
+  mkdirSync(outputDirectory, { recursive: true });
+  for (const entry of readdirSync(sourceDirectory)) {
+    if (!entry.endsWith('.js') && !entry.endsWith('.css')) continue;
+    cpSync(path.join(sourceDirectory, entry), path.join(outputDirectory, entry));
+  }
 }
 
 console.log(`Bundle listo en ${outputDir}`);

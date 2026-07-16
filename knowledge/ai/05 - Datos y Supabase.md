@@ -1,8 +1,8 @@
 ---
 title: "Datos y Supabase"
-updated: 2026-07-13
+updated: 2026-07-15
 status: vigente
-sources: [app/src/db/sqlite.ts, app/src/db/schema.ts, supabase/migrations, docs/run2_tire_lifecycle_architecture.md, tasks_cambios_neumaticos/CONTRATOS_UI.md]
+sources: [app/src/db/sqlite.ts, app/src/db/schema.ts, supabase/migrations, docs/run2_tire_lifecycle_architecture.md, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/CONTRATOS_DATOS.md]
 ---
 
 # Datos y Supabase
@@ -58,13 +58,18 @@ Separarlos permite medir rendimiento de una banda, posición y vida completa sin
 - Rendimiento: `v_rendimiento_dashboard_rows`, `v_axle_performance`, vistas de ciclo/casco/instalación definidas en la migración base.
 - Taller/historial: `v_unit_position_state` entrega todas las posiciones configuradas, incluso
   vacías; `v_tire_inventory_available` entrega ciclos activos disponibles para montar;
-  `v_inventory_status` (usada por `v_casing_history_summary`, ya no tiene pantalla propia),
+  `v_inventory_status` clasifica cascos instalados, en inventario y descartados;
   `v_casing_history_summary`, `v_casing_installations`, `v_casing_inspections`.
 - Rutas: `v_unit_current_route`, `v_installation_route_attribution`.
 
 `v_removal_cause_ranking` y `v_comparison_cycle_rows` (junto con las RPCs `reinstall_tire`/
 `retread_casing`) se eliminaron de Supabase al retirar `inventario.html`/`comparativo.html`
 del dashboard web.
+
+La pantalla `WEB/inventario.html` consume las dos vistas existentes sin agregar DDL: Retén usa
+todo `v_tire_inventory_available` (incluye ciclos montables sin retiro previo) y Descartados filtra
+`v_inventory_status` por `inventory_status='discarded'`. La empresa no se recibe como filtro del
+navegador: se conserva el aislamiento de sesión/RLS.
 
 ## Lotes de cambios de neumáticos
 

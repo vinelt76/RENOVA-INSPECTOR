@@ -1,8 +1,8 @@
 ---
 title: "Glosario RENOVA"
-updated: 2026-07-14
+updated: 2026-07-15
 status: vigente
-sources: [WEB/movimientos, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, domain terminology]
+sources: [WEB/movimientos, WEB/inventario, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, domain terminology]
 ---
 
 # Glosario
@@ -17,6 +17,10 @@ sources: [WEB/movimientos, supabase/migrations/20260716100000_baseline_provenanc
 - **Ciclo:** una vida de banda: nueva o reencauchada.
 - **Instalación:** período de un ciclo montado en unidad/posición.
 - **Retiro:** evento que cierra una instalación.
+- **Retén:** conjunto derivado de ciclos activos y montables que no tienen una instalación activa;
+  puede incluir un ciclo sin retiro previo, por lo que no se filtra solo por el motivo `retention`.
+- **Descartado:** baja definitiva del casco y su ciclo vigente; se consulta en Inventario pero no
+  puede volver a montarse.
 - **Movimientos:** modo web antes llamado «Cambios», que prepara retiros, descartes, montajes e
   intercambios en un borrador local antes de confirmarlos como lote. La nomenclatura técnica del
   esquema se conserva: `tire_change_batches` y `confirm_tire_change_batch`; su URL canónica es

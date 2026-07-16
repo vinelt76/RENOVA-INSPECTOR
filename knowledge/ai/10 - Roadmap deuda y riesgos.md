@@ -1,6 +1,6 @@
 ---
 title: "Roadmap, deuda y riesgos"
-updated: 2026-07-12
+updated: 2026-07-15
 status: vigente
 sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, code audit 2026-07-12]
 ---
@@ -25,7 +25,10 @@ sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, 
 - Pull/versionado/borrado de catálogos no está completo.
 - `vite.config.ts` no tiene `manualChunks`; el punto de task 18 sigue abierto.
 - Hay documentos run/STATE con afirmaciones vencidas.
-- Inventario/Comparativo retirados no deben reaparecer por copiar documentación o commits históricos.
+- Las acciones históricas de reinstalar/reencauchar desde Inventario y la pantalla Comparativo
+  siguen retiradas; no deben reaparecer al mantener la nueva consulta Retén/Descartados.
+- La pantalla nueva de Inventario necesita completar el smoke autenticado de campo y aislamiento
+  entre empresas; la suite local no sustituye esa verificación.
 
 ## Decisiones bloqueantes
 

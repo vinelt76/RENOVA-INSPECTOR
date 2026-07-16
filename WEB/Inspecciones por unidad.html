@@ -180,8 +180,6 @@ main{flex:1;display:flex;min-height:0}
 .anom-item .foto-tag{font-size:10px;margin-left:6px}
 .anom-empty{cursor:default}
 
-/* acciones sobre el neumático seleccionado (independientes de la inspección diaria) */
-.acciones-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
 .btn-accion{
   font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;
   padding:11px 10px;border-radius:8px;border:2px solid var(--border);
@@ -227,7 +225,7 @@ main{flex:1;display:flex;min-height:0}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
 .modal-actions .btn-accion{flex:none;padding:10px 16px}
 
-/* toast de confirmación */
+/* toast compartido por flujos transaccionales de movimientos */
 .toast{
   position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
   background:var(--navy);border:2px solid var(--green);border-radius:10px;
@@ -446,6 +444,7 @@ main{flex:1;display:flex;min-height:0}
     <div class="hdr-right">
       <a class="chip active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a class="chip" href="instalacion.html">Instalación</a>
+      <a class="chip" href="inventario.html">Inventario</a>
       <a class="chip" href="rendimiento.html">Rendimiento</a>
       <a class="chip" href="importar.html">Importar</a>
       <button class="chip" id="user-chip" type="button"><span class="ice">SN</span>· SUPERVISOR DE NEUMÁTICOS</button>
@@ -503,19 +502,6 @@ main{flex:1;display:flex;min-height:0}
           <div class="mini-sub" style="margin-top:8px">DESECHO: <span id="desecho" style="color:var(--ice)">NO</span></div>
         </section>
       </div>
-
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <div class="eyebrow"><span class="dot o"></span>POS <span id="acciones-pos-n">1</span> · INDEPENDIENTE DE LA INSPECCIÓN</div>
-            <h2>ACCIONES SOBRE EL NEUMÁTICO</h2>
-          </div>
-        </div>
-        <div class="acciones-row">
-          <button type="button" class="btn-accion" id="btn-reten">Enviar a Retén</button>
-          <button type="button" class="btn-accion danger" id="btn-descartar">Descartar</button>
-        </div>
-      </section>
 
       <div class="src-note" id="src-note"><span class="dot y"></span>FUENTE: CARGANDO DATOS DEL EXCEL</div>
     </aside>
@@ -627,7 +613,7 @@ main{flex:1;display:flex;min-height:0}
     </div>
   </div>
 
-  <!-- ================= MODAL: DESCARTAR NEUMÁTICO ================= -->
+  <!-- Infraestructura compartida: movimientos reutiliza este modal de descarte. -->
   <div class="overlay" id="overlay-descartar">
     <div class="modal">
       <h3>Descartar neumático</h3>
@@ -912,7 +898,6 @@ function renderPanel(n){
     document.getElementById('presion-sub').textContent = 'Sin presión registrada';
     document.getElementById('anomalias').innerHTML = `<div class="anom-item anom-empty">SIN DATOS DEL EXCEL</div>`;
     document.getElementById('desecho').textContent = 'NO';
-    document.getElementById('acciones-pos-n').textContent = '—';
     return;
   }
   const movi = rtdMovi(d.canales), eR = estadoEfectivo(d), eP = estadoPresion(d.pressure_state);
@@ -962,7 +947,6 @@ function renderPanel(n){
   document.getElementById('desecho').textContent = desecho?'SÍ':'NO';
   document.getElementById('desecho').style.color = desecho?'var(--orange)':'var(--ice)';
 
-  document.getElementById('acciones-pos-n').textContent = n;
 }
 
 /* ================= ANOMALÍAS · DETALLE + FOTO ================= */
@@ -980,56 +964,6 @@ document.getElementById('anomalias').addEventListener('click', e=>{
 document.getElementById('am-cerrar').addEventListener('click', ()=>{
   document.getElementById('overlay-anomalia').classList.remove('open');
 });
-
-/* ================= ACCIONES SOBRE EL NEUMÁTICO ================= */
-/* Independientes del formulario de inspección diaria: no se disparan al guardar
-   una inspección, son botones aparte sobre el neumático seleccionado. */
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=>t.classList.remove('show'), 2600);
-}
-function enviarARetenAction(n){
-  showToast(`✓ POS ${n} · ${POSICIONES[n].codigo} enviado a retén`);
-}
-let descartarPos = null;
-let descartarFotoTomada = false;
-function openDescartarModal(n){
-  descartarPos = n;
-  descartarFotoTomada = false;
-  document.getElementById('ds-sub').textContent = `POS ${n} · ${POSICIONES[n].codigo}`;
-  const fotoBtn = document.getElementById('ds-foto-btn');
-  fotoBtn.textContent = '📷 Adjuntar foto del daño (obligatorio)';
-  fotoBtn.classList.remove('taken');
-  document.getElementById('ds-causa').value = '';
-  document.getElementById('ds-confirmar').disabled = true;
-  document.getElementById('overlay-descartar').classList.add('open');
-}
-function closeDescartarModal(){
-  document.getElementById('overlay-descartar').classList.remove('open');
-}
-function checkDescartarValido(){
-  document.getElementById('ds-confirmar').disabled =
-    !(descartarFotoTomada && document.getElementById('ds-causa').value);
-}
-document.getElementById('ds-foto-btn').addEventListener('click', ()=>{
-  descartarFotoTomada = true;
-  const fotoBtn = document.getElementById('ds-foto-btn');
-  fotoBtn.textContent = '✓ Foto del daño adjuntada';
-  fotoBtn.classList.add('taken');
-  checkDescartarValido();
-});
-document.getElementById('ds-causa').addEventListener('change', checkDescartarValido);
-document.getElementById('ds-cancelar').addEventListener('click', closeDescartarModal);
-document.getElementById('ds-confirmar').addEventListener('click', ()=>{
-  const causa = document.getElementById('ds-causa').value;
-  showToast(`✓ POS ${descartarPos} descartado · causa: ${causa}`);
-  closeDescartarModal();
-});
-document.getElementById('btn-reten').addEventListener('click', ()=>enviarARetenAction(selected));
-document.getElementById('btn-descartar').addEventListener('click', ()=>openDescartarModal(selected));
 
 /* ================= SELECCIÓN + DOCK ================= */
 const SHORT={1:'DEL IZQ',2:'DEL DER',3:'TRAC IZQ',4:'TRAC IZQ',5:'TRAC DER',6:'TRAC DER',7:'LIB IZQ',8:'LIB DER'};

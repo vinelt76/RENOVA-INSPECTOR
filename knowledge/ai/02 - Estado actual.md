@@ -1,8 +1,8 @@
 ---
 title: "Estado actual verificado"
-updated: 2026-07-14
+updated: 2026-07-15
 status: vigente
-sources: [git, app/src, WEB, supabase/migrations, supabase/diagnostics/baseline_profile.sql, tasks_puesta_en_marcha_movimientos/STATE.md]
+sources: [git, app/src, WEB, supabase/migrations, supabase/diagnostics/baseline_profile.sql, tasks_puesta_en_marcha_movimientos/STATE.md, tasks_pantalla_inventario/STATE.md]
 ---
 
 # Estado actual verificado
@@ -16,7 +16,7 @@ sources: [git, app/src, WEB, supabase/migrations, supabase/diagnostics/baseline_
 | Cálculos | Motor TS con golden reference Python; RTD/IDI/presión FRÍO/VUR/tasa/ISA |
 | Sync | Cola durable, upsert idempotente, backoff, guard contra carreras y cierre seguro del día |
 | Supabase | Esquema, RLS, vistas, RPCs, Realtime y datos demo/operativos; procedencia y primer montaje de línea base aplicados |
-| Web | Seis HTML en `WEB/`: inspecciones por fecha/unidad, rendimiento, historial, instalación e importación |
+| Web | Siete HTML en `WEB/`: inspecciones por fecha/unidad, rendimiento, historial, instalación, inventario e importación |
 | Taller | Operaciones de taller por lote y primer montaje guiado desde evidencia de inspección |
 | Rutas | Asignaciones temporales y atribución de instalaciones agregadas el 2026-07-12 |
 | Tests app | 44 casos registrados en la última bitácora verificada; volver a ejecutar antes de confiar |
@@ -29,7 +29,8 @@ sources: [git, app/src, WEB, supabase/migrations, supabase/diagnostics/baseline_
 - Task 14 de Supabase está materialmente implementada, aunque su fila histórica no se cerró.
 - Task 18 pedía tests que ya existen parcialmente; `manualChunks` sigue ausente en `vite.config.ts`.
 - La nota humana anterior decía que sync/umbrales seguían pendientes; eso ya no es correcto.
-- Inventario/Comparativo y sus APIs exclusivas existieron brevemente, pero fueron retirados por decisión de producto.
+- La pantalla histórica de Inventario y Comparativo se retiró; el 15 de julio Inventario volvió
+  como una superficie nueva y acotada de solo lectura. Sus acciones exclusivas siguen retiradas.
 
 ## Evidencia reciente
 
