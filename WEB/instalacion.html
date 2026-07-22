@@ -14,6 +14,7 @@
 <script src="renova-format.js"></script>
 <script type="module" src="supabase-demo.js"></script>
 <link rel="stylesheet" href="renova-office-shell.css">
+<link rel="stylesheet" href="buscador/buscador.css">
 <style>
   :root{
     --critical:var(--ember-orange);
@@ -173,9 +174,13 @@
       <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a class="active" href="instalacion.html">Instalación</a>
       <a href="inventario.html">Inventario</a>
+      <a href="servicios.html">Servicios</a>
       <a href="rendimiento.html">Rendimiento</a>
       <a href="importar.html">Importar</a>
     </nav>
+    <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+      Buscar unidad o neumático <kbd>Ctrl K</kbd>
+    </button>
   </div>
 </header>
 
@@ -240,7 +245,7 @@
             <option value="">Seleccionar…</option>
             <option value="N">N (Nuevo)</option><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option>
           </select>
-          <div class="err">Elegí la condición.</div>
+          <div class="err">Elige la condición.</div>
         </div>
       </div>
       <div class="form-grid">
@@ -264,17 +269,17 @@
       <div class="form-grid">
         <div class="form-field" id="i-ffUnit"><label>Vehículo <span class="req">*</span></label>
           <select id="i-unit" onchange="onInstUnitChange()"><option value="">Seleccionar unidad…</option></select>
-          <div class="err">Elegí la unidad.</div>
+          <div class="err">Elige la unidad.</div>
         </div>
         <div class="form-field" id="i-ffPosition"><label>Posición <span class="req">*</span></label>
           <select id="i-position"><option value="">Seleccionar posición…</option></select>
-          <div class="err">Elegí la posición.</div>
+          <div class="err">Elige la posición.</div>
         </div>
       </div>
       <div class="form-grid">
         <div class="form-field" id="i-ffOdo"><label>Odómetro instalación</label><input id="i-odo" type="number" min="0"></div>
         <div class="form-field" id="i-ffDate"><label>Fecha instalación <span class="req">*</span></label><input id="i-date" type="date">
-          <div class="err">Ingresá la fecha.</div>
+          <div class="err">Ingresa la fecha.</div>
         </div>
       </div>
       <div class="form-field" id="i-ffNotes"><label>Observaciones</label><textarea id="i-notes"></textarea></div>
@@ -304,11 +309,11 @@
           <option value="discard">Descarte</option>
           <option value="other">Otro</option>
         </select>
-        <div class="err">Elegí el motivo.</div>
+        <div class="err">Elige el motivo.</div>
       </div>
       <div class="form-grid">
         <div class="form-field" id="r-ffDate"><label>Fecha de retiro <span class="req">*</span></label><input id="r-date" type="date">
-          <div class="err">Ingresá la fecha.</div>
+          <div class="err">Ingresa la fecha.</div>
         </div>
         <div class="form-field" id="r-ffOdo"><label>Odómetro</label><input id="r-odo" type="number" min="0"></div>
       </div>
@@ -354,15 +359,15 @@
       <div class="form-grid">
         <div class="form-field" id="t-ffUnit"><label>Unidad destino <span class="req">*</span></label>
           <select id="t-unit" onchange="onTrUnitChange()"><option value="">Seleccionar unidad…</option></select>
-          <div class="err">Elegí la unidad destino.</div>
+          <div class="err">Elige la unidad de destino.</div>
         </div>
         <div class="form-field" id="t-ffPosition"><label>Posición destino <span class="req">*</span></label>
           <select id="t-position"><option value="">Seleccionar posición…</option></select>
-          <div class="err">Elegí la posición destino.</div>
+          <div class="err">Elige la posición de destino.</div>
         </div>
       </div>
       <div class="form-field" id="t-ffDate"><label>Fecha del traslado <span class="req">*</span></label><input id="t-date" type="date">
-        <div class="err">Ingresá la fecha.</div>
+        <div class="err">Ingresa la fecha.</div>
       </div>
       <div class="form-grid">
         <div class="form-field" id="t-ffOdoOrigin"><label>Odómetro en origen</label><input id="t-odo-origin" type="number" min="0"></div>
@@ -405,11 +410,12 @@ function normalize(rows){
       unitId:r.unit_id,
       plate:String(r.plate),
       position:Number(r.position_number),
-      casing_code:r.casing_code || "—",
+      casing_code:r.casing_code ?? null,
       brand_name:r.brand_name || "—",
+      model_name:r.model_name || "—",
       size_name:r.size_name || "—",
       condition:r.condition || "—",
-      retread_design:r.retread_design || r.model_name || "—",
+      retread_design:r.retread_design || "—",
       installed_at:r.installed_at,
       odometer_at_install:r.odometer_at_install,
       rtd_at_install_mm:r.rtd_at_install_mm,
@@ -503,7 +509,7 @@ function renderRows(rows){
     <tr>
       <td><b>${r.plate}</b></td>
       <td>P${r.position}</td>
-      <td class="code">${r.casing_code}</td>
+      <td class="code">${historyLink(r.casing_code)}</td>
       <td>${r.brand_name}</td>
       <td>${r.size_name}</td>
       <td>${r.retread_design}</td>
@@ -521,6 +527,12 @@ function renderRows(rows){
         </div>
       </td>
     </tr>`).join("");
+}
+
+function historyLink(casingCode){
+  if(typeof casingCode !== "string" || !casingCode.trim()) return "—";
+  const encoded = encodeURIComponent(casingCode);
+  return `<a class="casing-history-link" href="historial-neumatico.html?serie=${encoded}&from=instalacion">${esc(casingCode)}</a>`;
 }
 
 function render(){
@@ -676,7 +688,7 @@ function openRetirar(lifeCycleId){
   const row = INSTALLATIONS.find(r => r.lifeCycleId === lifeCycleId);
   if(!row) return;
   removingLifeCycleId = lifeCycleId;
-  document.getElementById("remTarget").textContent = `#${row.casing_code} · ${row.plate} P${row.position} · ${row.brand_name}`;
+  document.getElementById("remTarget").textContent = `#${row.casing_code ?? "—"} · ${row.plate} P${row.position} · ${row.brand_name}`;
   document.getElementById("remForm").reset();
   document.getElementById("r-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("r-ffCause").classList.add("hidden");
@@ -743,7 +755,7 @@ function openTrasladar(lifeCycleId){
   const row = INSTALLATIONS.find(r => r.lifeCycleId === lifeCycleId);
   if(!row) return;
   transferringLifeCycleId = lifeCycleId;
-  document.getElementById("trTarget").textContent = `#${row.casing_code} · actualmente en ${row.plate} P${row.position}`;
+  document.getElementById("trTarget").textContent = `#${row.casing_code ?? "—"} · actualmente en ${row.plate} P${row.position}`;
   document.getElementById("trForm").reset();
   document.getElementById("t-date").value = new Date().toISOString().slice(0,10);
   ["t-ffUnit","t-ffPosition","t-ffDate"].forEach(f => document.getElementById(f).classList.remove("invalid"));
@@ -801,6 +813,22 @@ async function submitTrasladar(ev){
 
 document.addEventListener("keydown", e => {
   if(e.key === "Escape"){ closeInstalar(); closeRetirar(); closeTrasladar(); }
+});
+</script>
+<script type="module">
+import { createFinderController } from "./buscador/finder-controller.js";
+
+const finderTrigger = document.querySelector("[data-finder-trigger]");
+const finderReady = new Promise((resolve) => {
+  window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+});
+const openFinder = async () => (await finderReady).open(finderTrigger);
+finderTrigger.addEventListener("click", () => void openFinder());
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+  if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  event.preventDefault();
+  void openFinder();
 });
 </script>
 </body>

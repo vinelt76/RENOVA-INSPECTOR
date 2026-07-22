@@ -240,7 +240,7 @@ export function createBaselineUI({
     );
     elements.source.textContent = sources.length
       ? `Datos precargados según la inspección de ${sources.join(" · ")}. Revisalos antes de confirmar.`
-      : "Seleccioná una posición pendiente para comenzar.";
+      : "Selecciona una posición pendiente para comenzar.";
     elements.confirm.disabled = busy || !state.mounts.length;
     elements.addAnother.disabled = busy;
     elements.close.disabled = busy;

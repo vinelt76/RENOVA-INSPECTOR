@@ -125,7 +125,7 @@ function requireImage(file) {
   if (!file || typeof file.size !== "number" || typeof file.type !== "string") {
     throw new DiscardPhotoError(
       "invalid_file",
-      "Seleccioná una foto válida para el descarte.",
+      "Selecciona una foto válida para el descarte.",
     );
   }
   if (file.size < 1) {
@@ -256,7 +256,7 @@ export async function uploadDiscardPhoto(
   } catch (error) {
     throw storageFailure(
       "upload_failed",
-      "No se pudo subir la evidencia. Revisá la conexión y reintentá.",
+      "No se pudo subir la evidencia. Revisa la conexión e inténtalo de nuevo.",
       error,
       path,
     );
@@ -264,7 +264,7 @@ export async function uploadDiscardPhoto(
   if (uploadResult?.error) {
     throw storageFailure(
       "upload_failed",
-      "No se pudo subir la evidencia. Revisá la conexión y reintentá.",
+      "No se pudo subir la evidencia. Revisa la conexión e inténtalo de nuevo.",
       uploadResult.error,
       path,
     );
@@ -288,8 +288,8 @@ export async function uploadDiscardPhoto(
     throw new DiscardPhotoError(
       "signed_url_failed",
       cleanupError
-        ? "La foto se subió, pero no pudo firmarse ni limpiarse. Reintentá la limpieza."
-        : "La foto se subió, pero no pudo generarse su URL firmada. Volvé a intentarlo.",
+        ? "La foto se subió, pero no pudo firmarse ni limpiarse. Intenta limpiarla de nuevo."
+        : "La foto se subió, pero no pudo generarse su URL firmada. Vuelve a intentarlo.",
       {
         cause: error,
         path,
@@ -310,7 +310,7 @@ export async function deleteDiscardPhoto(pathOrUrl, { client } = {}) {
   } catch (error) {
     throw storageFailure(
       "delete_failed",
-      "No se pudo borrar la evidencia pendiente. Reintentá antes de salir.",
+      "No se pudo borrar la evidencia pendiente. Inténtalo de nuevo antes de salir.",
       error,
       path,
     );
@@ -318,7 +318,7 @@ export async function deleteDiscardPhoto(pathOrUrl, { client } = {}) {
   if (result?.error) {
     throw storageFailure(
       "delete_failed",
-      "No se pudo borrar la evidencia pendiente. Reintentá antes de salir.",
+      "No se pudo borrar la evidencia pendiente. Inténtalo de nuevo antes de salir.",
       result.error,
       path,
     );

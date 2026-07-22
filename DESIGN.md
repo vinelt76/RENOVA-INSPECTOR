@@ -1,6 +1,8 @@
 ---
 name: RENOVA INSPECTOR
 description: App de campo para inspección de neumáticos de flotas de buses — consola oscura, monoespaciada, sin adornos.
+language:
+  ui: "Español neutro (referencia peruana); sin voseo argentino ni localismos regionales."
 colors:
   navy-brand: "#15233f"
   ember-orange: "#F06822"
@@ -341,4 +343,15 @@ una superficie de LECTURA (no captura). Reglas propias:
   severidad; cada fila = unidad + posición + RTD MOVI + estado como badge.
 - **Fórmulas visibles:** ISA, VUR y tasa de desgaste se muestran con su unidad y con "—"
   cuando no hay datos suficientes (nunca 0 fingido, ver reglas_negocio §8).
-- El dashboard NO edita datos: cero inputs, cero estados de foco naranja.
+- El dashboard NO edita datos: cero inputs, cero estados de foco naranja. **Esto prohíbe
+  inputs de captura, no controles de lectura.** Un campo de filtro no escribe nada: acota lo
+  mostrado y actualiza la URL. Su foco naranja tampoco viola la Regla del Naranja Único, porque
+  el foco es exclusivo por definición (§2: un solo elemento en estado foco/acción a la vez); el
+  naranja *persistente* del contenido sigue siendo único. Inspecciones, Rendimiento, Neumáticos y
+  Servicios montan un `combobox` de filtro bajo esta regla.
+- **Distribución con más categorías que colores semánticos:** cuando los segmentos superan los
+  tres colores del semáforo RTD, usar una **rampa monocroma** descendente sobre el azul del
+  sistema y reservar los semánticos solo donde hay carga real (desecho → `ember-orange`,
+  reencauche → `signal-yellow`). Reusar el semáforo para categorías sin esa semántica miente; e
+  inventar tonos arbitrarios rompe el sistema. **El color nunca es el único canal:** leyenda con
+  conteo y porcentaje en `tabular-nums`, `title` por segmento y `aria-label` que enumere todo.

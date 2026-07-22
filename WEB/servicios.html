@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RENOVA — Servicios</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="renova-office-shell.css">
+  <link rel="stylesheet" href="buscador/buscador.css">
+  <link rel="stylesheet" href="shared/filter-bar.css">
+  <link rel="stylesheet" href="servicios/servicios.css">
+  <script src="supabase-config.public.js"></script>
+  <script src="renova-ready.js"></script>
+  <script type="module" src="supabase-demo.js"></script>
+</head>
+<body>
+  <header>
+    <div class="services-head">
+      <div class="brand">
+        <div class="logo">RENOVA<b>·</b></div>
+        <div class="screen-name">SERVICIOS</div>
+      </div>
+      <nav class="nav" aria-label="Pantallas">
+        <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+        <a href="instalacion.html">Instalación</a>
+        <a href="inventario.html">Inventario</a>
+        <a class="active" href="servicios.html" aria-current="page">Servicios</a>
+        <a href="neumaticos.html">Neumáticos</a>
+        <a href="rendimiento.html">Rendimiento</a>
+      </nav>
+      <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+        Buscar unidad o neumático <kbd>Ctrl K</kbd>
+      </button>
+    </div>
+  </header>
+
+  <main class="services-main" aria-busy="true">
+    <section class="services-intro" aria-labelledby="services-title">
+      <p class="services-eyebrow">ACTIVIDAD EJECUTADA</p>
+      <h1 id="services-title">Servicios</h1>
+      <p>Cada salida que registra un operario cuenta como un servicio. Una rotación se cuenta una sola vez, en su salida. Un ingreso que no cierra una rotación se muestra como instalación. Estos registros todavía no están ligados a un casco ni a su ciclo de vida.</p>
+    </section>
+
+    <section class="services-filter" aria-label="Filtrar servicios">
+      <div id="services-filter-mount"></div>
+    </section>
+
+    <aside id="services-truncated" class="services-banner" role="note" hidden></aside>
+
+    <section class="services-stats" aria-label="Resumen de servicios">
+      <article class="services-stat"><span>SERVICIOS</span><strong id="services-stat-total">—</strong></article>
+      <article class="services-stat"><span>UNIDADES ATENDIDAS</span><strong id="services-stat-units">—</strong></article>
+      <article class="services-stat"><span>ÓRDENES</span><strong id="services-stat-orders">—</strong></article>
+      <article class="services-stat"><span>PERIODO</span><strong id="services-stat-period">—</strong></article>
+    </section>
+
+    <section class="services-mix" aria-labelledby="services-mix-title">
+      <div class="services-section-heading">
+        <p>MEZCLA DE ACTIVIDAD</p>
+        <h2 id="services-mix-title">Distribución por tipo</h2>
+      </div>
+      <div id="services-segments-empty" class="services-mix-empty">La distribución aparecerá cuando haya servicios visibles.</div>
+      <div id="services-segments-wrap" hidden>
+        <div id="services-segments" class="services-segments" role="img"></div>
+        <div id="services-legend" class="services-legend" aria-label="Leyenda de tipos de servicio"></div>
+      </div>
+    </section>
+
+    <div id="services-status" class="services-status" role="status" aria-live="polite"></div>
+    <section id="services-list" class="services-list" aria-label="Lista de servicios ejecutados"></section>
+  </main>
+
+  <footer class="services-footer">Vista de solo lectura · esta pantalla no ejecuta ni modifica movimientos</footer>
+  <script type="module" src="servicios/servicios-controller.js"></script>
+  <script type="module">
+    import { createFinderController } from "./buscador/finder-controller.js";
+
+    const finderTrigger = document.querySelector("[data-finder-trigger]");
+    const finderReady = new Promise((resolve) => {
+      window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+    });
+    const openFinder = async () => (await finderReady).open(finderTrigger);
+    finderTrigger.addEventListener("click", () => void openFinder());
+    document.addEventListener("keydown", (event) => {
+      if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+      if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+      event.preventDefault();
+      void openFinder();
+    });
+  </script>
+</body>
+</html>

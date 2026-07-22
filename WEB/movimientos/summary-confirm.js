@@ -40,7 +40,7 @@ export function validateSummaryHeader(header) {
   const errors = [];
 
   if (!isValidDate(performedAt)) {
-    errors.push("Elegí una fecha válida.");
+    errors.push("Elige una fecha válida.");
   }
   if (!/^\d+$/.test(odometerText) || !Number.isSafeInteger(Number(odometerText))) {
     errors.push("El odómetro es obligatorio y debe ser un entero válido.");
@@ -73,7 +73,7 @@ export function installationDateWarning(performedAt, remoteState, draft) {
   const labels = laterRows
     .map((row) => `P${Number(row.position_number)}`)
     .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
-  return `Revisá la fecha: es anterior a la instalación visible de ${labels.join(", ")}.`;
+  return `Revisa la fecha: es anterior a la instalación visible de ${labels.join(", ")}.`;
 }
 
 function isValidDate(value) {
@@ -171,7 +171,7 @@ export function createSummaryConfirmUI({
   realtimeBanner.hidden = true;
   realtimeBanner.dataset.kind = "warning";
   realtimeBanner.setAttribute("role", "status");
-  realtimeBanner.textContent = "El estado de la unidad cambió. Revisá el borrador antes de confirmar.";
+  realtimeBanner.textContent = "El estado de la unidad cambió. Revisa el borrador antes de confirmar.";
 
   const list = createElement(documentObject, "div");
   list.setAttribute("role", "region");

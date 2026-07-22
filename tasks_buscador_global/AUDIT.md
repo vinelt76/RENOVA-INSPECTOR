@@ -98,6 +98,31 @@ lo declara: «Catálogo normalizado = Run 3», Run 3 no llegó).
 Esto es lo que hace inviable un parser de prosa a filtros, y a la vez es **tolerable para un
 índice de búsqueda por fragmento**: `miche` encuentra `Michelin`, `MICHELIN` y `michellin` por igual.
 
+#### Medición real (2026-07-19, consulta de solo lectura al proyecto productivo)
+
+La suciedad esperada resultó **menor y de un solo tipo**:
+
+- **`size_name`: limpio.** Dos valores, formato canónico sin espacio, idénticos en `tire_casings` e
+  `inspection_measurements`: `315/80R22.5` y `295/80R22.5`. La hipótesis de formato inconsistente
+  (con/sin espacio) provenía de comparar prototipos con documentación, no de datos reales.
+- **`brand_name`: solo variantes de caja.** Sin errores ortográficos. Tres marcas partidas:
+  `GOODYEAR`/`goodyear` (67+4), `HANKOOK`/`hankook` (40+6), `BRIDGESTONE`/`Bridgestone` (61+3).
+  13 mediciones de 2 247 (~0,6 %).
+- **Hallazgo no previsto: `QA-TEST` en producción** — 9 cascos y 14 mediciones de datos de prueba
+  mezclados con datos reales.
+
+Consecuencias:
+
+1. El buscador **no requiere ninguna acción**: `normalizeSearchText` ya pasa a minúsculas, así que
+   las variantes de caja colapsan solas. La suciedad no afecta a esta fase.
+2. Lo afectado es la **agregación**, no la búsqueda: `v_rendimiento_dashboard_rows` agrupa por marca
+   y hoy parte tres marcas en seis filas. Un jefe de flota comparando marcas lee números
+   fragmentados sin saberlo.
+3. El remedio es `upper(trim())` en la RPC de escritura más un backfill; **no hacen falta tablas de
+   catálogo ni FK**. Fase separada, idealmente antes del baseline de las 2 096 posiciones: hoy son
+   36 cascos, después ~3 800.
+4. `QA-TEST` requiere decisión humana. Borrar datos en producción no se propone de oficio.
+
 ### 5.3 Cobertura: no existe vista unificada
 
 Ninguna vista cubre el universo de neumáticos. La unión requeriría

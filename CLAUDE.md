@@ -62,4 +62,7 @@ mostrar la evidencia y confirmar si corresponde corregir código o aprobar/docum
 - Antes de aplicar una migración sensible, usar el agente `sync-migration-reviewer` y verificar
   orden, RLS, permisos, idempotencia, legacy y tests SQL. No aplicar cambios remotos destructivos
   o difíciles de revertir sin aprobación explícita.
-- Responder en español y usar los términos de dominio del proyecto.
+- Responder en español y usar los términos de dominio del proyecto. Todo texto visible para
+  personas usuarias debe estar en español neutro, cercano al uso peruano: usar «elige», «filtra»,
+  «puedes», «ingresa», «revisa», «vuelve» y evitar voseo argentino («elegí», «filtrá», «podés»,
+  «ingresá», «revisá», «volvé») y localismos equivalentes.

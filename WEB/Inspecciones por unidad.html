@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RENOVA — Panel de Taller</title>
-<!-- Dashboard web para jefes de taller. Solo lee datos reales desde Supabase/Excel. -->
+<title>RENOVA — Supervisión de Neumáticos</title>
+<!-- Dashboard web: inspecciones de lectura y emisión/seguimiento de órdenes de movimiento. -->
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
 <script type="module" src="supabase-demo.js"></script>
 <link rel="stylesheet" href="renova-office-shell.css">
+<link rel="stylesheet" href="buscador/buscador.css">
 <link rel="stylesheet" href="movimientos/movimientos.css">
 </head>
 <body>
@@ -445,8 +446,10 @@ main{flex:1;display:flex;min-height:0}
       <a class="chip active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a class="chip" href="instalacion.html">Instalación</a>
       <a class="chip" href="inventario.html">Inventario</a>
+      <a class="chip" href="servicios.html">Servicios</a>
       <a class="chip" href="rendimiento.html">Rendimiento</a>
       <a class="chip" href="importar.html">Importar</a>
+      <button class="chip finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">BUSCAR <kbd>Ctrl K</kbd></button>
       <button class="chip" id="user-chip" type="button"><span class="ice">SN</span>· SUPERVISOR DE NEUMÁTICOS</button>
     </div>
   </header>
@@ -464,9 +467,10 @@ main{flex:1;display:flex;min-height:0}
           <span class="badge proximo" id="estado-badge">⚠ PRÓXIMO A REENCAUCHE</span>
         </div>
         <div class="id-grid">
-          <div class="id-cell destacada"><div class="lbl">Código · <span class="id-hist-hint">ver historial ›</span></div><div class="v num id-codigo-link" id="id-codigo" role="link" tabindex="0" title="Ver historial del neumático">NEU-04182</div></div>
+          <div class="id-cell destacada"><div class="lbl">Código · <span class="id-hist-hint" id="id-hist-hint">ver historial ›</span></div><div class="v num id-codigo-link" id="id-codigo" role="link" tabindex="0" title="Ver historial del neumático">NEU-04182</div></div>
           <div class="id-cell"><div class="lbl">Medida</div><div class="v num" id="id-medida">295/80R22.5</div></div>
-          <div class="id-cell"><div class="lbl">Diseño</div><div class="v" id="id-diseno">RIB HWY</div></div>
+          <div class="id-cell"><div class="lbl">Marca</div><div class="v" id="id-marca">MICHELIN</div></div>
+          <div class="id-cell"><div class="lbl">Modelo</div><div class="v" id="id-modelo">X MULTI Z</div></div>
           <div class="id-cell destacada"><div class="lbl">Condición · Reencauche</div><div class="v" id="id-reenc">N · Sin reencauche</div></div>
         </div>
       </section>
@@ -506,7 +510,7 @@ main{flex:1;display:flex;min-height:0}
       <div class="src-note" id="src-note"><span class="dot y"></span>FUENTE: CARGANDO DATOS DEL EXCEL</div>
     </aside>
 
-    <!-- Modo Movimientos: estado de taller separado de la inspección histórica. -->
+    <!-- Movimientos: el supervisor dirige; la captura técnica ocurre en la app del operario. -->
     <aside class="movimientos-panel" id="modo-movimientos" hidden aria-hidden="true" aria-labelledby="tab-movimientos">
       <section class="tc-card" id="movimientos-details" hidden>
         <div class="tc-eyebrow">POSICIÓN SELECCIONADA</div>
@@ -651,10 +655,10 @@ main{flex:1;display:flex;min-height:0}
     <div class="modal tc-baseline-dialog" id="movimientos-baseline-dialog" tabindex="-1">
       <h3 id="movimientos-baseline-title">Registrar primer montaje</h3>
       <p class="modal-sub" id="movimientos-baseline-source">
-        Seleccioná una posición pendiente para comenzar.
+        Selecciona una posición pendiente para comenzar.
       </p>
       <p class="tc-baseline-realtime" id="movimientos-baseline-realtime" role="status" hidden>
-        El estado cambió, revisá antes de confirmar.
+        El estado cambió; revisa antes de confirmar.
       </p>
       <form id="movimientos-baseline-form" novalidate>
         <div class="tc-baseline-header">
@@ -755,9 +759,9 @@ function rowsToPositions(rows){
     out[pos] = {
       nombre: posName(r),
       codigo: r.tire_code || r.casing_code || 'N/V',
-      // "Diseño" = marca del neumático (no hay diseño original separado en
-      // la vista). El diseño de RECENCAUCHE se muestra aparte, en `reenc`.
-      diseno: r.brand_name || 'SIN DATO',
+      casingCode: r.casing_code || null,
+      marca: r.brand_name || 'SIN DATO',
+      modelo: r.model_name || 'SIN DATO',
       // Condición (N/R1/R2…) + diseño de reencauche si existe. Un neumático
       // Nuevo (condition='N') nunca tiene retread_design — es esperado, no
       // un dato faltante.
@@ -896,8 +900,10 @@ function renderPanel(n){
     document.getElementById('estado-badge').textContent = 'SIN DATOS';
     document.getElementById('estado-badge').className = 'badge normal';
     document.getElementById('id-codigo').textContent = '—';
+    document.getElementById('id-hist-hint').textContent = '—';
     document.getElementById('id-medida').textContent = '—';
-    document.getElementById('id-diseno').textContent = '—';
+    document.getElementById('id-marca').textContent = '—';
+    document.getElementById('id-modelo').textContent = '—';
     document.getElementById('id-reenc').textContent = '—';
     document.getElementById('rtd-movi').innerHTML = '—<small>MM</small>';
     document.getElementById('canales').innerHTML = '';
@@ -916,8 +922,16 @@ function renderPanel(n){
   badge.className = 'badge '+eR.cls;
 
   document.getElementById('id-codigo').textContent = d.codigo;
+  const codeEl = document.getElementById('id-codigo');
+  const historyHint = document.getElementById('id-hist-hint');
+  const hasHistory = Boolean(d.casingCode);
+  codeEl.classList.toggle('id-codigo-link', hasHistory);
+  codeEl.setAttribute('aria-disabled', String(!hasHistory));
+  codeEl.title = hasHistory ? 'Ver historial del neumático' : 'Sin historial: falta vincular el casco';
+  historyHint.textContent = hasHistory ? 'ver historial ›' : 'sin historial · falta vincular casco';
   document.getElementById('id-medida').textContent = d.medida || cfg.medida;
-  document.getElementById('id-diseno').textContent = d.diseno;
+  document.getElementById('id-marca').textContent = d.marca;
+  document.getElementById('id-modelo').textContent = d.modelo;
   document.getElementById('id-reenc').textContent  = d.reenc;
 
   const rtdEl = document.getElementById('rtd-movi');
@@ -1037,7 +1051,7 @@ window.addEventListener('resize', drawConnector);
    El # Código navega a la vista APARTE historial-neumatico.html, en la misma
    carpeta WEB/, pasando el código y el origen. */
 function goToTireHistory(){
-  const code = POSICIONES[selected] && POSICIONES[selected].codigo;
+  const code = POSICIONES[selected] && POSICIONES[selected].casingCode;
   if(!code) return;
   location.href = `historial-neumatico.html?serie=${encodeURIComponent(code)}&from=inspeccion`;
 }
@@ -1074,6 +1088,22 @@ function init(){
 init();
 </script>
 <script type="module" src="movimientos/movimientos-controller.js"></script>
+<script type="module">
+import { createFinderController } from "./buscador/finder-controller.js";
+
+const finderTrigger = document.querySelector("[data-finder-trigger]");
+const finderReady = new Promise((resolve) => {
+  window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+});
+const openFinder = async () => (await finderReady).open(finderTrigger);
+finderTrigger.addEventListener("click", () => void openFinder());
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+  if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  event.preventDefault();
+  void openFinder();
+});
+</script>
 
 </body>
 </html>

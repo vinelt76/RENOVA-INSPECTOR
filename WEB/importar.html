@@ -47,6 +47,7 @@
 <script src="renova-ready.js"></script>
 <script type="module" src="supabase-demo.js"></script>
 <link rel="stylesheet" href="renova-office-shell.css">
+<link rel="stylesheet" href="buscador/buscador.css">
 <style>
   :root{
     --crit:var(--ember-orange);
@@ -163,9 +164,13 @@
       <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
       <a href="instalacion.html">Instalación</a>
       <a href="inventario.html">Inventario</a>
+      <a href="servicios.html">Servicios</a>
       <a href="rendimiento.html">Rendimiento</a>
       <a class="active" href="importar.html">Importar</a>
     </nav>
+    <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+      Buscar unidad o neumático <kbd>Ctrl K</kbd>
+    </button>
   </div>
 </header>
 
@@ -191,7 +196,7 @@
     <h2>1. Elegir archivo</h2>
     <label class="drop-zone" id="dropZone">
       <input type="file" id="fileInput" accept=".xlsx,.xls" />
-      <div class="dz-title">Arrastrá tu .xlsx acá o hacé clic para elegirlo</div>
+      <div class="dz-title">Arrastra tu .xlsx aquí o haz clic para elegirlo</div>
       <div class="dz-sub">Se procesa en tu navegador — nada se sube hasta que confirmes el envío</div>
     </label>
     <div class="file-picked" id="filePicked" style="display:none">
@@ -594,6 +599,22 @@ sendBtn.addEventListener("click", async () => {
     }
   }
   sendBtn.disabled = false;
+});
+</script>
+<script type="module">
+import { createFinderController } from "./buscador/finder-controller.js";
+
+const finderTrigger = document.querySelector("[data-finder-trigger]");
+const finderReady = new Promise((resolve) => {
+  window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+});
+const openFinder = async () => (await finderReady).open(finderTrigger);
+finderTrigger.addEventListener("click", () => void openFinder());
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+  if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  event.preventDefault();
+  void openFinder();
 });
 </script>
 </body>

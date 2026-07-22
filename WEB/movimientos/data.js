@@ -138,3 +138,34 @@ export async function loadAvailableInventory(dependency) {
 
   return rows.map((row) => normalizeNumericColumns(row, INVENTORY_NUMERIC_COLUMNS));
 }
+
+export async function loadCurrentMovementProfile(userId, dependency) {
+  if (!userId) return null;
+  const rows = await getFetchView(dependency)("profiles", {
+    select: "id,company_id,full_name,role,active",
+    id: `eq.${userId}`,
+    limit: "1",
+  });
+  return rows[0] ?? null;
+}
+
+export async function loadSupervisorMovementOrders(unitId, dependency) {
+  if (!unitId) return [];
+  return getFetchView(dependency)("v_operator_movement_orders", {
+    select: "id,company_id,unit_id,plate,requested_by_name,assigned_to_name,status,scheduled_for,instructions,request_items,requested_items_count,issued_at,started_at,completed_at,odometer_km",
+    unit_id: `eq.${unitId}`,
+    order: "issued_at.desc",
+    limit: "30",
+  });
+}
+
+export async function loadMovementExecutions(orderIds, dependency) {
+  const ids = [...new Set((orderIds ?? []).filter(Boolean))];
+  if (!ids.length) return [];
+  return getFetchView(dependency)("tire_movement_executions", {
+    select: "id,order_id,sequence,direction,position_number,movement_reason,casing_code,code_unreadable,brand_name,size_name,design_name,rtd_min_mm,condition,retread_design,observations,captured_at,reconciliation_status",
+    order_id: `in.(${ids.join(",")})`,
+    order: "captured_at.desc,sequence.asc",
+    limit: "300",
+  });
+}

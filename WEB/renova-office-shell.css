@@ -92,9 +92,70 @@ header {
   border-color: var(--ember-orange);
 }
 
+/* Entrada visible al buscador global. El atajo acompaña a la barra; nunca la
+   reemplaza, porque no se presupone uso experto de teclado. */
+.finder-trigger {
+  align-items: center;
+  background: var(--field-dark);
+  border: 2px solid var(--label-blue);
+  border-radius: 8px;
+  color: var(--value-ice);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 8px;
+  letter-spacing: .08em;
+  padding: 10px 12px;
+  text-transform: uppercase;
+}
+
+.finder-trigger:hover,
+.finder-trigger:focus-visible {
+  border-color: var(--ember-orange);
+  color: var(--ember-orange);
+  outline: none;
+}
+
+.finder-trigger kbd {
+  background: var(--screen-dark);
+  border: 1px solid var(--border-dark);
+  border-radius: 4px;
+  color: var(--label-blue);
+  font: inherit;
+  font-size: 9px;
+  padding: 2px 4px;
+}
+
+.finder-header-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+a.casing-history-link {
+  color: var(--value-ice);
+  text-decoration-color: var(--label-blue);
+  text-underline-offset: 3px;
+}
+
+a.casing-history-link:hover,
+a.casing-history-link:focus-visible {
+  color: var(--ember-orange);
+  outline: none;
+}
+
 @media (max-width: 780px) {
   .nav,
   .screen-nav {
     width: 100%;
+  }
+
+  .finder-trigger {
+    flex: 1 1 100%;
+    justify-content: space-between;
   }
 }

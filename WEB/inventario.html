@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="renova-office-shell.css">
+  <link rel="stylesheet" href="buscador/buscador.css">
   <link rel="stylesheet" href="inventario/inventario.css">
   <script src="supabase-config.public.js"></script>
   <script src="renova-ready.js"></script>
@@ -25,9 +26,13 @@
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="instalacion.html">Instalación</a>
         <a class="active" href="inventario.html" aria-current="page">Inventario</a>
+        <a href="servicios.html">Servicios</a>
         <a href="rendimiento.html">Rendimiento</a>
         <a href="importar.html">Importar</a>
       </nav>
+      <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+        Buscar unidad o neumático <kbd>Ctrl K</kbd>
+      </button>
     </div>
   </header>
 
@@ -81,5 +86,21 @@
 
   <footer class="inventory-footer">Datos protegidos por la sesión y la empresa activa · Vista de solo lectura</footer>
   <script type="module" src="inventario/inventory-controller.js"></script>
+  <script type="module">
+  import { createFinderController } from "./buscador/finder-controller.js";
+
+  const finderTrigger = document.querySelector("[data-finder-trigger]");
+  const finderReady = new Promise((resolve) => {
+    window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+  });
+  const openFinder = async () => (await finderReady).open(finderTrigger);
+  finderTrigger.addEventListener("click", () => void openFinder());
+  document.addEventListener("keydown", (event) => {
+    if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+    if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+    event.preventDefault();
+    void openFinder();
+  });
+  </script>
 </body>
 </html>

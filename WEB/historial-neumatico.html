@@ -31,6 +31,7 @@
 <script src="renova-format.js"></script>
 <script type="module" src="supabase-demo.js"></script>
 <link rel="stylesheet" href="renova-office-shell.css">
+<link rel="stylesheet" href="buscador/buscador.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html{height:100%}
@@ -143,11 +144,22 @@
 <body>
 
 <header>
-  <div class="head-inner">
+  <div class="head-inner finder-header-row">
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">HISTORIAL DE NEUMÁTICO</div>
     </div>
+    <nav class="screen-nav" aria-label="Pantallas">
+      <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+      <a href="instalacion.html">Instalación</a>
+      <a href="inventario.html">Inventario</a>
+      <a href="servicios.html">Servicios</a>
+      <a href="rendimiento.html">Rendimiento</a>
+      <a href="importar.html">Importar</a>
+    </nav>
+    <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+      Buscar unidad o neumático <kbd>Ctrl K</kbd>
+    </button>
   </div>
 </header>
 
@@ -207,6 +219,10 @@ async function loadHistorial(code){
       placa: i.plate, desde: i.installed_at,
       hasta: i.removed ? i.removed_at : null,
       km: i.km_run != null ? Number(i.km_run) : null,
+      posicion: i.position_number != null ? Number(i.position_number) : null,
+      motivoRetiro: i.removal_reason || null,
+      placaDestino: i.next_plate || null,
+      posicionDestino: i.next_position_number != null ? Number(i.next_position_number) : null,
     })),
     inspecciones: inspRows.map(i => ({
       fecha: i.inspected_on, placa: i.plate, posicion: i.position_number != null ? `P${i.position_number}` : "—",
@@ -240,11 +256,20 @@ function condClass(c){
 function backLabel(){
   return from === "inspeccion"  ? "Volver a Inspección"
        : from === "rendimiento" ? "Volver a Rendimiento"
+       : from === "inventario" ? "Volver a Inventario"
+       : from === "instalacion" ? "Volver a Instalación"
+       : from === "buscador" ? "Volver a Búsqueda"
        : "Volver";
 }
 function goBack(){
   if(document.referrer && history.length > 1){ history.back(); return; }
-  const map = { rendimiento:"rendimiento.html", inspeccion:"Inspecciones%20por%20unidad.html" };
+  const map = {
+    rendimiento:"rendimiento.html",
+    inspeccion:"Inspecciones%20por%20unidad.html",
+    inventario:"inventario.html",
+    instalacion:"instalacion.html",
+    buscador:"INSPECCIONES%20POR%20FECHA.html",
+  };
   location.href = map[from] || "rendimiento.html";
 }
 
@@ -322,16 +347,27 @@ function render(){
       </div>
     </div>`;
 
-  // Unidades donde estuvo instalado.
+  // Trayectoria: Supabase entrega el motivo y el siguiente montaje. La UI solo
+  // traduce esos hechos; no infiere una rotación por fechas o placas repetidas.
   const instList = instalaciones.map(i => {
     const hasta = i.hasta
       ? fmtDate(i.hasta)
       : `<span class="th-chip-actual">Instalado actualmente</span>`;
     const km = i.km != null ? `${fmtKm(i.km)}<small>km</small>` : "—";
+    const origen = `${i.placa || "—"}${i.posicion != null ? ` · P${i.posicion}` : ""}`;
+    let trayectoria = origen;
+    if(i.motivoRetiro === "rotation" && i.placaDestino && i.posicionDestino != null){
+      const destino = `${i.placaDestino}${i.posicionDestino != null ? ` · P${i.posicionDestino}` : ""}`;
+      trayectoria = i.placaDestino === i.placa
+        ? `Rotación interna · P${i.posicion ?? "—"} → P${i.posicionDestino}`
+        : `Rotación · ${origen} → ${destino}`;
+    }else if(i.motivoRetiro){
+      trayectoria = `${origen} · Retiro: ${i.motivoRetiro}`;
+    }
     return `
       <div class="th-inst">
         <div class="r-top">
-          <span class="r-plate">${esc(i.placa || "—")}</span>
+          <span class="r-plate">${esc(trayectoria)}</span>
           <span class="r-km num">${km}</span>
         </div>
         <div class="r-dates">${fmtDate(i.desde)} → ${hasta}</div>
@@ -339,7 +375,7 @@ function render(){
   }).join("");
   const instBlock = `
     <div class="th-section">
-      <div class="th-section-title">Unidades donde estuvo instalado</div>
+      <div class="th-section-title">Trayectoria de instalaciones</div>
       ${instalaciones.length
         ? `<div class="th-list">${instList}</div>`
         : `<div class="th-empty">Hay inspecciones registradas, pero no se encontró historial de instalación asociado.</div>`}
@@ -404,6 +440,22 @@ async function init(){
   }
 }
 onRenovaSupabaseReady(init);
+</script>
+<script type="module">
+import { createFinderController } from "./buscador/finder-controller.js";
+
+const finderTrigger = document.querySelector("[data-finder-trigger]");
+const finderReady = new Promise((resolve) => {
+  window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+});
+const openFinder = async () => (await finderReady).open(finderTrigger);
+finderTrigger.addEventListener("click", () => void openFinder());
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+  if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  event.preventDefault();
+  void openFinder();
+});
 </script>
 </body>
 </html>

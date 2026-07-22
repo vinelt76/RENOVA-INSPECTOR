@@ -1,35 +1,29 @@
-# WEB/movimientos — Modo Movimientos de Neumáticos
+# WEB/movimientos — Órdenes web de Movimientos
 
 Módulos ES del **modo Movimientos** del dashboard `WEB/Inspecciones por unidad.html`. Se importan desde
 el HTML con `type="module"`. Arquitectura estática (sin cambiar el stack). Fuente canónica de
 contratos backend: `tasks_cambios_neumaticos/CONTRATOS_UI.md`. Plan y tareas:
 `tasks_cambios_neumaticos_ui/`.
 
-Regla de oro: **la lógica pura no toca el DOM; la UI no reimplementa reglas de negocio.**
+Regla de oro: **la web dirige y sigue órdenes; el operario ejecuta y captura los datos técnicos en
+`app movimientos/`.** La pestaña web no llama `confirm_tire_change_batch`.
 
-## Límites de módulos (ver `tasks_cambios_neumaticos_ui/PLAN.md §1`)
+## Módulos activos
 
 | Módulo | Responsabilidad | Toca DOM | Testeable puro | Crea |
 |---|---|---|---|---|
-| `data.js` | Resolución de unidad, carga de vistas, normalización | No | Sí | task_04 |
-| `a11y.js` | Anuncio accesible y foco de los mensajes del editor | Sí | No (smoke) | task_14 |
-| `batch-model.js` | Máquina de estados del lote, invariantes, payload v1, sellado | No | Sí | task_05 |
-| `batch-store.js` | Persistencia `localStorage` de borrador y payload sellado | No¹ | Sí | task_06 |
-| `rpc.js` | Llamada a `confirm_tire_change_batch`, clasificación de errores, retry | No | Sí | task_07 |
-| `baseline-model.js` | Máquina pura del primer montaje, precarga, validación y sellado | No | Sí | task_08 |
-| `baseline-ui.js` | Diálogo guiado, formulario y foco del primer montaje | Sí | No (smoke) | task_08 |
-| `diagram-projection.js` | Proyección pura `(remoteState, draft) → estado por posición` | No | Sí | task_08 |
-| `storage-client.js` | Foto de descarte: captura/preview/upload/limpieza (Storage) | Parcial | Parcial | task_12 |
+| `data.js` | Unidad, perfil, órdenes y ejecuciones por RLS | No | Sí | — |
+| `supervisor-order-model.js` | Borrador e invariantes de indicaciones | No | Sí | — |
+| `supervisor-order-projection.js` | Proyección de la orden sobre el gemelo digital | No | Sí | — |
+| `orders-rpc.js` | Única escritura activa: `create_tire_movement_order` | No | Sí | — |
+| `supervisor-orders-ui.js` | Editor de indicaciones y bandeja de seguimiento | Sí | No (smoke) | — |
 | `diagram-view.js` | Render de ruedas/dock desde la proyección | Sí | No (smoke) | task_09 |
-| `mode-toggle.js` | Tabs Inspección/Movimientos sobre el diagrama; Inspección intacto | Sí | No (smoke) | task_09 |
-| `movimientos-controller.js` | Orquestador: cablea submódulos, estado vivo, Realtime | Sí | No (smoke) | task_09 |
-| `movements-ui.js` | Modales retén/descarte/montaje/swap; selección origen→destino | Sí | No (smoke) | task_10 |
-| `inventory-ui.js` | Cajón de inventario/retén, buscador, prevención de duplicados | Sí | No (smoke) | task_11 |
-| `summary-confirm.js` | Resumen, deshacer/editar, encabezado, confirmación, errores | Sí | No (smoke) | task_13 |
-| `movimientos.css` | Tokens/estilos reutilizando la paleta vigente | — | — | task_09 |
-| `vitest.config.js` | Configuración del runner de pruebas | — | — | task_02 |
+| `mode-toggle.js` | Tabs Inspección/Movimientos; Inspección intacto | Sí | No (smoke) | task_09 |
+| `movimientos-controller.js` | Auth de supervisor, borrador, RPC, lectura y Realtime | Sí | No (smoke) | — |
+| `movimientos.css` | Estilos RENOVA y estados de órdenes | — | — | — |
 
-¹ `batch-store.js` usa `localStorage`, que se mockea en los tests (entorno `node`).
+Los módulos antiguos de ejecución en taller permanecen temporalmente para conservar su suite y
+trazabilidad, pero ya no forman parte del grafo de imports del controlador web.
 
 ## Compatibilidad de despliegue y rollback
 
@@ -41,20 +35,15 @@ Regla de oro: **la lógica pura no toca el DOM; la UI no reimplementa reglas de 
   borradores no confirmados que ya hayan sido migrados. Antes de revertir,
   confirmar o descartar esos borradores; no hay datos remotos afectados.
 
-## Línea base perezosa
+## Separación de responsabilidades
 
-Una posición `is_empty=true` con `baseline_pending=true` no está disponible para montar desde el
-retén: una inspección dejó evidencia de que había un neumático físico. El taller debe registrar el
-**primer montaje** y confirmar los datos frente a la unidad. El flujo crea casco, ciclo e
-instalación con `origin='baseline'`, cita `source_measurement_id` y usa
-`confirm_baseline_mount`; la fecha de instalación es declarada, no una observación histórica.
-El formulario permite registrar la OTD original del ciclo cuando se conoce; es opcional y jamás
-se infiere desde la medición RTD de la inspección.
-
-La línea base es perezosa para no convertir por lote una medición histórica en historia de taller.
-La flota se completa a medida que se opera cada posición; una posición sin evidencia sí conserva el
-montaje normal. El contrato de esquema y el indicador de avance están en
-`supabase/diagnostics/baseline_profile.sql` (Q6).
+- Supervisor web (`tire_supervisor`, `fleet_manager` histórico o `admin`): posición, dirección,
+  razón, nota y fecha.
+- Operario Android (`operator`): toma la orden y captura código, marca, medida, diseño, RTD,
+  condición, reencauche, observaciones y un único odómetro de máquina.
+- Web: sigue estado, operario asignado y renglones técnicos completados.
+- La captura nace pendiente de reconciliación para no inventar instalaciones mientras falte la
+  importación masiva de línea base.
 
 ## Pruebas
 
@@ -63,8 +52,8 @@ montaje normal. El contrato de esquema y el indicador de avance están en
   navegador** (task_16), no con vitest.
 - `localStorage`, el cliente Supabase (`RenovaSupabase`/`.rpc()`), `fetchView` y `crypto.randomUUID`
   se **inyectan o mockean** en cada test. Sin red ni datos reales en las pruebas.
-- La suite cubre el modelo de primer montaje y el adaptador de `confirm_baseline_mount`; el smoke
-  autenticado con datos de prueba se ejecuta por separado y nunca contra una unidad de cliente.
+- La suite cubre además el modelo de orden, la proyección y el contrato exacto de
+  `create_tire_movement_order`; nunca usa datos reales.
 
 ### Comandos
 
@@ -81,3 +70,5 @@ npm run test:watch
 - No agregar dependencias de runtime del dashboard (vitest es sólo dev).
 - Nunca `service_role`, secretos ni datos de sesión en módulos, fixtures o logs.
 - UUIDs de fixture en tests; nunca UUIDs de producción.
+- El ID de orden usa `crypto.randomUUID()` y cae a UUID v4 con
+  `crypto.getRandomValues()` para navegadores/contextos HTTP compatibles antiguos.

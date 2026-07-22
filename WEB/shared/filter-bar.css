@@ -1,0 +1,164 @@
+/* Componente único de filtro (F1). Reutiliza los tokens del shell
+   (renova-office-shell.css) y converge visualmente con:
+   - los chips de WEB/neumaticos/ (.tires-filter-chip: píldora, borde naranja);
+   - el combobox del buscador global (WEB/buscador/buscador.css: .finder-*).
+   No introduce un patrón visual nuevo (límite duro 4). */
+
+.filter-bar,
+.filter-bar * {
+  box-sizing: border-box;
+}
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.filter-bar-chips {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-bar-chip {
+  background: var(--field-dark, #111E2E);
+  border: 2px solid var(--ember-orange, #F06822);
+  border-radius: 999px;
+  color: var(--ember-orange, #F06822);
+  cursor: pointer;
+  font: 800 10px var(--mono, monospace);
+  letter-spacing: .06em;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 11px;
+}
+
+.filter-bar-chip:hover {
+  border-color: var(--signal-yellow, #f4b821);
+}
+
+.filter-bar-chip:focus-visible {
+  outline: 2px solid var(--signal-yellow, #f4b821);
+  outline-offset: 3px;
+}
+
+.filter-bar-chip-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  max-width: 46vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-bar-field {
+  align-items: center;
+  background: var(--field-dark, #111E2E);
+  border: 2px solid var(--border-dark, #1B2D42);
+  border-radius: 8px;
+  display: flex;
+  min-height: 48px;
+  padding: 0 12px;
+}
+
+.filter-bar-field:focus-within {
+  border-color: var(--label-blue, #7AABCC);
+}
+
+.filter-bar-input {
+  background: transparent;
+  border: 0;
+  color: var(--value-ice, #F0F8FF);
+  font: 700 13px var(--mono, monospace);
+  min-height: 44px;
+  outline: 0;
+  padding: 11px 4px;
+  width: 100%;
+}
+
+.filter-bar-input::placeholder {
+  color: var(--label-blue, #7AABCC);
+  opacity: .72;
+}
+
+.filter-bar-listbox {
+  background: var(--screen-dark, #07111C);
+  border: 2px solid var(--border-dark, #1B2D42);
+  border-radius: 10px;
+  left: 0;
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  padding: 10px;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 30;
+}
+
+.filter-bar-group + .filter-bar-group {
+  border-top: 2px solid var(--border-dark, #1B2D42);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.filter-bar-group-heading {
+  color: var(--label-blue, #7AABCC);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.filter-bar-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-bar-option {
+  background: var(--field-dark, #111E2E);
+  border: 2px solid var(--border-dark, #1B2D42);
+  border-radius: 8px;
+  color: var(--value-ice, #F0F8FF);
+  cursor: pointer;
+  font: 700 12px var(--mono, monospace);
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.filter-bar-option[data-active="true"] {
+  border-color: var(--ember-orange, #F06822);
+}
+
+.filter-bar-option:hover {
+  border-color: var(--signal-yellow, #f4b821);
+}
+
+.filter-bar-empty {
+  color: var(--label-blue, #7AABCC);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+  padding: 8px 2px;
+}
+
+@media (max-width: 480px) {
+  .filter-bar-chip-text {
+    max-width: 70vw;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filter-bar-field,
+  .filter-bar-option,
+  .filter-bar-chip {
+    transition: border-color .18s ease-out;
+  }
+}

@@ -80,7 +80,7 @@ describe("confirmTireChangeBatch", () => {
 
   it("logs the complete returned error and throws the same object", async () => {
     const error = supabaseError("42501", "[sin_permiso] Rol no autorizado.", {
-      hint: "Usá un rol de taller",
+      hint: "Usa un rol de taller",
     });
     const client = mockClient({ data: null, error });
     const logger = { error: vi.fn() };

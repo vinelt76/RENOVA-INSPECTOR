@@ -1,0 +1,14 @@
+{
+  "name": "renova-buscador",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Índice, caché y modelo puro del buscador global de RENOVA.",
+  "scripts": {
+    "test": "../movimientos/node_modules/.bin/vitest run",
+    "test:watch": "../movimientos/node_modules/.bin/vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.9"
+  }
+}

@@ -78,7 +78,7 @@ function validateDraft(state) {
     violations.push(violation("performed_at_required", "La fecha de confirmación es obligatoria."));
   }
   if (!state.mounts.length) {
-    violations.push(violation("mounts_required", "Agregá al menos una posición pendiente."));
+    violations.push(violation("mounts_required", "Agrega al menos una posición pendiente."));
   }
   if (state.odometer !== null && state.odometer !== "") {
     const odometer = Number(state.odometer);

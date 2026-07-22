@@ -9,12 +9,15 @@
   PANTALLA RENDIMIENTO — vista de consulta para el JEFE DE FLOTA.
   Autocontenida: abrir directamente en el navegador. Datos reales desde Supabase/Excel.
 
-  Un solo flujo jerárquico, SIN modos alternos:
-    Rendimiento → Eje → Posición / Neumático
-    1. Seleccionar eje (Dirección / Tracción / Libre, según configuración del vehículo).
-    2. Revisar el resumen del eje (promedios, mejor/peor posición, balance Izq/Der).
-    3. Seleccionar una posición del eje.
-    4. Revisar el detalle del neumático de esa posición.
+  Pantalla de búsqueda con agregación (F3, tasks_filtros_facetados/task_05):
+    1. Sin filtros: agregado de rendimiento de TODA la flota + lista de neumáticos.
+    2. Cada chip de filtro (unidad, marca, modelo, medida, condición, diseño de
+       reencauche, eje) recalcula el agregado y la lista sobre el subconjunto que
+       queda — nunca sobre una posición aislada, porque las facetas no tienen
+       sentido ahí (AUDIT.md §2.1 de la fase).
+    3. Abrir una fila de la lista muestra el detalle jerárquico Eje → Posición de
+       esa unidad (balance Izq/Der incluido: ahí sí tiene sentido, porque el
+       conjunto es un eje). "← Volver a resultados" regresa a la lista filtrada.
 
   Reglas que respeta este prototipo:
     · Solo muestra datos DERIVADOS/calculados. Nada de datos crudos del inspector
@@ -55,6 +58,8 @@
 <script src="renova-animate.js"></script>
 <script type="module" src="supabase-demo.js"></script>
 <link rel="stylesheet" href="renova-office-shell.css">
+<link rel="stylesheet" href="buscador/buscador.css">
+<link rel="stylesheet" href="shared/filter-bar.css">
 <style>
   :root{
     /* Balance del eje — SEMÁNTICA PROPIA de Rendimiento (no es el semáforo de
@@ -86,25 +91,59 @@
     color:var(--label-blue);margin-top:8px;
   }
   .header-tools{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end}
-  .unit-picker{display:flex;flex-direction:column;gap:6px}
-  .unit-picker label{
-    font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--label-blue);
-  }
-  .unit-picker select{
-    appearance:none;-webkit-appearance:none;
-    background:var(--field-dark);color:var(--value-ice);
-    font-family:var(--mono);font-weight:700;font-size:14px;
-    border:2px solid var(--border-dark);border-radius:8px;
-    padding:11px 40px 11px 14px;cursor:pointer;
-    transition:border-color .15s ease-out;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%237AABCC' stroke-width='2' stroke-linecap='round'/></svg>");
-    background-repeat:no-repeat;background-position:right 14px center;
-  }
-  .unit-picker select:focus{outline:none;border-color:var(--ember-orange)}
 
   /* ───────────────── Layout ───────────────── */
   main{max-width:1280px;margin:0 auto;padding:16px;flex:1 0 auto;width:100%}
+
+  /* ───────────────── Filtro facetado (F1/F3, tasks_filtros_facetados) ───────────────── */
+  .filter-block{margin-bottom:18px;position:relative}
+  .filter-block .selector-label{margin-bottom:9px}
+  .freshness-control{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}
+  .freshness-chip{
+    min-height:44px;padding:8px 13px;border:2px solid var(--border-dark);border-radius:999px;
+    background:var(--field-dark);color:var(--value-ice);font:800 11px/1.25 var(--mono);
+    cursor:pointer;transition:border-color .15s ease-out,background .15s ease-out;
+  }
+  .freshness-chip:hover,.freshness-chip:focus-visible{outline:none;border-color:var(--signal-yellow)}
+  .freshness-chip[aria-pressed="true"]{border-color:var(--ember-orange);background:rgba(255,106,0,.1)}
+  .freshness-help{font-size:10px;font-weight:700;color:var(--label-blue);line-height:1.45}
+
+  /* ───────────────── Agregado sobre el conjunto filtrado ───────────────── */
+  .excluded-note{
+    font-size:11px;font-weight:700;color:var(--label-blue);margin-bottom:12px;line-height:1.5;
+  }
+  .excluded-note b{color:var(--value-ice)}
+  .excluded-note.has-excluded b.excl{color:var(--signal-yellow)}
+
+  /* ───────────────── Lista de resultados ───────────────── */
+  .results-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .result-row{
+    display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 14px;
+    width:100%;text-align:left;font-family:var(--mono);cursor:pointer;
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
+    padding:12px 14px;color:var(--value-ice);min-height:44px;
+    transition:border-color .15s ease-out;
+  }
+  .result-row:hover,.result-row:focus-visible{outline:none;border-color:var(--signal-yellow)}
+  .result-identity{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .result-code{font-size:14px;font-weight:800;overflow-wrap:anywhere}
+  .result-sub{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--label-blue)}
+  .result-model{
+    grid-column:1/-1;font-size:11px;font-weight:700;color:var(--label-blue);
+    overflow-wrap:anywhere;
+  }
+  .result-metric{font-size:13px;font-weight:800;text-align:right;white-space:nowrap}
+  .result-metric.empty{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--label-blue)}
+
+  /* ───────────────── Volver del detalle a la lista ───────────────── */
+  .detail-back{
+    display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;
+    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:8px;
+    color:var(--value-ice);font-family:var(--mono);font-weight:800;font-size:11px;
+    letter-spacing:.06em;min-height:44px;padding:0 16px;cursor:pointer;
+    transition:border-color .15s ease-out;
+  }
+  .detail-back:hover,.detail-back:focus-visible{outline:none;border-color:var(--signal-yellow)}
 
   /* ───────────────── Selector de eje (tabs) ───────────────── */
   .selector-block{margin-bottom:16px}
@@ -315,8 +354,6 @@
 
   @media (max-width:560px){
     .brand .logo{font-size:26px}
-    .unit-picker{width:100%}
-    .unit-picker select{width:100%}
     .card-cols{grid-template-columns:1fr}
     .card-col+.card-col{border-left:none;border-top:2px solid var(--border-dark)}
     .avg-kpis{grid-template-columns:1fr}
@@ -334,42 +371,63 @@
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">RENDIMIENTO</div>
-      <div class="subtitle">Rendimiento → Eje → Posición</div>
+      <div class="subtitle">Filtra y agrega · abre una fila para ver el detalle por eje</div>
     </div>
     <div class="header-tools">
       <nav class="screen-nav" aria-label="Pantallas">
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="instalacion.html">Instalación</a>
         <a href="inventario.html">Inventario</a>
+        <a href="servicios.html">Servicios</a>
         <a class="active" href="rendimiento.html">Rendimiento</a>
         <a href="importar.html">Importar</a>
       </nav>
-      <div class="unit-picker">
-        <label for="unitSelect">Unidad</label>
-        <select id="unitSelect" aria-label="Seleccionar unidad"></select>
-      </div>
+      <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+        Buscar unidad o neumático <kbd>Ctrl K</kbd>
+      </button>
     </div>
   </div>
 </header>
 
 <main>
-  <!-- 1. Seleccionar eje -->
-  <div class="selector-block" id="axleSelectorBlock">
-    <div class="selector-label">Eje</div>
-    <div class="axle-tabs" id="axleTabs" role="tablist" aria-label="Seleccionar eje"></div>
+  <!-- Filtro facetado (task_03/task_05): escribir un valor y elegirlo, o Enter,
+       agrega un chip. Sin chips: agregado de toda la flota. -->
+  <div class="filter-block">
+    <div class="selector-label">Filtrar neumáticos</div>
+    <div id="filterMount"></div>
+    <div class="freshness-control">
+      <button id="freshnessToggle" class="freshness-chip" type="button" aria-pressed="false">
+        Incluir datos antiguos
+      </button>
+      <span id="freshnessHelp" class="freshness-help">Promedios basados en inspecciones de los últimos 30 días.</span>
+    </div>
   </div>
 
-  <!-- 2. Resumen del eje -->
-  <div id="summaryMount"></div>
-
-  <!-- 3. Seleccionar posición dentro del eje -->
-  <div class="selector-block" id="posSelectorBlock">
-    <div class="selector-label">Posición del eje</div>
-    <div class="pos-pills" id="posPills" role="tablist" aria-label="Seleccionar posición"></div>
+  <!-- Vista de resultados: agregado (computeGroup) + lista filtrada. Vista inicial. -->
+  <div id="listView">
+    <div id="aggregateMount"></div>
+    <div id="resultsListMount" class="results-list"></div>
   </div>
 
-  <!-- 4. Detalle del neumático seleccionado -->
-  <div id="cardMount"></div>
+  <!-- Vista de detalle: se abre al elegir una fila de la lista. Eje → Posición,
+       igual que antes de esta fase — el balance Izq/Der solo tiene sentido acá. -->
+  <div id="detailView" hidden>
+    <button class="detail-back" type="button" onclick="closeDetail()">← Volver a resultados</button>
+
+    <div class="selector-block" id="axleSelectorBlock">
+      <div class="selector-label">Eje</div>
+      <div class="axle-tabs" id="axleTabs" role="tablist" aria-label="Seleccionar eje"></div>
+    </div>
+
+    <div id="summaryMount"></div>
+
+    <div class="selector-block" id="posSelectorBlock">
+      <div class="selector-label">Posición del eje</div>
+      <div class="pos-pills" id="posPills" role="tablist" aria-label="Seleccionar posición"></div>
+    </div>
+
+    <div id="cardMount"></div>
+  </div>
 </main>
 
 <footer>
@@ -385,6 +443,9 @@
    Diferencia de Km/mm entre posiciones  > umbral  → desbalance detectado (rojo)
    ========================================================================= */
 const AXLE_BALANCE_THRESHOLD_PERCENT = 15;
+// F12: punto único configurable de la pantalla. No pertenece al componente
+// compartido porque cada empresa aún no expone este umbral como dato.
+const RENDIMIENTO_FRESHNESS_DAYS = 30;
 
 /* Dataset activo: SOLO datos reales desde Supabase/Excel. */
 let UNITS = [];
@@ -408,48 +469,73 @@ function serieOf(uId, pos){
 const AXLE_KEY_BY_TYPE = { "Direccional":"direccional", "Tracción":"traccion", "Libre":"libre" };
 const num = v => (v === null || v === undefined || v === "") ? null : Number(v);
 
-function buildUnitsFromSupabase(rows){
+/* Dataset activo del filtro facetado: una fila por neumático (task_05). Cada
+   objeto ya trae lo que computeTire() necesita (rtdInstalacion, rtdActual...)
+   Y los campos crudos de faceta (brand_name, size_name...) de CONTRATOS_DATOS.md
+   §2 — el mismo objeto sirve para filtrar y para calcular, sin dos mapeos. */
+let TIRES = [];
+
+function buildTireRowsFromSupabase(rows){
+  return rows.map(r => {
+    const axNum = r.axle_number ?? 99;
+    const axName = r.axle_type || ("Eje " + axNum);
+    return {
+      unitId: r.plate, plate: r.plate, companyName: r.company_name,
+      pos: "P" + r.position_number, lado: r.side || "Izq",
+      axleNumber: axNum, axleKey: AXLE_KEY_BY_TYPE[axName] || ("eje" + axNum), axleName: axName,
+      casingCode: r.casing_code || null,   // código real del casco (o null si N/V)
+      // Campos crudos de faceta (CONTRATOS_DATOS.md §2) — sin normalizar, F7/F1.
+      brand_name: r.brand_name || null, model_name: r.model_name || null,
+      size_name: r.size_name || null, condition: r.condition || null,
+      retread_design: r.retread_design || null, axle_type: r.axle_type || null,
+      // Frescura (F11/F12): filtra filas; nunca recalcula consumo por período.
+      lastInspectionOn: r.last_inspection_on || null,
+      // Entrada de computeTire() — igual que antes de esta fase.
+      modelo: [r.size_name, r.model_name].filter(Boolean).join(" ") || null,
+      reencauche: (r.condition && r.condition !== "N")
+        ? { codigo: r.retread_design || "—", ciclo: r.condition } : null,
+      rtdInstalacion: num(r.rtd_at_install_mm),
+      rtdActual:      num(r.current_rtd_mm),
+      kmInstalacion:  num(r.odometer_at_install),
+      kmActual:       num(r.current_odometer_km),
+      otd:            num(r.otd_mm),
+      rtdRetiro:      num(r.rtd_removal_mm),   // umbral por empresa (rtd_thresholds) — nunca hardcodeado
+      costo:          num(r.cost),
+      // Km Acumulado del casco = previo + recorrido de esta instalación
+      kmPrevioAcumulado: Math.max(0, (num(r.casing_km_accumulated) || 0) - (num(r.km_run) || 0)),
+      fuente: r,   // fila completa → panel de datos fuente
+    };
+  });
+}
+
+/* Reagrupa los mismos neumáticos por unidad → eje, para el detalle (Eje →
+   Posición) que se abre al elegir una fila. Una sola fuente de mapeo
+   (buildTireRowsFromSupabase); esto solo reordena, no vuelve a leer columnas. */
+function buildUnitsFromTires(tires){
   const byPlate = new Map();
-  rows.forEach(r => {
-    if(!byPlate.has(r.plate)) byPlate.set(r.plate, []);
-    byPlate.get(r.plate).push(r);
+  tires.forEach(t => {
+    if(!byPlate.has(t.plate)) byPlate.set(t.plate, []);
+    byPlate.get(t.plate).push(t);
   });
   const units = [];
-  for(const [plate, rws] of byPlate){
-    rws.sort((a,b) => a.position_number - b.position_number);
-    const axMap = new Map();   // axle_number → {key,name,positions}
-    const tires = {}, fuente = {}, series = {};
-    for(const r of rws){
-      const axNum = r.axle_number ?? 99;
-      const axName = r.axle_type || ("Eje " + axNum);
-      if(!axMap.has(axNum)){
-        axMap.set(axNum, { key: AXLE_KEY_BY_TYPE[axName] || ("eje" + axNum), name: axName, positions: [] });
+  for(const [plate, ts] of byPlate){
+    ts.sort((a,b) => Number(a.pos.slice(1)) - Number(b.pos.slice(1)));
+    const axMap = new Map();   // axleNumber → {key,name,positions}
+    const tiresByPos = {}, fuente = {}, series = {};
+    for(const t of ts){
+      if(!axMap.has(t.axleNumber)){
+        axMap.set(t.axleNumber, { key: t.axleKey, name: t.axleName, positions: [] });
       }
-      const pos = "P" + r.position_number;
-      axMap.get(axNum).positions.push({ pos, lado: r.side || "Izq" });
-      tires[pos] = {
-        modelo: [r.size_name, r.model_name].filter(Boolean).join(" ") || null,
-        reencauche: (r.condition && r.condition !== "N")
-          ? { codigo: r.retread_design || "—", ciclo: r.condition } : null,
-        rtdInstalacion: num(r.rtd_at_install_mm),
-        rtdActual:      num(r.current_rtd_mm),
-        kmInstalacion:  num(r.odometer_at_install),
-        kmActual:       num(r.current_odometer_km),
-        otd:            num(r.otd_mm),
-        rtdRetiro:      num(r.rtd_removal_mm),   // umbral por empresa (rtd_thresholds) — nunca hardcodeado
-        costo:          num(r.cost),
-        // Km Acumulado del casco = previo + recorrido de esta instalación
-        kmPrevioAcumulado: Math.max(0, (num(r.casing_km_accumulated) || 0) - (num(r.km_run) || 0)),
-      };
-      fuente[pos] = r;                       // fila completa → panel de datos fuente
-      series[pos] = r.casing_code || null;   // código real del casco (o null si N/V)
+      axMap.get(t.axleNumber).positions.push({ pos: t.pos, lado: t.lado });
+      tiresByPos[t.pos] = t;
+      fuente[t.pos] = t.fuente;
+      series[t.pos] = t.casingCode;
     }
     units.push({
       id: plate, plate,
-      label: `${plate} · ${rws[0].company_name || "Bus"}`,
-      config: null,
+      label: `${plate} · ${ts[0].companyName || "Bus"}`,
       axles: [...axMap.entries()].sort((a,b) => a[0]-b[0]).map(e => e[1]),
-      tires, fuente, series,
+      tires: tiresByPos, fuente, series,
     });
   }
   units.sort((a,b) => a.plate.localeCompare(b.plate, "es", {numeric:true}));
@@ -465,7 +551,8 @@ async function loadSupabaseData(){
   try{
     const rows = await RenovaSupabase.fetchView("v_rendimiento_dashboard_rows",
       { order: "plate.asc,position_number.asc" });
-    const units = buildUnitsFromSupabase(rows);
+    const tires = buildTireRowsFromSupabase(rows);
+    const units = buildUnitsFromTires(tires);
     // Sesión válida pero sin filas propias (empresa nueva, aún sin datos
     // importados) NO es un error de conexión — la sesión sigue activa y el
     // botón de logout debe seguir visible.
@@ -476,11 +563,9 @@ async function loadSupabaseData(){
       return;
     }
     UNITS = units;
-    unitId = UNITS[0].id;
-    renderUnitOptions();
-    initSelectionForUnit();
-    renderAll();
+    TIRES = tires;
     RenovaSupabase.showBadge("supabase", rows[0].company_name || "");
+    window.RenovaRendimiento.onDataLoaded?.();
   }catch(err){
     console.warn("Rendimiento: Supabase no disponible.", err);
     renderNoData("No se pudieron cargar los datos del Excel desde Supabase.");
@@ -523,29 +608,77 @@ function computeTire(t){
 }
 
 /* =========================================================================
-   AGREGADO DEL EJE — se calcula SOBRE las métricas ya derivadas por posición.
-   Excluye posiciones sin datos válidos.
+   AGREGADO SOBRE UN CONJUNTO — se calcula SOBRE las métricas ya derivadas por
+   neumático. Excluye los que no tienen datos válidos (F10, filtros
+   facetados): valid/excluded siempre se devuelven para que la UI los muestre.
+   `tires` es cualquier lista de objetos que computeTire() sepa leer; cada uno
+   puede traer campos extra (pos, lado, id...) que esta función ignora y solo
+   reexpone por referencia en rows/valids/best/worst para que quien llama
+   pueda etiquetar el resultado (posición de eje, unidad, lo que corresponda).
    ========================================================================= */
 function mean(arr){ return arr.reduce((s,v)=>s+v,0)/arr.length; }
 
-function computeAxle(unit, axle){
-  const rows = axle.positions.map(p => ({pos:p.pos, lado:p.lado, m:computeTire(unit.tires[p.pos])}));
+function partitionByFreshness(rows, now = new Date(), maxAgeDays = RENDIMIENTO_FRESHNESS_DAYS){
+  const source = Array.isArray(rows) ? rows : [];
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const fresh = [], stale = [], future = [];
+  for(const row of source){
+    const raw = row?.lastInspectionOn;
+    const inspected = typeof raw === "string" ? /^\d{4}-\d{2}-\d{2}/.exec(raw)?.[0] : null;
+    const inspectedUtc = inspected ? Date.parse(`${inspected}T00:00:00Z`) : NaN;
+    if(!Number.isFinite(inspectedUtc)){
+      stale.push(row); // sin inspección (o fecha ilegible) se trata explícitamente como rancio
+      continue;
+    }
+    const ageDays = Math.floor((todayUtc - inspectedUtc) / 86400000);
+    if(ageDays < 0){
+      future.push(row); // anomalía de carga: no rompe ni se descarta silenciosamente
+      fresh.push(row);
+    }else if(ageDays > maxAgeDays){
+      stale.push(row);
+    }else{
+      fresh.push(row);
+    }
+  }
+  return { fresh, stale, future, total: source.length, maxAgeDays };
+}
+
+function computeGroup(tires){
+  const source = Array.isArray(tires) ? tires : [];
+  const rows = source.map(tire => ({tire, m:computeTire(tire)}));
   const valids = rows.filter(r => r.m.valid);
 
-  let avgKmMm = null, avgPct = null, avgKmProyectado = null, totalKmAcumulado = null;
-  let bestPos = null, worstPos = null;
+  let avgKmMm = null, avgPct = null, avgKmProyectado = null, totalKmAcumulado = null, avgCostoKm = null;
+  let best = null, worst = null;
   if(valids.length >= 1){
     avgKmMm          = mean(valids.map(r=>r.m.kmMm));
     avgPct           = mean(valids.map(r=>r.m.pctConsumo));
     avgKmProyectado  = mean(valids.map(r=>r.m.kmProyectado));
     totalKmAcumulado = valids.reduce((s,r)=>s+r.m.kmAcumulado,0);
-    bestPos  = valids.reduce((a,b)=> b.m.kmMm > a.m.kmMm ? b : a).pos;
-    worstPos = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).pos;
+    best  = valids.reduce((a,b)=> b.m.kmMm > a.m.kmMm ? b : a).tire;
+    worst = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).tire;
+    // Un neumático sin costo fuente no vale 0 soles: se excluye del promedio,
+    // no se cuenta como costoKm:0 (F10).
+    const withCost = valids.filter(r => r.tire && r.tire.costo != null);
+    avgCostoKm = withCost.length ? mean(withCost.map(r=>r.m.costoKm)) : null;
   }
 
-  // Balance Izq/Der — promedio de Km/mm por lado (según "lado" del catálogo).
-  const izq = valids.filter(r => r.lado === "Izq");
-  const der = valids.filter(r => r.lado === "Der");
+  return {
+    total: source.length, valid: valids.length, excluded: source.length - valids.length,
+    rows, valids,
+    avgKmMm, avgPct, avgKmProyectado, totalKmAcumulado, avgCostoKm,
+    best, worst,
+  };
+}
+
+function computeAxle(unit, axle){
+  const tires = axle.positions.map(p => Object.assign({}, unit.tires[p.pos], {pos:p.pos, lado:p.lado}));
+  const group = computeGroup(tires);
+
+  // Balance Izq/Der — propio del eje, no migra a computeGroup (F10/CONTRATOS_DATOS.md §4):
+  // sobre un conjunto arbitrario ("todos los Michelin de la flota") no significa nada.
+  const izq = group.valids.filter(r => r.tire.lado === "Izq");
+  const der = group.valids.filter(r => r.tire.lado === "Der");
   let lr = null;
   if(izq.length && der.length){
     const izqAvg = mean(izq.map(r=>r.m.kmMm));
@@ -555,9 +688,13 @@ function computeAxle(unit, axle){
   }
 
   return {
-    rows, valids,
-    avgKmMm, avgPct, avgKmProyectado, totalKmAcumulado,
-    bestPos, worstPos, lr,
+    rows: group.rows.map(r => ({pos:r.tire.pos, lado:r.tire.lado, m:r.m})),
+    valids: group.valids.map(r => ({pos:r.tire.pos, lado:r.tire.lado, m:r.m})),
+    avgKmMm: group.avgKmMm, avgPct: group.avgPct, avgKmProyectado: group.avgKmProyectado,
+    totalKmAcumulado: group.totalKmAcumulado,
+    bestPos: group.best ? group.best.pos : null,
+    worstPos: group.worst ? group.worst.pos : null,
+    lr,
   };
 }
 
@@ -603,14 +740,127 @@ function visiblePositions(){
 }
 
 /* =========================================================================
-   RENDER
+   RENDER — vista de resultados (agregado + lista, task_05)
    ========================================================================= */
-function renderUnitOptions(){
-  const sel = document.getElementById("unitSelect");
-  sel.innerHTML = UNITS.length
-    ? UNITS.map(u => `<option value="${u.id}">${u.label}</option>`).join("")
-    : `<option value="">Sin datos Excel</option>`;
-  sel.value = unitId || "";
+let currentResultTires = []; // última lista filtrada renderizada, para abrir detalle por índice
+
+function excludedNote(group, freshness){
+  const total = freshness?.total ?? group.total;
+  const excluded = group.excluded;
+  const stale = freshness?.stale?.length ?? 0;
+  const future = freshness?.future?.length ?? 0;
+  if(!total) return "";
+  const cls = excluded > 0 || stale > 0 ? "excluded-note has-excluded" : "excluded-note";
+  const detail = excluded > 0
+    ? ` · <b class="excl num">${excluded}</b> excluido${excluded===1?"":"s"} por datos insuficientes`
+    : " · todos con datos suficientes";
+  const staleDetail = stale > 0
+    ? ` · <b class="excl num">${stale}</b> excluido${stale===1?"":"s"} por inspección de más de ${freshness.maxAgeDays} días o sin fecha`
+    : ` · ninguno excluido por antigüedad`;
+  const futureDetail = future > 0
+    ? ` · <b class="excl num">${future}</b> con fecha futura para revisar`
+    : "";
+  return `<div class="${cls}"><b class="num">${group.valid}</b> de <b class="num">${total}</b> neumáticos aportan al promedio${detail}${staleDetail}${futureDetail}.</div>`;
+}
+
+function aggregateKpis(group){
+  if(group.avgKmMm == null){
+    return `<div class="note">Sin datos suficientes en este conjunto para calcular promedios.</div>`;
+  }
+  return `
+    <div class="avg-kpis">
+      <div class="avg-stat">
+        <div class="a-label">Km Acumulado</div>
+        <div class="a-value num">${fmtKm(group.totalKmAcumulado)}<span class="a-unit">km</span></div>
+        <div class="a-sub">Total del conjunto</div>
+      </div>
+      <div class="avg-stat">
+        <div class="a-label">Km Proyectado promedio</div>
+        <div class="a-value num">${fmtKm(group.avgKmProyectado)}<span class="a-unit">km</span></div>
+        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
+      </div>
+      <div class="avg-stat">
+        <div class="a-label">Km/mm promedio</div>
+        <div class="a-value num">${fmtKmMm(group.avgKmMm)}<span class="a-unit">km/mm</span></div>
+        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
+      </div>
+      <div class="avg-stat">
+        <div class="a-label">% Consumo promedio</div>
+        <div class="a-value num">${fmtPct(group.avgPct)}<span class="a-unit">%</span></div>
+        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
+      </div>
+      <div class="avg-stat">
+        <div class="a-label">Costo/Km promedio</div>
+        <div class="a-value">${group.avgCostoKm != null ? `<span class="num">${fmtCost(group.avgCostoKm)}</span>` : `<span class="a-sub" style="margin-top:0">Sin costo fuente</span>`}</div>
+        <div class="a-sub">${group.avgCostoKm != null ? "Solo neumáticos con costo registrado" : "Ningún neumático del conjunto tiene costo cargado"}</div>
+      </div>
+    </div>`;
+}
+
+function resultRow(tire, index){
+  const m = computeTire(tire);
+  const identity = tire.casingCode || "SIN CÓDIGO";
+  const sub = [tire.plate, tire.pos, tire.axleName].filter(Boolean).join(" · ");
+  const model = [tire.brand_name, tire.model_name].filter(Boolean).join(" ") || tire.size_name || "—";
+  const metric = m.valid
+    ? `<span class="result-metric num">${fmtKmMm(m.kmMm)}<span class="a-unit"> km/mm</span></span>`
+    : `<span class="result-metric empty">Sin datos suficientes</span>`;
+  return `
+    <button class="result-row" type="button" onclick="openResultRow(${index})"
+            aria-label="Ver detalle de ${identity}, unidad ${tire.plate}, posición ${tire.pos}">
+      <span class="result-identity">
+        <span class="result-code num">${identity}</span>
+        <span class="result-sub">${sub}</span>
+      </span>
+      ${metric}
+      <span class="result-model">${model}</span>
+    </button>`;
+}
+
+function renderResults(tires, chips, freshness){
+  currentResultTires = tires;
+  const aggMount = document.getElementById("aggregateMount");
+  const listMount = document.getElementById("resultsListMount");
+
+  if(!tires.length){
+    const group = computeGroup([]);
+    aggMount.innerHTML = excludedNote(group, freshness);
+    const allStale = freshness?.total > 0 && freshness.stale.length === freshness.total;
+    listMount.innerHTML = `<div class="note">${allStale
+      ? `Todos los datos del conjunto superan ${freshness.maxAgeDays} días o no tienen fecha de inspección. Puedes incluirlos con el chip superior.`
+      : (chips && chips.length)
+        ? "Ningún neumático coincide con estos filtros."
+        : "No hay neumáticos disponibles para esta empresa."}</div>`;
+    return;
+  }
+
+  const group = computeGroup(tires);
+  aggMount.innerHTML = excludedNote(group, freshness) + aggregateKpis(group);
+  listMount.innerHTML = tires.map((t, i) => resultRow(t, i)).join("");
+}
+
+function openResultRow(index){
+  const tire = currentResultTires[index];
+  if(tire) openDetail(tire);
+}
+
+/* =========================================================================
+   RENDER — detalle por eje/posición (se abre desde una fila de resultados)
+   ========================================================================= */
+function openDetail(tire){
+  unitId = tire.unitId;
+  axleKey = tire.axleKey;
+  selectedPos = tire.pos;
+  document.getElementById("listView").hidden = true;
+  document.getElementById("detailView").hidden = false;
+  renderAll();
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById("detailView").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+}
+
+function closeDetail(){
+  document.getElementById("detailView").hidden = true;
+  document.getElementById("listView").hidden = false;
 }
 
 function renderAxleTabs(){
@@ -947,41 +1197,29 @@ function renderSummary(){
   });
 }
 
+/* Renderiza SOLO el detalle Eje→Posición de la unidad actual (unitId/axleKey/
+   selectedPos). Se llama desde openDetail()/selectAxle()/selectPos(); siempre
+   con UNITS ya cargado — la vista de "sin datos" vive en renderNoData(), del
+   lado de la lista de resultados, no acá. */
 function renderAll(){
-  if(!UNITS.length){
-    renderNoData("Cargando datos del Excel desde Supabase...");
-    return;
-  }
-  document.getElementById("axleSelectorBlock").style.display = "";
-  document.getElementById("posSelectorBlock").style.display = "";
   renderAxleTabs();
   renderPills();
   renderCard();
   renderSummary();
 }
 
+/* "Sin datos" es un estado de la VISTA DE RESULTADOS (lista), no del detalle:
+   el detalle ni siquiera es alcanzable sin datos (no hay fila que abrir). */
 function renderNoData(message){
-  renderUnitOptions();
-  document.getElementById("axleSelectorBlock").style.display = "none";
-  document.getElementById("posSelectorBlock").style.display = "none";
-  document.getElementById("axleTabs").innerHTML = "";
-  document.getElementById("posPills").innerHTML = "";
-  document.getElementById("summaryMount").innerHTML =
-    `<section><div class="empty">${message}</div></section>`;
-  document.getElementById("cardMount").innerHTML = "";
+  document.getElementById("detailView").hidden = true;
+  document.getElementById("listView").hidden = false;
+  document.getElementById("aggregateMount").innerHTML = "";
+  document.getElementById("resultsListMount").innerHTML = `<div class="note">${message}</div>`;
 }
 
 /* =========================================================================
    INTERACCIÓN
    ========================================================================= */
-function initSelectionForUnit(){
-  const u = currentUnit();
-  if(!u){ axleKey = null; selectedPos = null; return; }
-  // primer eje + primera posición del eje
-  axleKey = u.axles[0].key;
-  selectedPos = currentAxle().positions[0].pos;
-}
-
 function selectAxle(key){
   if(axleKey === key) return;
   axleKey = key;
@@ -1001,14 +1239,144 @@ function goToHistory(serie){
   location.href = `historial-neumatico.html?serie=${encodeURIComponent(serie)}&from=rendimiento`;
 }
 
+/* Puente hacia el script de módulo de abajo (filtros facetados, task_05):
+   `let TIRES`/`renderResults` viven en el scope de ESTE script clásico — un
+   script type="module" no los ve por closure, así que se exponen acá
+   explícitamente, mismo patrón que ya usa el buscador con
+   `window.onRenovaSupabaseReady`. */
+window.RenovaRendimiento = {
+  getTires: () => TIRES,
+  renderResults,
+  partitionByFreshness,
+  onDataLoaded: null,
+};
+
 /* init — solo datos reales desde Supabase/Excel. */
-document.getElementById("unitSelect").addEventListener("change", e => {
-  unitId = e.target.value; initSelectionForUnit(); renderAll();
-});
 renderNoData("Cargando datos del Excel desde Supabase...");
 onRenovaSupabaseReady(async () => {
   await RenovaSupabase.requireAuth();
   loadSupabaseData();
+});
+</script>
+<script type="module">
+import { createFinderController } from "./buscador/finder-controller.js";
+import { createFilterBar } from "./shared/filter-bar.js";
+import { applyFilters, distinctValues } from "./shared/filter-facets.js";
+import { distinctInspectionMonthValues, matchInspectionMonthFacet } from "./shared/inspection-date-facets.js";
+
+const finderTrigger = document.querySelector("[data-finder-trigger]");
+const finderReady = new Promise((resolve) => {
+  window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+});
+const openFinder = async () => (await finderReady).open(finderTrigger);
+finderTrigger.addEventListener("click", () => void openFinder());
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
+  if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  event.preventDefault();
+  void openFinder();
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Filtros facetados de Rendimiento (F3, tasks_filtros_facetados/task_05).
+   Facetas congeladas en CONTRATOS_DATOS.md §2: unidad, marca, modelo,
+   medida, condición, diseño de reencauche, eje. "Configuración" quedó
+   retirada del alcance (columna no expuesta, sin migración a cargo de
+   ninguna tarea de esta fase). "unidad" reemplaza al selector que había
+   antes (D-BLOQ-2, resuelta): un chip `unidad: PLACA` reduce el conjunto a
+   esa unidad en vez de un <select> dedicado.
+   ───────────────────────────────────────────────────────────────────────── */
+const RENDIMIENTO_FACETS = [
+  { key: "mes",       label: "Mes de última inspección", values: (r) => distinctInspectionMonthValues(r), match: (row, v) => matchInspectionMonthFacet(row, v) },
+  { key: "unidad",    label: "Unidad",              values: (r) => distinctValues(r, "plate"),          match: (row, v) => row.plate === v },
+  { key: "marca",     label: "Marca",                values: (r) => distinctValues(r, "brand_name"),     match: (row, v) => row.brand_name === v },
+  { key: "modelo",    label: "Modelo",               values: (r) => distinctValues(r, "model_name"),     match: (row, v) => row.model_name === v },
+  { key: "medida",    label: "Medida",               values: (r) => distinctValues(r, "size_name"),      match: (row, v) => row.size_name === v },
+  { key: "condicion", label: "Condición",            values: (r) => distinctValues(r, "condition"),      match: (row, v) => row.condition === v },
+  { key: "reencauche",label: "Diseño de reencauche", values: (r) => distinctValues(r, "retread_design"), match: (row, v) => row.retread_design === v },
+  { key: "eje",       label: "Eje",                  values: (r) => distinctValues(r, "axle_type"),      match: (row, v) => row.axle_type === v },
+];
+const RENDIMIENTO_FACET_BY_KEY = new Map(RENDIMIENTO_FACETS.map((facet) => [facet.key, facet]));
+
+function chipsFromLocation(){
+  const params = new URLSearchParams(location.search);
+  const chips = [];
+  for(const facet of RENDIMIENTO_FACETS){
+    for(const value of params.getAll(facet.key)){
+      if(value) chips.push({ facet: facet.key, value, label: `${facet.label}: ${value}` });
+    }
+  }
+  return chips;
+}
+
+function urlForState(chips, includeStale){
+  const url = new URL(location.href);
+  url.search = "";
+  for(const chip of chips){
+    if(RENDIMIENTO_FACET_BY_KEY.has(chip.facet)) url.searchParams.append(chip.facet, chip.value);
+  }
+  if(includeStale) url.searchParams.set("rancios", "incluir");
+  return url;
+}
+
+let rendimientoChips = chipsFromLocation();
+let includeStale = new URLSearchParams(location.search).get("rancios") === "incluir"
+  || rendimientoChips.some((chip) => chip.facet === "mes");
+const freshnessToggle = document.getElementById("freshnessToggle");
+const freshnessHelp = document.getElementById("freshnessHelp");
+
+function currentTires(){
+  return window.RenovaRendimiento?.getTires?.() ?? [];
+}
+
+function refreshResults(){
+  const faceted = applyFilters(currentTires(), rendimientoChips, RENDIMIENTO_FACETS);
+  const partition = window.RenovaRendimiento?.partitionByFreshness?.(faceted)
+    ?? { fresh: faceted, stale: [], future: [], total: faceted.length, maxAgeDays: 30 };
+  const visible = includeStale ? faceted : partition.fresh;
+  freshnessToggle.setAttribute("aria-pressed", String(includeStale));
+  freshnessToggle.textContent = includeStale
+    ? `Incluyendo ${partition.stale.length} dato${partition.stale.length===1?"":"s"} antiguo${partition.stale.length===1?"":"s"} ×`
+    : `Incluir ${partition.stale.length} dato${partition.stale.length===1?"":"s"} antiguo${partition.stale.length===1?"":"s"}`;
+  freshnessHelp.textContent = includeStale
+    ? `Se incluyen inspecciones antiguas; esto no calcula consumo por período.`
+    : `Promedios basados en inspecciones de los últimos ${partition.maxAgeDays} días.`;
+  const renderedFreshness = includeStale ? { ...partition, stale: [] } : partition;
+  window.RenovaRendimiento?.renderResults?.(visible, rendimientoChips, renderedFreshness);
+}
+
+freshnessToggle.addEventListener("click", () => {
+  includeStale = !includeStale;
+  history.pushState({ rendimientoChips, includeStale }, "", urlForState(rendimientoChips, includeStale));
+  refreshResults();
+});
+
+const filterBar = createFilterBar({
+  mount: document.getElementById("filterMount"),
+  facets: RENDIMIENTO_FACETS,
+  rows: currentTires(),
+  chips: rendimientoChips,
+  onChange(nextChips){
+    rendimientoChips = nextChips;
+    // Un mes explícito debe poder consultar inspecciones antiguas;
+    // el corte de 30 días sigue siendo el comportamiento sin filtro temporal.
+    if (nextChips.some((chip) => chip.facet === "mes")) includeStale = true;
+    history.pushState({ rendimientoChips, includeStale }, "", urlForState(rendimientoChips, includeStale));
+    refreshResults();
+  },
+});
+
+window.RenovaRendimiento.onDataLoaded = () => {
+  filterBar.setRows(currentTires());
+  refreshResults();
+};
+
+window.addEventListener("popstate", () => {
+  rendimientoChips = chipsFromLocation();
+  includeStale = new URLSearchParams(location.search).get("rancios") === "incluir"
+    || rendimientoChips.some((chip) => chip.facet === "mes");
+  filterBar.setChips(rendimientoChips);
+  refreshResults();
 });
 </script>
 </body>

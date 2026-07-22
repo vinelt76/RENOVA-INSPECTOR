@@ -5,6 +5,8 @@ app/.vite/
 app/coverage/
 app/.env
 app/.env.local
+app movimientos/.env
+app movimientos/.env.local
 deploy-static/
 
 # Capacitor / iOS (proyecto nativo generado)

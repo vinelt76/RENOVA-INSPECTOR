@@ -1,4 +1,5 @@
 import { createFocusTrap } from "./a11y.js";
+import { filterRowsBySearchTokens } from "../shared/search.js";
 
 const SEARCH_FIELDS = [
   "casing_code",
@@ -11,25 +12,8 @@ const SEARCH_FIELDS = [
   "cycle_number",
 ];
 
-function normalizeSearch(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es-PE")
-    .trim();
-}
-
 export function filterInventoryRows(inventory, query = "") {
-  if (!Array.isArray(inventory)) return [];
-  const tokens = normalizeSearch(query).split(/\s+/).filter(Boolean);
-  if (!tokens.length) return [...inventory];
-
-  return inventory.filter((row) => {
-    const searchable = normalizeSearch(
-      SEARCH_FIELDS.map((field) => row?.[field]).filter((value) => value != null).join(" "),
-    );
-    return tokens.every((token) => searchable.includes(token));
-  });
+  return filterRowsBySearchTokens(inventory, query, SEARCH_FIELDS);
 }
 
 export function mountedLifeCycleIds(draft) {

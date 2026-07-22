@@ -23,6 +23,24 @@ exploración conceptual.
 | D13 | El aprendizaje por frecency afecta **el orden, jamás la existencia** de un resultado. | RESUELTA por análisis de UX | Ocultar por poco uso rompe la confianza; reordenar sin histéresis destruye la memoria muscular. |
 | D14 | Una migración nueva (`v_search_index`), revisada por `sync-migration-reviewer` y aplicada solo con autorización explícita. | RESUELTA por el orquestador | A diferencia de la fase de Inventario, aquí `task_02` y `task_03` **no** son N/A. |
 
+## Decisiones posteriores a la revisión humana de `task_07` (2026-07-19)
+
+El humano revisó el resultado de `task_07`, que era fiel al plan, y pidió cambios. Se registran acá
+en vez de absorberlos dentro de una tarea ya `APROBADO`.
+
+| ID | Decisión | Estado | Consecuencia |
+|---|---|---|---|
+| D15 | El overlay se presenta **centrado tipo Spotlight**, no como panel lateral. | RESUELTA por el humano | El plan nunca fijó posición; no deroga ninguna decisión previa. Cosmético. |
+| D16 | **Los prefijos de alcance `uni:` y `neu:` son explícitos y NO contradicen D8.** | ACLARACIÓN, no derogación | D8 prohíbe *parsear prosa a filtros de atributo en silencio*. Un prefijo tecleado que filtra por `kind` —columna cerrada de dos valores— es visible, inequívoco y no puede fallar en silencio. `task_06` §5 ya los preveía como alias. |
+| D17 | Las facetas enrutan a **una única pantalla de Neumáticos filtrada por URL**, no a una pantalla por faceta. | RESUELTA por el humano | Confirma D2/D3 en lugar de contradecirlas: un objeto, N facetas, una superficie. Facetas: marca, modelo, medida, condición, diseño de reencauche, estado. |
+| D18 | `v_search_index` se **extiende con columnas de faceta**. | RESUELTA por consecuencia de D17 | La vista se diseñó para buscar, no para filtrar. Reabre la migración; cambio aditivo por `create or replace view`. Requiere medir el impacto en el payload. |
+| D19 | La frecency **debe persistirse**. | DEFECTO detectado, no alcance nuevo | `finder-controller.js:93` la reinicia en cada carga; como la web son 7 documentos que recargan enteros, muere en cada navegación y «recientes» muestra objetos arbitrarios. Pasó los reviews porque las pruebas cubren las funciones puras y el smoke usó mocks: el fallo está en el cableado. |
+
+**Nota de proceso.** La ejecución de `task_07` afirmó que estos cambios «reemplazan la restricción
+anterior de no interpretar prefijos de búsqueda». Esa restricción **nunca existió**. Inventar una
+decisión para derogarla ensucia el registro más que derogar una real. D8 sigue vigente con su
+alcance original: sin parsing silencioso de prosa a filtros de atributo.
+
 ## Limitación conocida y aceptada
 
 Un casco con `code` nulo **no tiene página de historial alcanzable**: `historial-neumatico.html`

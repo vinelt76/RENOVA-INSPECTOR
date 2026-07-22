@@ -84,7 +84,7 @@ describe("summary-confirm helpers", () => {
     };
 
     expect(installationDateWarning("2026-07-10", remoteState, draft)).toBe(
-      "Revisá la fecha: es anterior a la instalación visible de P1, P3.",
+      "Revisa la fecha: es anterior a la instalación visible de P1, P3.",
     );
     expect(installationDateWarning("2026-07-13", remoteState, draft)).toBeNull();
   });

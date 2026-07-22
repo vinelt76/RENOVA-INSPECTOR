@@ -1,8 +1,8 @@
 ---
 title: "Decisiones e historia"
-updated: 2026-07-14
+updated: 2026-07-21
 status: vigente
-sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md]
+sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md, tasks_buscador_global/DECISIONES.md, tasks_buscador_global/REVISION_FINAL.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/DECISIONES.md, tasks_servicios/REVISION_FINAL.md]
 ---
 
 # Decisiones e historia
@@ -34,6 +34,23 @@ smokes reales del modo taller.
 - ADR 0002: golden tests de paridad.
 - ADR 0003: sesión offline; la dirección sigue vigente, pero la app móvil todavía no completa Auth.
 - ADR 0004: versionado de catálogo; protocolo deseado, implementación parcial.
+- ADR 0005: buscador global — primer ADR de UI del proyecto. Dos objetos navegables (Unidad,
+  Neumático), índice `v_search_index` cacheado en cliente por sesión, sin parsing silencioso de
+  prosa a filtros, el buscador enruta y no ejecuta. Descarta la Command Palette como interacción
+  principal. Detalle completo en `tasks_buscador_global/DECISIONES.md` y
+  `tasks_buscador_global/REVISION_FINAL.md`.
+- ADR 0006: filtros facetados — el buscador enruta y el filtro reduce; Rendimiento agrega sobre el
+  conjunto filtrado e Inspecciones lista neumáticos; OR dentro/AND entre facetas; frescura distinta
+  de ventana temporal y exclusiones visibles. La ventana quedó sin entregar por cobertura real
+  insuficiente. Detalle en `tasks_filtros_facetados/REVISION_FINAL.md`.
+- ADR 0007: definición de servicio ejecutado — **un servicio es una salida** (`direction='exit'`),
+  no una orden ni un renglón, así que una rotación cuenta una vez y no dos. `installation` es tipo
+  sintético de la vista porque la constraint impide llevarlo al enum. El pareo de rotación es
+  estructural (`sequence - 1` sobre `request_items`), nunca textual, con `rotation_pairing` visible
+  como contrato de honestidad cuando la atribución degrada. Servicios **no** es un objeto navegable:
+  aplica el límite de ADR-0005 y enruta a Unidad y Neumático. Fija además la convención de zona
+  horaria del proyecto (`America/Lima`). Limitación aceptada: los servicios no están reconciliados
+  contra cascos. Detalle en `tasks_servicios/DECISIONES.md` y `tasks_servicios/REVISION_FINAL.md`.
 
 ## Principio para futuras decisiones
 

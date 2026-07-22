@@ -423,7 +423,7 @@ export function createMovementsUI({
     }
     swapOrigin = Number(row.position_number);
     setFeedback(
-      `Origen P${swapOrigin} listo. Elegí otra posición ocupada en el diagrama o dock.`,
+      `Origen P${swapOrigin} listo. Elige otra posición ocupada en el diagrama o panel.`,
       "info",
     );
     render(getState());
@@ -461,7 +461,7 @@ export function createMovementsUI({
         row,
         inventory: state.inventory,
       });
-      setFeedback("Elegí un neumático del inventario para completar el montaje.", "info");
+      setFeedback("Elige un neumático del inventario para completar el montaje.", "info");
     }
   }
 
@@ -476,7 +476,7 @@ export function createMovementsUI({
     }
 
     if (swapOrigin != null) {
-      copy.textContent = `INTERCAMBIO: P${swapOrigin} ES EL ORIGEN. SELECCIONÁ OTRO NEUMÁTICO OCUPADO.`;
+      copy.textContent = `INTERCAMBIO: P${swapOrigin} ES EL ORIGEN. SELECCIONA OTRO NEUMÁTICO OCUPADO.`;
       actions.append(createButton(documentObject, "cancel-swap", "Cancelar intercambio"));
       return;
     }
