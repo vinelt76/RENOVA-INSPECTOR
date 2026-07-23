@@ -60,6 +60,7 @@ body { margin: 0; overflow-x: hidden; }
 .services-banner {
   background: color-mix(in srgb, var(--signal-yellow) 9%, var(--field-dark));
   border: 2px solid var(--signal-yellow);
+  border-radius: 12px;
   color: var(--signal-yellow);
   font-size: 11px;
   line-height: 1.55;
@@ -168,6 +169,7 @@ body { margin: 0; overflow-x: hidden; }
 .services-status {
   align-items: center;
   border: 2px dashed var(--border-dark);
+  border-radius: 12px;
   color: var(--label-blue);
   display: flex;
   flex-wrap: wrap;
@@ -184,6 +186,7 @@ body { margin: 0; overflow-x: hidden; }
 .services-retry {
   background: var(--field-dark);
   border: 2px solid var(--border-dark);
+  border-radius: 8px;
   color: var(--value-ice);
   cursor: pointer;
   font: 800 10px var(--mono);
@@ -197,6 +200,7 @@ body { margin: 0; overflow-x: hidden; }
 .services-row {
   background: var(--field-dark);
   border: 2px solid var(--border-dark);
+  border-radius: 14px;
   display: grid;
   gap: 14px;
   grid-template-columns: minmax(205px, .8fr) minmax(190px, .7fr) minmax(280px, 1.5fr);
@@ -215,6 +219,7 @@ body { margin: 0; overflow-x: hidden; }
 }
 
 .services-type {
+  border-radius: 4px;
   color: var(--screen-dark);
   display: inline-flex;
   font-size: 9px;
@@ -225,7 +230,8 @@ body { margin: 0; overflow-x: hidden; }
 }
 .services-position { font-size: 14px; white-space: nowrap; }
 .services-tag {
-  border: 1px solid var(--label-blue);
+  border: 2px solid var(--label-blue);
+  border-radius: 4px;
   color: var(--label-blue);
   font-size: 8px;
   letter-spacing: .08em;
@@ -259,7 +265,7 @@ body { margin: 0; overflow-x: hidden; }
 /* Lo que entra en la posición, con su origen cuando se pudo derivar. */
 .services-row-facts span.services-entry {
   color: var(--value-ice);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .services-footer {
