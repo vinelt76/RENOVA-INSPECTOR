@@ -4,7 +4,7 @@ import { normalizeSearchText } from "./search.js";
  * Un solo componente de filtro (F1), parametrizado por pantalla con `facets`
  * (CONTRATOS_DATOS.md §1.2). Combobox + listbox como el buscador global
  * (`WEB/buscador/finder-controller.js`): mismo patrón de teclado y ARIA, sin
- * copiarlo. Chips con el mismo aspecto/interacción que `WEB/neumaticos/`
+ * copiarlo. Chips reutilizables con selección y remoción accesibles.
  * (`tires-filter-chip`: botón "Etiqueta: valor ×", `aria-label` de quitar).
  *
  * Contrato: CONTRATOS_DATOS.md §1 y task_03.
@@ -254,10 +254,18 @@ export function createFilterBar({ mount, facets = [], rows = [], chips = [], onC
     closeListbox();
   }
 
+  function onGlobalKeydown(event) {
+    if (event.code !== "Space" || !event.ctrlKey || event.altKey || event.metaKey) return;
+    event.preventDefault();
+    input.focus();
+    openListbox();
+  }
+
   input.addEventListener("input", onInput);
   input.addEventListener("focus", onFocus);
   input.addEventListener("keydown", onKeydown);
   root.addEventListener("focusout", onFocusOut);
+  documentObject.addEventListener?.("keydown", onGlobalKeydown);
 
   renderChips();
 
@@ -282,6 +290,7 @@ export function createFilterBar({ mount, facets = [], rows = [], chips = [], onC
       input.removeEventListener("focus", onFocus);
       input.removeEventListener("keydown", onKeydown);
       root.removeEventListener("focusout", onFocusOut);
+      documentObject.removeEventListener?.("keydown", onGlobalKeydown);
       mount.replaceChildren();
     },
   };

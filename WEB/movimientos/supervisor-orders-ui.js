@@ -1,4 +1,14 @@
-import { MOVEMENT_REASONS } from "./supervisor-order-model.js";
+import { groupDraftByPosition, MOVEMENT_REASONS } from "./supervisor-order-model.js";
+import { filterRowsBySearchTokens } from "../shared/search.js";
+
+const INVENTORY_SEARCH_FIELDS = [
+  "casing_code",
+  "brand_name",
+  "model_name",
+  "size_name",
+  "condition",
+  "retread_design",
+];
 
 const STATUS_LABELS = Object.freeze({
   issued: "EMITIDA",
@@ -15,8 +25,32 @@ function element(documentObject, tag, className, text) {
 }
 
 function itemLabel(item) {
-  if (item.direction === "entry") return `INSTALAR · P${item.position}`;
+  if (item.direction === "entry") {
+    return `INSTALAR ${item.casing_code || "DESDE INVENTARIO"} · P${item.position}`;
+  }
   return `${MOVEMENT_REASONS[item.reason] ?? "SALIDA"} · P${item.position}`;
+}
+
+function inventoryIdentity(item) {
+  return item?.casing_code || "CÓDIGO NO VISIBLE";
+}
+
+function inventoryDetail(item) {
+  return [item?.brand_name, item?.model_name, item?.size_name, item?.condition]
+    .filter(Boolean)
+    .join(" · ") || "SIN DETALLE DE CATÁLOGO";
+}
+
+export function inventoryOptionsForService(inventory, draft, query = "") {
+  const selected = new Set(
+    (draft?.items ?? [])
+      .filter((item) => item?.direction === "entry" && item?.life_cycle_id)
+      .map((item) => item.life_cycle_id),
+  );
+  return filterRowsBySearchTokens(inventory ?? [], query, INVENTORY_SEARCH_FIELDS).map((item) => ({
+    item,
+    disabled: selected.has(item.life_cycle_id),
+  }));
 }
 
 function formatDate(value) {
@@ -38,10 +72,9 @@ export function createSupervisorOrdersUI({
   details,
   workspace,
   getState,
-  onAddExit,
-  onAddEntry,
+  onAddServiceFromInventory,
   onAddRotation,
-  onRemoveItem,
+  onRemovePosition,
   onDraftHeader,
   onEmit,
   onReload,
@@ -141,49 +174,143 @@ export function createSupervisorOrdersUI({
     notes.maxLength = 240;
     notes.placeholder = "Nota para el operario (opcional)";
     const target = positionOptions(state, state.selected);
-    target.hidden = reason.value !== "rotation";
-    reason.addEventListener("change", () => {
-      target.hidden = reason.value !== "rotation";
+    const rotate = element(documentObject, "button", "btn-accion tc-order-rotate", "AGREGAR ROTACIÓN");
+    rotate.type = "button";
+    rotate.addEventListener("click", () => {
+      const result = onAddRotation(state.selected, target.value, notes.value);
+      setFeedback(
+        result?.ok ? "Rotación agregada al borrador." : result?.errors?.join(" "),
+        result?.ok ? "success" : "error",
+      );
     });
 
-    const buttons = element(documentObject, "div", "tc-order-action-buttons");
-    const exit = element(documentObject, "button", "btn-accion", "ORDENAR SALIDA");
-    exit.type = "button";
-    const entry = element(documentObject, "button", "btn-accion", "ORDENAR INSTALACIÓN");
-    entry.type = "button";
-    exit.addEventListener("click", () => {
-      const result = reason.value === "rotation"
-        ? onAddRotation(state.selected, target.value, notes.value)
-        : onAddExit(state.selected, reason.value, notes.value);
-      setFeedback(result?.ok ? "Indicación agregada al borrador." : result?.errors?.join(" "), result?.ok ? "success" : "error");
-    });
-    entry.addEventListener("click", () => {
-      const result = onAddEntry(state.selected, notes.value);
-      setFeedback(result?.ok ? "Instalación agregada al borrador." : result?.errors?.join(" "), result?.ok ? "success" : "error");
-    });
-    buttons.append(exit, entry);
-    actions.append(title, reason, target, notes, buttons);
+    const inventory = element(documentObject, "section", "tc-order-inventory");
+    const inventoryTitle = element(documentObject, "div", "tc-action-title", "NEUMÁTICO QUE ENTRA DESDE INVENTARIO");
+    const inventoryHelp = element(
+      documentObject,
+      "p",
+      "tc-order-inventory-help",
+      "Haz clic en la llanta que reemplazará a la actual en esta misma posición.",
+    );
+    const search = element(documentObject, "input", "tc-order-input");
+    search.type = "search";
+    search.placeholder = "Buscar código, marca, modelo o medida";
+    search.setAttribute("aria-label", "Buscar neumático disponible en inventario");
+    const inventoryList = element(documentObject, "div", "tc-order-inventory-list");
+    inventoryList.setAttribute("aria-live", "polite");
+    inventory.append(inventoryTitle, inventoryHelp, search, inventoryList);
+
+    function renderInventory() {
+      inventoryList.replaceChildren();
+      const options = inventoryOptionsForService(state.inventory, state.draft, search.value);
+      if (!state.inventory?.length) {
+        inventoryList.append(element(documentObject, "p", "tc-order-empty", "No hay llantas disponibles en inventario/retén."));
+        return;
+      }
+      if (!options.length) {
+        inventoryList.append(element(documentObject, "p", "tc-order-empty", "No hay resultados para esta búsqueda."));
+        return;
+      }
+      for (const { item, disabled } of options) {
+        const button = element(documentObject, "button", "tc-order-inventory-item");
+        button.type = "button";
+        button.disabled = disabled;
+        button.dataset.lifeCycleId = item.life_cycle_id;
+        button.setAttribute(
+          "aria-label",
+          `${inventoryIdentity(item)}. ${inventoryDetail(item)}${disabled ? ". Ya elegida en este borrador" : ""}`,
+        );
+        const copy = element(documentObject, "span", "tc-order-inventory-copy");
+        copy.append(
+          element(documentObject, "strong", "", `${inventoryIdentity(item)}${disabled ? " · YA ELEGIDA" : ""}`),
+          element(documentObject, "span", "", inventoryDetail(item)),
+          element(
+            documentObject,
+            "span",
+            "",
+            `RTD ${item.last_rtd_mm ?? "—"} mm · ${item.days_in_inventory ?? "—"} días en inventario`,
+          ),
+        );
+        button.append(copy, element(
+          documentObject,
+          "span",
+          "tc-order-inventory-pick",
+          disabled ? "ELEGIDA" : "ELEGIR",
+        ));
+        button.addEventListener("click", () => {
+          const result = onAddServiceFromInventory(
+            state.selected,
+            reason.value,
+            item,
+            notes.value,
+          );
+          setFeedback(
+            result?.ok
+              ? `${inventoryIdentity(item)} entrará en P${state.selected}.`
+              : result?.errors?.join(" "),
+            result?.ok ? "success" : "error",
+          );
+        });
+        inventoryList.append(button);
+      }
+    }
+
+    function updateFlow() {
+      const rotation = reason.value === "rotation";
+      target.hidden = !rotation;
+      rotate.hidden = !rotation;
+      inventory.hidden = rotation;
+      if (!rotation) renderInventory();
+    }
+
+    reason.addEventListener("change", updateFlow);
+    search.addEventListener("input", renderInventory);
+    actions.append(title, reason, target, notes, rotate, inventory);
+    updateFlow();
   }
 
+  // Una fila por posición atendida, como la planilla: P una sola vez, luego lo que
+  // sale y lo que entra. Quitar retira la posición entera; quitar media dejaría un
+  // borrador que no se puede emitir.
   function renderItems(state) {
     items.replaceChildren();
-    const draftItems = state.draft.items ?? [];
-    if (!draftItems.length) {
+    const groups = groupDraftByPosition(state.draft);
+    if (!groups.length) {
       items.append(element(documentObject, "p", "tc-order-empty", "Selecciona una posición y agrega la instrucción. El operario completará los datos técnicos."));
       return;
     }
-    draftItems.forEach((item, index) => {
+    groups.forEach((group) => {
       const row = element(documentObject, "div", "tc-order-item");
       const copy = element(documentObject, "div");
-      copy.append(
-        element(documentObject, "strong", "", itemLabel(item)),
-        element(documentObject, "span", "", item.notes || "Sin nota adicional"),
-      );
+      copy.append(element(documentObject, "strong", "", `P${group.position}`));
+
+      if (group.exit) {
+        copy.append(element(documentObject, "span", "", `SALE · ${MOVEMENT_REASONS[group.exit.reason] ?? "SALIDA"}`));
+      }
+      if (group.entry) {
+        copy.append(element(
+          documentObject,
+          "span",
+          "",
+          `ENTRA · ${group.entry.casing_code || "ROTACIÓN ENTRE POSICIONES"}`,
+        ));
+      } else if (group.exit?.without_entry) {
+        copy.append(element(documentObject, "span", "tc-order-warn", "ENTRA · SIN REEMPLAZO (declarado)"));
+      } else if (group.exit) {
+        copy.append(element(documentObject, "span", "tc-order-warn", "ENTRA · FALTA INDICAR"));
+      }
+
+      const notes = group.exit?.notes || group.entry?.notes;
+      copy.append(element(documentObject, "span", "", notes || "Sin nota adicional"));
+
+      const buttons = element(documentObject, "div", "tc-order-item-actions");
       const remove = element(documentObject, "button", "tc-order-remove", "QUITAR");
       remove.type = "button";
-      remove.setAttribute("aria-label", `Quitar ${itemLabel(item)}`);
-      remove.addEventListener("click", () => onRemoveItem(index));
-      row.append(copy, remove);
+      remove.setAttribute("aria-label", `Quitar P${group.position}`);
+      remove.addEventListener("click", () => onRemovePosition(group.position));
+      buttons.append(remove);
+
+      row.append(copy, buttons);
       items.append(row);
     });
   }

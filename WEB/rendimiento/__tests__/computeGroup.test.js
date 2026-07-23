@@ -54,6 +54,11 @@ describe("computeTire (sin cambios, verificación de referencia)", () => {
   it("neumático sin desgaste (rtdGastado <= 0) es inválido", () => {
     expect(computeTire(tire({ rtdActual: 16 })).valid).toBe(false);
   });
+
+  it("costo fuente ausente permanece null y nunca se convierte en cero", () => {
+    expect(computeTire(tire({ costo: null })).costoKm).toBeNull();
+    expect(computeTire(tire({ costo: "" })).costoKm).toBeNull();
+  });
 });
 
 describe("computeGroup", () => {

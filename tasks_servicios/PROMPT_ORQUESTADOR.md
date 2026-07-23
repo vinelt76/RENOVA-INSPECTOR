@@ -1,5 +1,12 @@
 # PROMPT ORQUESTADOR — Sección Servicios
 
+> **HISTÓRICO (Fase 1).** Su definición de servicio —«una salida es un servicio», «una
+> rotación se cuenta una sola vez»— quedó **superada el 2026-07-22** por
+> `decisions/0008-servicio-por-posicion-atendida.md`: un servicio es una **posición
+> atendida**, y una rotación entre dos posiciones cuenta 2. Este documento no se reescribe:
+> describe correctamente lo que se decidió entonces, y era correcto dado lo que la app
+> capturaba. Ver `PLAN_PAREO.md`.
+
 > Copia este prompt íntegro en una sesión nueva. El agente debe actuar como orquestador de ejecución
 > de las tareas definidas en esta carpeta, no rediseñar el alcance.
 

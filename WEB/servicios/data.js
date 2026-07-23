@@ -39,6 +39,7 @@ export const SERVICE_COLUMNS = Object.freeze([
   "pair_condition",
   "pair_rtd_min_mm",
   "rotation_pairing",
+  "entry_origin_position",
 ]);
 
 const NUMERIC_COLUMNS = Object.freeze([
@@ -48,6 +49,7 @@ const NUMERIC_COLUMNS = Object.freeze([
   "odometer_km",
   "pair_position_number",
   "pair_rtd_min_mm",
+  "entry_origin_position",
 ]);
 
 function getFetchView(dependency) {

@@ -45,22 +45,6 @@ function statusLabel(status) {
   return String(status ?? "sin estado").replaceAll("_", " ").toUpperCase();
 }
 
-/** Ruta explícita a la lista facetada; jamás interpreta el texto libre del input. */
-export function resolveTireFacetDestination(row) {
-  if (row?.kind !== "casing") return null;
-  const params = new URLSearchParams();
-  for (const [param, column] of [
-    ["marca", "brand_name"],
-    ["medida", "size_name"],
-    ["condicion", "condition"],
-  ]) {
-    const value = String(row?.[column] ?? "").trim();
-    if (value) params.set(param, value);
-  }
-  const query = params.toString();
-  return query ? `neumaticos.html?${query}` : null;
-}
-
 function flattenedRows(groups) {
   return ["unit", "casing", "inspection"].flatMap((kind) => groups[kind]?.rows ?? []);
 }
@@ -205,14 +189,6 @@ export function createFinderController({
     option.addEventListener("click", () => navigate(row));
     group.append(option);
 
-    const tireFacetDestination = resolveTireFacetDestination(row);
-    if (tireFacetDestination) {
-      const facetRoute = createElement(documentObject, "a", "finder-group-hint");
-      facetRoute.href = tireFacetDestination;
-      facetRoute.textContent = "VER LISTA FILTRADA: MARCA · MEDIDA · CONDICIÓN →";
-      facetRoute.setAttribute("aria-label", `Ver neumáticos con las facetas de ${row.label ?? "este casco"}`);
-      group.append(facetRoute);
-    }
   }
 
   function renderRows(rows, { recent = false } = {}) {

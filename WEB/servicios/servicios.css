@@ -40,12 +40,20 @@ body { margin: 0; overflow-x: hidden; }
   margin: 0;
 }
 
-.services-intro > p:last-child {
+.services-intro > p {
   color: var(--label-blue);
   font-size: 12px;
   line-height: 1.65;
   margin: 14px 0 0;
   max-width: 860px;
+}
+
+/* Qué NO cuenta la pantalla. Va más tenue que la definición, pero presente:
+   describir solo lo que sí mide la hace parecer más completa de lo que es. */
+.services-intro > p.services-scope-limits {
+  font-size: 11px;
+  margin-top: 10px;
+  opacity: .82;
 }
 
 .services-filter { margin: 24px 0 18px; }
@@ -246,7 +254,13 @@ body { margin: 0; overflow-x: hidden; }
   text-align: right;
 }
 .services-row-facts span { min-width: 0; overflow-wrap: anywhere; }
-.services-row-facts span:last-child { color: var(--value-ice); }
+.services-row-facts span.services-when { color: var(--value-ice); }
+
+/* Lo que entra en la posición, con su origen cuando se pudo derivar. */
+.services-row-facts span.services-entry {
+  color: var(--value-ice);
+  font-weight: 600;
+}
 
 .services-footer {
   border-top: 2px solid var(--border-dark);

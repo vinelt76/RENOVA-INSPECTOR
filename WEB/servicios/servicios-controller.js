@@ -70,11 +70,27 @@ function formatPeriod(summary) {
   return first === last || !last ? first : `${first} → ${last}`;
 }
 
+// Un servicio es una posición atendida, así que la posición se dice una vez —
+// como en la planilla—. La v1 mostraba `P3 → P7` porque una rotación era un
+// casco reubicándose; ahora la salida y el ingreso son de la misma posición y
+// esa flecha sería siempre `P3 → P3` (ADR-0008).
 function positionLabel(row) {
-  const source = row?.position_number == null ? "P?" : `P${row.position_number}`;
-  if (row?.service_type !== "rotation") return source;
-  if (row?.pair_position_number != null) return `${source} → P${row.pair_position_number}`;
-  return `${source} → ?`;
+  return row?.position_number == null ? "P?" : `P${row.position_number}`;
+}
+
+// Qué entra en esta posición, y de dónde viene cuando se pudo derivar dentro de
+// la orden. `entry_origin_position` nulo significa que vino de afuera —retén,
+// reparación, nuevo— y eso no se infiere: se declara indeterminado.
+function entryLabel(row) {
+  if (row?.direction !== "exit") return null;
+  if (row?.pair_casing_code == null && row?.rotation_pairing === "not_paired") {
+    return "ENTRA · SIN REEMPLAZO REGISTRADO";
+  }
+  const code = clean(row?.pair_casing_code, "SIN CÓDIGO");
+  const origin = row?.entry_origin_position;
+  if (origin == null) return `ENTRA · ${code} · ORIGEN NO DETERMINADO`;
+  if (origin === row?.position_number) return `ENTRA · ${code} · VUELVE EL MISMO`;
+  return `ENTRA · ${code} · DESDE P${origin}`;
 }
 
 function locationForChips(chips) {
@@ -195,8 +211,10 @@ function createServiceRow(row) {
     createElement("span", null, `${clean(row?.condition)} · ${clean(row?.retread_design)}`),
     createElement("span", null, row?.rtd_min_mm == null ? "RTD —" : `${Number(row.rtd_min_mm).toFixed(1)} mm`),
     createElement("span", null, `${clean(row?.brand_name)} · ${clean(row?.size_name)}`),
-    createElement("span", null, `${formatDate(row?.captured_on) ?? "FECHA SIN REGISTRO"} · ${clean(row?.captured_by_name, "OPERARIO SIN REGISTRO")}`),
+    createElement("span", "services-when", `${formatDate(row?.captured_on) ?? "FECHA SIN REGISTRO"} · ${clean(row?.captured_by_name, "OPERARIO SIN REGISTRO")}`),
   );
+  const entry = entryLabel(row);
+  if (entry) facts.append(createElement("span", "services-entry", entry));
   article.append(header, identity, facts);
   return article;
 }

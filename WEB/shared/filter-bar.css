@@ -1,6 +1,6 @@
 /* Componente único de filtro (F1). Reutiliza los tokens del shell
    (renova-office-shell.css) y converge visualmente con:
-   - los chips de WEB/neumaticos/ (.tires-filter-chip: píldora, borde naranja);
+   - los chips de filtro (píldora con borde naranja);
    - el combobox del buscador global (WEB/buscador/buscador.css: .finder-*).
    No introduce un patrón visual nuevo (límite duro 4). */
 

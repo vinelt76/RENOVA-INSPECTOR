@@ -18,18 +18,17 @@
 </head>
 <body>
   <header>
-    <div class="services-head">
+    <div class="services-head office-head">
       <div class="brand">
         <div class="logo">RENOVA<b>·</b></div>
         <div class="screen-name">SERVICIOS</div>
       </div>
       <nav class="nav" aria-label="Pantallas">
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
-        <a href="instalacion.html">Instalación</a>
         <a href="inventario.html">Inventario</a>
         <a class="active" href="servicios.html" aria-current="page">Servicios</a>
-        <a href="neumaticos.html">Neumáticos</a>
         <a href="rendimiento.html">Rendimiento</a>
+        <a href="importar.html">Importar</a>
       </nav>
       <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
         Buscar unidad o neumático <kbd>Ctrl K</kbd>
@@ -41,7 +40,8 @@
     <section class="services-intro" aria-labelledby="services-title">
       <p class="services-eyebrow">ACTIVIDAD EJECUTADA</p>
       <h1 id="services-title">Servicios</h1>
-      <p>Cada salida que registra un operario cuenta como un servicio. Una rotación se cuenta una sola vez, en su salida. Un ingreso que no cierra una rotación se muestra como instalación. Estos registros todavía no están ligados a un casco ni a su ciclo de vida.</p>
+      <p>Un servicio es una posición atendida: el neumático que sale de esa posición y el que entra en su lugar. Una rotación entre dos posiciones cuenta como dos servicios, uno por posición. Un ingreso que no reemplaza ninguna salida se muestra como instalación.</p>
+      <p class="services-scope-limits">No incluye lo que se hace sin desmontar el neumático —presión, torque, alineación— ni las inspecciones, que se registran aparte. El origen del neumático que entra solo se conoce cuando salió de otra posición de la misma orden; si viene de retén, de reparación o es nuevo, se muestra como no determinado. Estos registros todavía no están ligados a un casco ni a su ciclo de vida.</p>
     </section>
 
     <section class="services-filter" aria-label="Filtrar servicios">

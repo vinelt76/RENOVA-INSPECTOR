@@ -144,14 +144,13 @@
 <body>
 
 <header>
-  <div class="head-inner finder-header-row">
+  <div class="head-inner finder-header-row office-head">
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">HISTORIAL DE NEUMÁTICO</div>
     </div>
     <nav class="screen-nav" aria-label="Pantallas">
       <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
-      <a href="instalacion.html">Instalación</a>
       <a href="inventario.html">Inventario</a>
       <a href="servicios.html">Servicios</a>
       <a href="rendimiento.html">Rendimiento</a>
@@ -257,7 +256,6 @@ function backLabel(){
   return from === "inspeccion"  ? "Volver a Inspección"
        : from === "rendimiento" ? "Volver a Rendimiento"
        : from === "inventario" ? "Volver a Inventario"
-       : from === "instalacion" ? "Volver a Instalación"
        : from === "buscador" ? "Volver a Búsqueda"
        : "Volver";
 }
@@ -267,7 +265,6 @@ function goBack(){
     rendimiento:"rendimiento.html",
     inspeccion:"Inspecciones%20por%20unidad.html",
     inventario:"inventario.html",
-    instalacion:"instalacion.html",
     buscador:"INSPECCIONES%20POR%20FECHA.html",
   };
   location.href = map[from] || "rendimiento.html";

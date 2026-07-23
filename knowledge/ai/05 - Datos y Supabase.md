@@ -1,8 +1,8 @@
 ---
 title: "Datos y Supabase"
-updated: 2026-07-21
+updated: 2026-07-22
 status: vigente
-sources: [app/src/db/sqlite.ts, app/src/db/schema.ts, supabase/migrations, docs/run2_tire_lifecycle_architecture.md, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/CONTRATOS_DATOS.md, tasks_buscador_global/CONTRATOS_DATOS.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/CONTRATOS_DATOS.md, tasks_servicios/REVISION_FINAL.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md]
+sources: [app/src/db/sqlite.ts, app/src/db/schema.ts, supabase/migrations, docs/run2_tire_lifecycle_architecture.md, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/CONTRATOS_DATOS.md, tasks_buscador_global/CONTRATOS_DATOS.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/CONTRATOS_DATOS.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PLAN_PAREO.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md]
 ---
 
 # Datos y Supabase
@@ -114,7 +114,7 @@ ficticia; una fase posterior los liga con casco/ciclo/instalación.
 ## `v_search_index`
 
 Vista de lectura (`security_invoker=true`, `SELECT` solo a `authenticated`) que alimenta el buscador
-global y `neumaticos.html`. Se construye desde **tablas base** (`units`, `tire_casings`, con laterales
+global. Se construye desde **tablas base** (`units`, `tire_casings`, con laterales
 a `tire_life_cycles`/`tire_installations`/`inspections`/`inspection_measurements`), no desde las
 vistas de inventario (`v_tire_inventory_available`, `v_inventory_status`). Razón: ninguna vista
 existente cubre el universo completo de cascos a la vez (montados + retén + descartados) sin
@@ -125,8 +125,8 @@ El `haystack` de un casco incluye `tire_casings.code` **y** el `tire_code` de su
 identidad del neumático puede discrepar entre ambas capas (`code_mismatch`), y ambas deben ser
 buscables. `20260719180841_search_index_facets.sql` extendió la vista (aditivo, `create or replace
 view`, mismo orden de columnas) con `brand_name`/`model_name`/`size_name`/`condition`/
-`retread_design` crudos —sin normalizar— para que `neumaticos.html` filtre por faceta; la
-normalización para comparar ocurre en cliente con `normalizeSearchText`, igual que la búsqueda.
+`retread_design` crudos —sin normalizar— para enriquecer la búsqueda por catálogo; la
+normalización para comparar ocurre en cliente con `normalizeSearchText`.
 Sin filtro de `company_id` dentro de la vista: el aislamiento lo da la RLS de las tablas base
 (`select_own_company` en las seis tablas involucradas, `authenticated` únicamente). Detalle y
 porqué: ADR-0005 (`decisions/0005-buscador-global-objetos-navegables.md`).
@@ -135,18 +135,31 @@ porqué: ADR-0005 (`decisions/0005-buscador-global-objetos-navegables.md`).
 
 Vista de lectura (`security_invoker=true`, `SELECT` solo a `authenticated`) construida desde
 **tablas base** (`tire_movement_executions` con su orden), que alimenta `servicios.html`. Define la
-unidad de conteo del negocio: **un servicio es un renglón `direction='exit'`**, con su
-`movement_reason` como tipo. Contar órdenes no sirve —una orden mixta tendría tipo multivaluado— y
-contar renglones duplicaría cada rotación, que se modela como salida + entrada.
+unidad de conteo del negocio: **un servicio es una posición atendida** —el neumático que sale de esa
+posición y el que entra—, así que un servicio son dos movimientos y una rotación entre dos
+posiciones cuenta **2** (ADR-0008). Contar órdenes no sirve: una orden mixta tendría tipo
+multivaluado.
 
-Los `entry` que no cierran rotación reciben `service_type='installation'`, un tipo **sintético de la
-vista**: no está en el enum porque la constraint prohíbe que un `entry` lleve `movement_reason`.
+El pareo es **estructural y por posición**: la entrada cierra la salida de `sequence - 1` **de su
+misma posición**, verificado contra `request_items`, nunca por el texto de `observations`. La
+condición de misma posición no es cosmética: sin ella un ingreso puede parear con la salida de otra
+posición, que es el defecto que ADR-0008 corrigió. Como `complete_tire_movement_order` no valida la
+longitud de `p_items`, la alineación sigue siendo propiedad emergente del cliente y no invariante
+del esquema; por eso queda un segundo nivel inferido, ahora acotado por conteo **dentro de cada
+posición**, y `rotation_pairing` (`exact`/`inferred`/`not_paired`/`not_applicable`) expone cuál
+aplicó. Un `inferred` sobre datos reales significa que la emisión perdió la adyacencia del par: se
+investiga aguas arriba, no se relaja la vista.
 
-El pareo de rotación es **estructural**: `sequence - 1` como índice en `request_items`, nunca el
-texto de `observations`. Como `complete_tire_movement_order` no valida la longitud de `p_items`, la
-alineación es propiedad emergente del cliente y no invariante del esquema; por eso hay un segundo
-nivel inferido acotado por conteo y la columna `rotation_pairing` (`exact`/`inferred`/`not_paired`/
-`not_applicable`) expone cuál aplicó. Hoy es 100 % `exact`/`not_applicable` en producción.
+`service_type='installation'` queda para el ingreso que **no** reemplaza ninguna salida —un montaje
+sobre posición vacía—. Sigue siendo derivado en la vista porque la constraint prohíbe que un `entry`
+lleve `movement_reason`, pero ya no absorbe todo ingreso sin pareo.
+
+`entry_origin_position` **deriva** de dónde viene el neumático que entra: la posición por la que
+salió ese mismo `casing_code` en la misma orden. El operario no lo declara —sería pedirle un dato
+que el sistema ya tiene—. Cuando el casco no salió en esa orden (viene de retén, de reparación o es
+nuevo) la columna queda **NULL** y la pantalla lo muestra indeterminado: resolverlo exige el
+historial del casco, que es el mismo problema que la reconciliación pendiente
+([[10 - Roadmap deuda y riesgos]]).
 
 Expone `brand_key`/`size_key` normalizados (`upper(btrim(...))`) además de la grafía cruda: agrupar
 no tolera las variantes de caja que buscar sí tolera (ver deuda en
@@ -154,8 +167,9 @@ no tolera las variantes de caja que buscar sí tolera (ver deuda en
 da la RLS de las tablas base. Índice de apoyo:
 `tire_movement_executions (company_id, captured_at desc, sequence)`.
 
-Definición y porqué: ADR-0007 (`decisions/0007-definicion-de-servicio-ejecutado.md`). Contrato de
-columnas: `tasks_servicios/CONTRATOS_DATOS.md`.
+Definición y porqué: **ADR-0008** (`decisions/0008-servicio-por-posicion-atendida.md`), que supera la
+unidad de conteo de ADR-0007 y conserva el resto. Contrato de columnas:
+`tasks_servicios/CONTRATOS_DATOS.md` (histórico de Fase 1) más lo que ADR-0008 cambia.
 
 ## Convención de zona horaria del proyecto
 

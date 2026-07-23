@@ -15,6 +15,11 @@ const LABEL: React.CSSProperties = {
 const VALVULA_OK = new Set(['plástica', 'plastica', 'metalica', 'metálica']);
 const CODIGO_ESPECIALES = ['No visible', 'Sin código'];
 
+export function isActiveAnomaly(value: string | null | undefined): boolean {
+  const normalized = String(value ?? '').trim().toLocaleLowerCase('es-PE');
+  return normalized !== '' && normalized !== 'normal';
+}
+
 const sanitizeDecimal = (v: string) => {
   const clean = v.replace(/[^0-9.]/g, '');
   const firstDot = clean.indexOf('.');
@@ -83,7 +88,7 @@ export default function FormBody({
   };
 
   const showReencauche = data.condicion !== '' && data.condicion !== 'N';
-  const anomaliaAlert = data.anomalia !== '';
+  const anomaliaAlert = isActiveAnomaly(data.anomalia);
   const valvulaAlert = data.tapaValvula !== '' && !VALVULA_OK.has(data.tapaValvula.toLowerCase());
   const condicionOptions = condiciones.flatMap(c => [`${c.codigo} · ${c.nombre}`, c.codigo]);
   const normalizeCondicion = (value: string) => {

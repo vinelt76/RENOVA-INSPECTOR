@@ -41,9 +41,17 @@ describe("loadServices", () => {
 
   it("normaliza las columnas numéricas", async () => {
     const result = await loadServices({}, vi.fn().mockResolvedValue([{
-      sequence: "2", position_number: "7", rtd_min_mm: "4.80", pair_position_number: "3",
+      sequence: "2", position_number: "7", rtd_min_mm: "4.80", pair_position_number: "7",
+      entry_origin_position: "3",
     }]));
-    expect(result.rows[0]).toMatchObject({ sequence: 2, position_number: 7, rtd_min_mm: 4.8, pair_position_number: 3 });
+    expect(result.rows[0]).toMatchObject({
+      sequence: 2, position_number: 7, rtd_min_mm: 4.8, pair_position_number: 7,
+      entry_origin_position: 3,
+    });
+  });
+
+  it("pide el origen derivado del neumático que entra", () => {
+    expect(SERVICE_COLUMNS).toContain("entry_origin_position");
   });
 
   it("acepta el cliente global", async () => {

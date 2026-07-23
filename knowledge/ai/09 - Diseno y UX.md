@@ -32,7 +32,7 @@ sources: [DESIGN.md, PRODUCT.md, design-principle.md, app/src/index.css, app/src
 ## Patrón de filtro
 
 El filtro facetado es un autocomplete agrupado que produce chips tipados, visibles y removibles.
-Reutiliza el lenguaje industrial de píldoras de `WEB/neumaticos/` y el contrato de teclado/ARIA del
+Reutiliza el lenguaje industrial de píldoras de filtros y el contrato de teclado/ARIA del
 buscador, pero no es el buscador global: reduce el conjunto actual y nunca navega ni ejecuta una
 acción. Enter elige la primera coincidencia; flechas/Home/End recorren, Escape cierra y Backspace en
 vacío quita el último chip. Objetivos táctiles mínimos de 44 px y `prefers-reduced-motion` se
@@ -49,7 +49,7 @@ que **el dashboard no captura datos**. Un control de lectura que solo acota lo m
 la URL no la viola, y su foco naranja tampoco viola la Regla del Naranja Único porque el foco es
 exclusivo por definición (§2). El naranja *persistente* del contenido sigue siendo único.
 
-Inspecciones, Rendimiento y Neumáticos ya montaban un `combobox` de filtro con foco naranja sin que
+Inspecciones y Rendimiento ya montaban un `combobox` de filtro con foco naranja sin que
 estuviera documentado; Servicios hereda el patrón. Se escribe para que la próxima pantalla no vuelva
 a litigarlo.
 
@@ -104,7 +104,7 @@ buscador (dos objetos, sin parsing silencioso, sin escritura).
 
 Las superficies web vigentes fueron alineadas contra `DESIGN.md` y las pantallas de
 Inspecciones/Rendimiento: naranja como máxima severidad (sin rojo), botones primarios naranja
-con texto navy y hovers limitados a los tokens de paleta. `instalacion.html` e
-`historial-neumatico.html` comparten `WEB/renova-office-shell.css` para tokens, fondo, header,
+con texto navy y hovers limitados a los tokens de paleta. `historial-neumatico.html` comparte
+`WEB/renova-office-shell.css` con los demás tableros para tokens, fondo, header,
 marca y navegación. `inventario.html` y `comparativo.html` fueron retirados el mismo día y no
 son superficies vigentes.

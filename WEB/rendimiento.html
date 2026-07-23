@@ -253,6 +253,37 @@
   .a-fill{display:block;height:100%;width:0%;background:var(--bar-steel);border-radius:3px;
     transition:width .6s cubic-bezier(.22,1,.36,1)}
 
+  /* ───────────────── Panel gráfico del conjunto filtrado ─────────────────
+     Cuatro métricas comparables en módulos cuadrados. El costo ocupa una
+     franja completa porque es una lectura transversal, no otra tarjeta suelta.
+     Las columnas representan valores reales de los neumáticos incluidos. */
+  .fleet-kpis{
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
+    margin:0 0 18px;
+  }
+  .fleet-stat{
+    min-width:0;aspect-ratio:1;background:var(--field-dark);border:2px solid var(--border-dark);
+    padding:15px 16px;display:flex;flex-direction:column;
+    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  }
+  .fleet-stat .a-label,.fleet-cost .a-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .fleet-stat .a-value,.fleet-cost .a-value{font-size:clamp(20px,2vw,28px);font-weight:800;line-height:1;margin-top:9px;color:var(--value-ice)}
+  .fleet-stat .a-unit,.fleet-cost .a-unit{font-size:10px;font-weight:700;color:var(--label-blue);margin-left:3px}
+  .fleet-stat .a-sub,.fleet-cost .a-sub{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:7px;line-height:1.45}
+  .metric-bars{display:flex;align-items:flex-end;gap:4px;height:68px;flex:none;margin-top:auto;padding:7px 8px;background:var(--screen-dark);border-radius:4px}
+  .metric-bar{flex:1;min-width:3px;height:var(--bar-height);background:var(--bar-steel);border-radius:2px 2px 0 0;transform-origin:bottom;animation:metricBarIn .6s cubic-bezier(.22,1,.36,1) both}
+  .metric-bar:nth-child(2n){animation-delay:.04s}
+  .metric-bar:nth-child(3n){animation-delay:.08s}
+  .metric-bars.is-consumption .metric-bar{background:var(--signal-yellow)}
+  .metric-bars.is-cost .metric-bar{background:var(--signal-yellow)}
+  .metric-bars.is-empty{align-items:center;justify-content:center;color:var(--label-blue);font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .fleet-cost{
+    grid-column:1/-1;background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
+    padding:15px 16px;display:grid;grid-template-columns:minmax(210px, .7fr) 1fr;gap:20px;align-items:center;
+  }
+  .fleet-cost .metric-bars{height:62px;margin-top:0}
+  @keyframes metricBarIn{from{transform:scaleY(.04)}to{transform:scaleY(1)}}
+
   /* Mejor vs. peor posición del eje — panel único de comparación (no cards
      duplicadas junto al gráfico por posición de más abajo). */
   .bw-panel{
@@ -357,6 +388,11 @@
     .card-cols{grid-template-columns:1fr}
     .card-col+.card-col{border-left:none;border-top:2px solid var(--border-dark)}
     .avg-kpis{grid-template-columns:1fr}
+    .fleet-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .fleet-stat{padding:12px}
+    .fleet-stat .a-value{font-size:20px}
+    .metric-bars{height:52px;margin-top:auto}
+    .fleet-cost{grid-template-columns:1fr;gap:12px}
     .balance{flex-wrap:wrap}
   }
   @media (prefers-reduced-motion:reduce){
@@ -367,16 +403,14 @@
 <body>
 
 <header>
-  <div class="head-row">
+  <div class="head-row office-head">
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">RENDIMIENTO</div>
-      <div class="subtitle">Filtra y agrega · abre una fila para ver el detalle por eje</div>
     </div>
     <div class="header-tools">
       <nav class="screen-nav" aria-label="Pantallas">
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
-        <a href="instalacion.html">Instalación</a>
         <a href="inventario.html">Inventario</a>
         <a href="servicios.html">Servicios</a>
         <a class="active" href="rendimiento.html">Rendimiento</a>
@@ -597,7 +631,11 @@ function computeTire(t){
   const pctConsumo   = (rtdGastado / t.otd) * 100;
   const kmMm         = kmRecorrido / rtdGastado;
   const kmProyectado = kmMm * (t.otd - t.rtdRetiro);
-  const costoKm      = t.costo / kmRecorrido;
+  // Un costo ausente no equivale a S/ 0. Mantenerlo como null permite que
+  // tanto el promedio como la distribución visual excluyan ese neumático sin
+  // falsear el costo de la flota.
+  const costoFuente  = t.costo == null || t.costo === "" ? null : Number(t.costo);
+  const costoKm      = Number.isFinite(costoFuente) ? costoFuente / kmRecorrido : null;
   const kmAcumulado  = (t.kmPrevioAcumulado || 0) + kmRecorrido;
 
   return {
@@ -659,7 +697,7 @@ function computeGroup(tires){
     worst = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).tire;
     // Un neumático sin costo fuente no vale 0 soles: se excluye del promedio,
     // no se cuenta como costoKm:0 (F10).
-    const withCost = valids.filter(r => r.tire && r.tire.costo != null);
+    const withCost = valids.filter(r => Number.isFinite(r.m.costoKm));
     avgCostoKm = withCost.length ? mean(withCost.map(r=>r.m.costoKm)) : null;
   }
 
@@ -763,38 +801,66 @@ function excludedNote(group, freshness){
   return `<div class="${cls}"><b class="num">${group.valid}</b> de <b class="num">${total}</b> neumáticos aportan al promedio${detail}${staleDetail}${futureDetail}.</div>`;
 }
 
+function distributionBars(values, variant = ""){
+  const validValues = values.filter(value => Number.isFinite(value) && value >= 0);
+  if(!validValues.length){
+    return `<div class="metric-bars is-empty">Sin datos</div>`;
+  }
+  // Una muestra uniforme evita que una flota grande convierta el panel en una
+  // masa ilegible, manteniendo siempre la distribución de datos reales.
+  const samples = validValues.length <= 12
+    ? validValues
+    : Array.from({length:12}, (_, index) => validValues[Math.round(index * (validValues.length - 1) / 11)]);
+  const max = Math.max(...samples, 1);
+  const bars = samples.map(value => {
+    const height = Math.max(8, Math.round((value / max) * 100));
+    return `<span class="metric-bar" style="--bar-height:${height}%"></span>`;
+  }).join("");
+  return `<div class="metric-bars ${variant}" aria-label="Distribución de ${validValues.length} valores">${bars}</div>`;
+}
+
 function aggregateKpis(group){
   if(group.avgKmMm == null){
     return `<div class="note">Sin datos suficientes en este conjunto para calcular promedios.</div>`;
   }
+  const metrics = group.valids.map(row => row.m);
+  const costMetrics = group.valids.map(row => row.m.costoKm).filter(Number.isFinite);
+  const countLabel = `Promedio de ${group.valid} neumático${group.valid===1?"":"s"}`;
   return `
-    <div class="avg-kpis">
-      <div class="avg-stat">
+    <section class="fleet-kpis" aria-label="Gráficos de rendimiento del conjunto filtrado">
+      <article class="fleet-stat">
         <div class="a-label">Km Acumulado</div>
-        <div class="a-value num">${fmtKm(group.totalKmAcumulado)}<span class="a-unit">km</span></div>
-        <div class="a-sub">Total del conjunto</div>
-      </div>
-      <div class="avg-stat">
-        <div class="a-label">Km Proyectado promedio</div>
+        <div class="a-value num">${fmtKm(group.totalKmAcumulado / group.valid)}<span class="a-unit">km</span></div>
+        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
+        ${distributionBars(metrics.map(metric => metric.kmAcumulado))}
+      </article>
+      <article class="fleet-stat">
+        <div class="a-label">Km Proyectado</div>
         <div class="a-value num">${fmtKm(group.avgKmProyectado)}<span class="a-unit">km</span></div>
-        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
-      </div>
-      <div class="avg-stat">
-        <div class="a-label">Km/mm promedio</div>
+        <div class="a-sub">${countLabel}</div>
+        ${distributionBars(metrics.map(metric => metric.kmProyectado))}
+      </article>
+      <article class="fleet-stat">
+        <div class="a-label">Km/mm</div>
         <div class="a-value num">${fmtKmMm(group.avgKmMm)}<span class="a-unit">km/mm</span></div>
-        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
-      </div>
-      <div class="avg-stat">
-        <div class="a-label">% Consumo promedio</div>
+        <div class="a-sub">${countLabel}</div>
+        ${distributionBars(metrics.map(metric => metric.kmMm))}
+      </article>
+      <article class="fleet-stat">
+        <div class="a-label">Consumo</div>
         <div class="a-value num">${fmtPct(group.avgPct)}<span class="a-unit">%</span></div>
-        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
-      </div>
-      <div class="avg-stat">
-        <div class="a-label">Costo/Km promedio</div>
-        <div class="a-value">${group.avgCostoKm != null ? `<span class="num">${fmtCost(group.avgCostoKm)}</span>` : `<span class="a-sub" style="margin-top:0">Sin costo fuente</span>`}</div>
-        <div class="a-sub">${group.avgCostoKm != null ? "Solo neumáticos con costo registrado" : "Ningún neumático del conjunto tiene costo cargado"}</div>
-      </div>
-    </div>`;
+        <div class="a-sub">${countLabel}</div>
+        ${distributionBars(metrics.map(metric => metric.pctConsumo), "is-consumption")}
+      </article>
+      <article class="fleet-cost">
+        <div>
+          <div class="a-label">Costo/Km promedio</div>
+          <div class="a-value">${group.avgCostoKm != null ? `<span class="num">${fmtCost(group.avgCostoKm)}</span>` : "Sin costo fuente"}</div>
+          <div class="a-sub">${group.avgCostoKm != null ? "Solo neumáticos con costo registrado" : "Ningún neumático del conjunto tiene costo cargado"}</div>
+        </div>
+        ${distributionBars(costMetrics, "is-cost")}
+      </article>
+    </section>`;
 }
 
 function resultRow(tire, index){
@@ -1309,6 +1375,19 @@ function chipsFromLocation(){
   return chips;
 }
 
+function currentMonthChip(){
+  const now = new Date();
+  const month = new Intl.DateTimeFormat("es-PE", { month: "long" })
+    .format(now)
+    .toLocaleLowerCase("es-PE");
+  const value = `${month} ${now.getFullYear()}`;
+  return { facet: "mes", value, label: `Mes de última inspección: ${value}` };
+}
+
+function withCurrentMonthByDefault(chips){
+  return chips.some((chip) => chip.facet === "mes") ? chips : [currentMonthChip(), ...chips];
+}
+
 function urlForState(chips, includeStale){
   const url = new URL(location.href);
   url.search = "";
@@ -1319,7 +1398,10 @@ function urlForState(chips, includeStale){
   return url;
 }
 
-let rendimientoChips = chipsFromLocation();
+const initialChips = chipsFromLocation();
+// Al abrir Rendimiento, el periodo operativo es siempre el mes calendario en
+// curso. Un mes escrito explícitamente en el enlace conserva su contexto.
+let rendimientoChips = withCurrentMonthByDefault(initialChips);
 let includeStale = new URLSearchParams(location.search).get("rancios") === "incluir"
   || rendimientoChips.some((chip) => chip.facet === "mes");
 const freshnessToggle = document.getElementById("freshnessToggle");
@@ -1372,7 +1454,7 @@ window.RenovaRendimiento.onDataLoaded = () => {
 };
 
 window.addEventListener("popstate", () => {
-  rendimientoChips = chipsFromLocation();
+  rendimientoChips = withCurrentMonthByDefault(chipsFromLocation());
   includeStale = new URLSearchParams(location.search).get("rancios") === "incluir"
     || rendimientoChips.some((chip) => chip.facet === "mes");
   filterBar.setChips(rendimientoChips);

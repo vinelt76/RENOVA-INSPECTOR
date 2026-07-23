@@ -22,6 +22,26 @@ body {
   font-family: var(--mono);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+/* Desplazamiento sin barra visible: conserva el scroll nativo (rueda,
+   trackpad, teclado y táctil) y mantiene la interfaz visualmente limpia. */
+html,
+body,
+*,
+*::before,
+*::after {
+  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 
 body {
@@ -92,6 +112,56 @@ header {
   border-color: var(--ember-orange);
 }
 
+/* Cabecera estable entre pantallas.
+   La marca/buscador ocupan la primera fila y la navegación siempre vive en
+   una segunda fila propia. Así el ancho del título de cada pantalla no mueve
+   los botones al navegar. */
+header > .office-head {
+  align-items: end;
+  display: grid;
+  gap: 12px 16px;
+  grid-template-areas:
+    "brand finder"
+    "nav nav";
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 0 auto;
+  max-width: 1280px;
+  width: 100%;
+}
+
+header > .office-head > .brand {
+  grid-area: brand;
+}
+
+header > .office-head > .header-tools {
+  display: contents;
+}
+
+header > .office-head .nav,
+header > .office-head .screen-nav {
+  flex-wrap: nowrap;
+  grid-area: nav;
+  margin-left: 0;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-color: var(--border-dark) transparent;
+  scrollbar-width: thin;
+}
+
+header > .office-head .nav a,
+header > .office-head .screen-nav a {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+}
+
+header > .office-head .finder-trigger {
+  grid-area: finder;
+}
+
 /* Entrada visible al buscador global. El atajo acompaña a la barra; nunca la
    reemplaza, porque no se presupone uso experto de teclado. */
 .finder-trigger {
@@ -149,13 +219,27 @@ a.casing-history-link:focus-visible {
 }
 
 @media (max-width: 780px) {
-  .nav,
-  .screen-nav {
+  header > .office-head {
+    align-items: stretch;
+    grid-template-areas:
+      "brand"
+      "nav"
+      "finder";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  header > .office-head .nav,
+  header > .office-head .screen-nav {
     width: 100%;
   }
 
-  .finder-trigger {
+  header > .office-head .finder-trigger {
     flex: 1 1 100%;
     justify-content: space-between;
+    width: 100%;
+  }
+
+  header > .office-head .brand .logo {
+    font-size: 32px;
   }
 }

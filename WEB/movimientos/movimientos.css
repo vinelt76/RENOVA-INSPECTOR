@@ -116,6 +116,94 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   font-size:9px;
 }
 
+.tc-order-rotate{
+  width:100%;
+}
+
+.tc-order-inventory{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:4px;
+  padding-top:12px;
+  border-top:2px solid var(--border);
+}
+
+.tc-order-inventory-help{
+  margin:0;
+  color:var(--label);
+  font-size:9px;
+  font-weight:700;
+  line-height:1.45;
+}
+
+.tc-order-inventory-list{
+  display:flex;
+  max-height:300px;
+  flex-direction:column;
+  gap:7px;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+}
+
+.tc-order-inventory-item{
+  width:100%;
+  min-height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px;
+  border:2px solid var(--border);
+  border-radius:8px;
+  background:var(--screen);
+  color:var(--ice);
+  font-family:var(--mono);
+  text-align:left;
+  cursor:pointer;
+}
+
+.tc-order-inventory-item:hover,
+.tc-order-inventory-item:focus-visible{
+  border-color:var(--orange);
+}
+
+.tc-order-inventory-item:disabled{
+  opacity:.45;
+}
+
+.tc-order-inventory-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+
+.tc-order-inventory-copy strong,
+.tc-order-inventory-copy span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.tc-order-inventory-copy strong{
+  font-size:10px;
+}
+
+.tc-order-inventory-copy span{
+  color:var(--label);
+  font-size:8px;
+}
+
+.tc-order-inventory-pick{
+  flex:none;
+  color:var(--orange);
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+
 .tc-order-header-grid{
   display:grid;
   grid-template-columns:150px 1fr;
@@ -178,6 +266,22 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   color:var(--label);
   font-size:9px;
   line-height:1.4;
+}
+
+/* Bloque de botones de una posición: fila, no columna. Sobrescribe el
+   `flex-direction:column` que `.tc-order-item > div` aplica al bloque de texto. */
+.tc-order-item > .tc-order-item-actions{
+  flex:none;
+  flex-direction:row;
+  align-items:center;
+  gap:6px;
+}
+
+/* Una posición con salida y sin ingreso todavía. El color no es el único canal:
+   el texto dice «FALTA INDICAR» o «SIN REEMPLAZO (declarado)». */
+.tc-order-item span.tc-order-warn{
+  color:var(--orange);
+  font-weight:700;
 }
 
 .tc-order-remove,

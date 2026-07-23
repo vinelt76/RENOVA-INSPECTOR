@@ -18,11 +18,11 @@ mkdirSync(outputWebDir, { recursive: true });
 
 cpSync(appDistDir, outputDir, { recursive: true });
 
-for (const entry of ['historial-neumatico.html', 'importar.html', 'instalacion.html', 'inventario.html', 'neumaticos.html', 'servicios.html', 'INSPECCIONES POR FECHA.html', 'Inspecciones por unidad.html', 'rendimiento.html', 'renova-office-shell.css', 'renova-ready.js', 'supabase-config.public.js', 'supabase-demo.js']) {
+for (const entry of ['historial-neumatico.html', 'importar.html', 'inventario.html', 'servicios.html', 'INSPECCIONES POR FECHA.html', 'Inspecciones por unidad.html', 'rendimiento.html', 'renova-office-shell.css', 'renova-ready.js', 'renova-animate.js', 'renova-format.js', 'supabase-config.public.js', 'supabase-demo.js']) {
   cpSync(path.join(webDir, entry), path.join(outputWebDir, entry));
 }
 
-for (const directory of ['inventario', 'movimientos', 'buscador', 'shared', 'neumaticos', 'servicios']) {
+for (const directory of ['inventario', 'movimientos', 'buscador', 'shared', 'servicios']) {
   const sourceDirectory = path.join(webDir, directory);
   const outputDirectory = path.join(outputWebDir, directory);
   mkdirSync(outputDirectory, { recursive: true });

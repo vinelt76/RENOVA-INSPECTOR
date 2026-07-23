@@ -1,8 +1,8 @@
 ---
 title: "Web, dashboards y taller"
-updated: 2026-07-21
+updated: 2026-07-22
 status: vigente
-sources: [WEB/movimientos, WEB/inventario, WEB/buscador, WEB/shared, WEB/neumaticos, WEB/servicios, WEB/rendimiento.html, WEB/INSPECCIONES POR FECHA.html, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/PLAN.md, tasks_buscador_global/PLAN.md, tasks_buscador_global/STATE.md, decisions/0005-buscador-global-objetos-navegables.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md]
+sources: [WEB/movimientos, WEB/inventario, WEB/buscador, WEB/shared, WEB/servicios, WEB/rendimiento.html, WEB/INSPECCIONES POR FECHA.html, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/PLAN.md, tasks_buscador_global/PLAN.md, tasks_buscador_global/STATE.md, decisions/0005-buscador-global-objetos-navegables.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md]
 ---
 
 # Web, dashboards y taller
@@ -12,13 +12,11 @@ sources: [WEB/movimientos, WEB/inventario, WEB/buscador, WEB/shared, WEB/neumati
 | Archivo | Propósito | Fuente principal |
 |---|---|---|
 | `INSPECCIONES POR FECHA.html` | Último estado de neumáticos; histórico solo con fecha explícita | `inspections`, `units`, `v_inspection_dashboard_rows` |
-| `Inspecciones por unidad.html` | Detalle de inspecciones/posiciones | `v_inspection_dashboard_rows` |
+| `Inspecciones por unidad.html` | Detalle de inspecciones y órdenes de Servicios por posición | `v_inspection_dashboard_rows`, `v_unit_position_state`, `create_tire_movement_order` |
 | `rendimiento.html` | Agregado de neumáticos filtrados + detalle por fila; frescura de 30 días | `v_rendimiento_dashboard_rows` |
 | `historial-neumatico.html` | Historia completa de un casco | vistas `v_casing_*` (incluye `v_inventory_status`) |
-| `instalacion.html` | Instalación, retiro y transferencia | vistas + RPCs de taller |
 | `inventario.html` | Consulta de Retén y Descartados | `v_tire_inventory_available`, `v_inventory_status` |
 | `importar.html` | Importar inspecciones | `save_inspection` |
-| `neumaticos.html` | Neumáticos filtrados por faceta (marca, modelo, medida, condición, reencauche, estado) | `v_search_index` (columnas de faceta) |
 | `servicios.html` | Servicios ejecutados: cuántos neumáticos se atendieron y de qué tipo | `v_tire_services` |
 
 La pantalla histórica `inventario.html` y `comparativo.html` se retiraron junto con las RPCs
@@ -30,19 +28,19 @@ La implementación modular vive en `WEB/inventario/`, exige sesión mediante el 
 recarga por Realtime, ofrece búsqueda tolerante a acentos y enlaza el código al Historial. La URL
 de evidencia de descarte no se muestra porque la URL firmada original es temporal.
 
-El modo **Movimientos de neumáticos** vive en `WEB/movimientos/` (módulos ES puros +
+El modo visible **Servicios** vive en `WEB/movimientos/` (módulos ES puros +
 `movimientos-controller.js`) y se integra en `Inspecciones por unidad.html` como un segundo modo
-del gemelo digital. Un selector accesible **Inspección / Movimientos** (persistido en
+del gemelo digital. Un selector accesible **Inspección / Servicios** (persistido internamente en
 `?mode=movimientos`, sin recarga) alterna panel, dock y selección sin tocar el flujo histórico de
-Inspección. El enlace histórico `?mode=cambios` sigue abriendo Movimientos y se canonicaliza a la
-URL nueva. Exige un perfil activo `tire_supervisor`, `fleet_manager` histórico o `admin`: el supervisor selecciona
-posiciones y emite indicaciones; no captura código, RTD, marca, condición ni odómetro.
+Inspección. El enlace histórico `?mode=cambios` sigue abriendo Servicios y se canonicaliza a la
+URL nueva. Un perfil activo `tire_supervisor`, `fleet_manager` histórico o `admin` puede armar y
+emitir órdenes. La pantalla separada `instalacion.html` se retiró por redundante.
 
 ## Buscador global
 
 `WEB/buscador/` (overlay tipo Spotlight, `finder-controller.js` + `search-model.js` + `data.js`) da
 acceso a los dos únicos objetos navegables — Unidad y Neumático — desde una barra visible en el
-header más `Ctrl/Cmd+K`, presente en las 8 pantallas. Índice cacheado por sesión desde
+header más `Ctrl/Cmd+K`, presente en las 7 pantallas. Índice cacheado por sesión desde
 `v_search_index` (no búsqueda en servidor); frecency persistida en `localStorage`, aislada por
 usuario+empresa y purgada en cambio de sesión. Prefijos `uni:`/`neu:` acotan el tipo como chip
 removible. Decisiones y su porqué: ADR-0005 (`decisions/0005-buscador-global-objetos-navegables.md`).
@@ -50,14 +48,8 @@ removible. Decisiones y su porqué: ADR-0005 (`decisions/0005-buscador-global-ob
 `WEB/shared/search.js` centraliza la normalización de texto (`normalizeSearchText`) que antes
 estaba duplicada en Inventario y Movimientos; ambos la reutilizan sin cambiar su UI propia.
 
-`WEB/neumaticos.html` (`WEB/neumaticos/`) es la única pantalla de lista filtrada por faceta —
-`?marca=&modelo=&medida=&condicion=&reencauche=&estado=`, combinable con AND, estado en la URL vía
-`pushState` — a la que el buscador enruta desde una faceta. No hay pantalla por marca ni por
-modelo (D2/D3 del ADR-0005): agregar una la contradice.
-
 Limitación conocida: un casco con `code` nulo no tiene historial alcanzable (`historial-neumatico.html`
-filtra por `code=eq.`); el buscador y Neumáticos lo muestran igual, enrutando a su unidad, sin enlace
-falso.
+filtra por `code=eq.`); el buscador lo muestra igual y enruta a su unidad, sin enlace falso.
 
 ## Filtros facetados
 
@@ -84,17 +76,28 @@ enlazadas por casco. Ver ADR-0006.
 
 `WEB/servicios.html` (`WEB/servicios/`: `data.js` + `servicios-model.js` + `servicios-controller.js`)
 es la superficie de lectura sobre `v_tire_services`. Responde **qué se hizo con los neumáticos**,
-completando el par con el modo Movimientos: uno **ejecuta** (emite órdenes y captura), el otro
+completando el par con el modo Servicios por unidad: uno **emite y sigue órdenes**, el otro
 **consulta** el resultado consolidado.
 
-**Qué mide:** actividad declarada por personas — salidas con su tipo (`rotation`, `retread`,
-`discard`, …) más las instalaciones derivadas. Cuatro tiles, barra de distribución segmentada con
-leyenda accesible, 12 facetas con OR dentro / AND entre y estado en URL multivalor, igual que
-ADR-0006.
+**Qué mide:** actividad declarada por personas, contada por **posición atendida** (ADR-0008): el
+neumático que sale de una posición con su tipo (`rotation`, `retread`, `discard`, …) y el que entra
+en su lugar. Una rotación entre dos posiciones son **2** servicios, uno por posición; un scrap con
+reemplazo es **1**. Cuatro tiles, barra de distribución segmentada con leyenda accesible, 12 facetas
+con OR dentro / AND entre y estado en URL multivalor, igual que ADR-0006.
 
 **Qué NO mide:** consumo, vida útil ni costo. `reconciliation_status` es `pending` al 100 %: los
 servicios no están ligados a casco/ciclo/instalación. La faceta se expone justamente para que el
 usuario descubra esa limitación en vez de asumir que la pantalla está completa.
+
+Tampoco mide **lo que se hace sin desmontar el neumático** —presión, torque, alineación— ni las
+inspecciones, que viven en su propia cadena (`inspections` / `inspection_measurements`). El párrafo
+de alcance de la pantalla lo dice explícitamente: describir solo lo que sí mide la haría parecer más
+completa de lo que es.
+
+**El origen del neumático que entra se deriva, no se captura.** Si salió de otra posición de la
+misma orden, la fila lo muestra (`DESDE P7`); si volvió a su propia posición, `VUELVE EL MISMO`; si
+vino de fuera de la orden —retén, reparación, nuevo—, `ORIGEN NO DETERMINADO`. No se infiere lo que
+exige el historial del casco.
 
 **A qué enruta:** la fila **no** es clicable. Solo la placa (→ `Inspecciones por unidad.html`) y el
 código de casco (→ `historial-neumatico.html`) son enlaces; un código sin historial muestra
@@ -102,8 +105,14 @@ código de casco (→ `historial-neumatico.html`) son enlaces; un código sin hi
 enruta hacia ellos sin volverse un tercero. Pantalla de solo lectura: ningún camino alcanza una RPC.
 
 Límite de 2.000 filas con banner explícito cuando la respuesta lo llena — un recorte silencioso es
-un error de datos disfrazado de rendimiento. Decisiones y porqué: ADR-0007
-(`decisions/0007-definicion-de-servicio-ejecutado.md`).
+un error de datos disfrazado de rendimiento. Decisiones y porqué: **ADR-0008**
+(`decisions/0008-servicio-por-posicion-atendida.md`) para la unidad de conteo y el origen derivado;
+ADR-0007 para lo que sobrevive (pareo estructural, no navegabilidad, normalización, zona horaria).
+
+**Del lado que dirige**, la rotación conserva el flujo entre dos posiciones. Para cualquier otra
+opción del dropdown se consulta `v_tire_inventory_available` y el clic en una llanta agrega una
+pareja consecutiva `exit + entry` en la misma posición. La entrada conserva `life_cycle_id`, código
+y snapshot visible para que la orden diga explícitamente qué neumático debe entrar.
 
 ## Patrón común
 
@@ -115,24 +124,18 @@ un error de datos disfrazado de rendimiento. Decisiones y porqué: ADR-0007
 
 ## Operaciones de taller
 
-Las escrituras complejas no se hacen como varias llamadas desde el navegador. Los RPCs del 12 de julio validan rol, posición libre e invariantes dentro de una transacción. Si una parte falla, no debe quedar medio retiro o media instalación.
+La pestaña web dirige el trabajo; no confirma por sí misma movimientos físicos. El flujo activo es:
 
-- Instalar: crea/resuelve casco y ciclo y abre instalación.
-- Retirar: cierra instalación con motivo y fuente de odómetro.
-- Transferir: cierra origen y abre destino atómicamente.
+1. Leer el diagrama desde `v_unit_position_state` y las llantas montables desde
+   `v_tire_inventory_available`.
+2. Para rotación, elegir la posición destino y emitir los pares de ambas posiciones.
+3. Para cualquier otro servicio, elegir la llanta de inventario que entra; la UI agrega salida e
+   ingreso juntos y no deja reutilizar el mismo ciclo en dos posiciones.
+4. Emitir una orden con `create_tire_movement_order` y seguir `issued → in_progress → completed`.
+5. El operario captura los datos técnicos al ejecutar; la reconciliación física permanece pendiente.
 
-La pestaña web ya no confirma movimientos físicos. El flujo activo es:
-
-1. Leer el diagrama completo desde `v_unit_position_state`.
-2. Mantener un borrador local con fecha, instrucción, dirección, posición y razón humana.
-3. Modelar una rotación como salida `rotation` del origen más entrada en el destino.
-4. Emitir una sola orden con `create_tire_movement_order`.
-5. Seguir `issued → in_progress → completed` desde `v_operator_movement_orders` y mostrar los
-   renglones de `tire_movement_executions` capturados por el operario.
-
-La empresa se deriva del perfil autenticado y la RPC acepta `tire_supervisor`, `fleet_manager`
-histórico o `admin`. El operario
-es el único que captura la lectura de máquina y los datos técnicos al completar la orden.
+La empresa se deriva del perfil autenticado. La RPC de órdenes admite `tire_supervisor`,
+`fleet_manager` histórico y `admin`.
 
 ### Posiciones pendientes de línea base
 
@@ -149,10 +152,9 @@ masivo y el indicador Q6 de `supabase/diagnostics/baseline_profile.sql` muestra 
 posición. El modo conserva `?mode=movimientos` como URL canónica; `?mode=cambios` es un alias de
 lectura que se canonicaliza sin recargar.
 
-Los antiguos módulos de lote directo, primer montaje, inventario y foto siguen versionados como
-historial y conservan sus pruebas, pero `movimientos-controller.js` ya no los importa. Por tanto,
-`confirm_tire_change_batch` y `confirm_baseline_mount` no son alcanzables desde la pestaña normal
-del supervisor.
+Los módulos de lote directo, primer montaje y foto se conservan versionados y probados, pero el
+controlador activo no los importa. `confirm_tire_change_batch` y `confirm_baseline_mount` no son
+alcanzables desde la pestaña normal del supervisor.
 
 ## Rutas
 

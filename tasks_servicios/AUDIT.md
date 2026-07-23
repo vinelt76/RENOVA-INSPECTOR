@@ -1,5 +1,12 @@
 # AUDIT — Sección Servicios (consulta y métricas de servicios ejecutados)
 
+> **HISTÓRICO (Fase 1).** Su definición de servicio —«una salida es un servicio», «una
+> rotación se cuenta una sola vez»— quedó **superada el 2026-07-22** por
+> `decisions/0008-servicio-por-posicion-atendida.md`: un servicio es una **posición
+> atendida**, y una rotación entre dos posiciones cuenta 2. Este documento no se reescribe:
+> describe correctamente lo que se decidió entonces, y era correcto dado lo que la app
+> capturaba. Ver `PLAN_PAREO.md`.
+
 Fecha: 2026-07-20. Auditoría previa a decidir. Autoridad: migraciones, código y pruebas actuales.
 
 ## 1. Reencuadre del pedido

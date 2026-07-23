@@ -1,5 +1,22 @@
 # ADR-0007: Definición de servicio ejecutado — una salida es un servicio
 
+> **PARCIALMENTE SUPERADO (2026-07-22) por
+> [ADR-0008](0008-servicio-por-posicion-atendida.md).**
+>
+> - **D1 superada.** La unidad de conteo dejó de ser «una salida» y pasó a ser **una posición
+>   atendida**. Una rotación entre dos posiciones cuenta 2, no 1. El criterio de campo de esta fase
+>   —«una rotación produce una fila y no dos»— queda derogado con fecha.
+> - **D2 sin objeto.** `installation` ya no se deriva para todo ingreso sin pareo de rotación: con
+>   el par explícito, un ingreso plegado no genera fila y `installation` queda solo para el montaje
+>   que realmente no reemplaza nada.
+> - **D3 a D14 siguen vigentes**, en particular D5 (Servicios no es objeto navegable), D6, D8, D9,
+>   D10, D11, D13 y D14.
+> - **La limitación aceptada sigue vigente**: los servicios no están reconciliados contra cascos.
+>
+> El cuerpo de este ADR **no se reescribe**. D1 y D2 fueron correctas dado lo que la app capturaba
+> entonces; lo que cambió es la captura. Se lee para entender por qué se decidió así, no como regla
+> vigente.
+
 Segundo ADR de superficie de lectura, después de ADR-0005 (buscador) y ADR-0006 (filtros
 facetados). Registra qué cuenta la pantalla Servicios y por qué, porque «una rotación = un
 servicio» es exactamente el tipo de definición que se re-litiga a los seis meses y que cualquier

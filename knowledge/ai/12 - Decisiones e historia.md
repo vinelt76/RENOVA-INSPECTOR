@@ -1,8 +1,8 @@
 ---
 title: "Decisiones e historia"
-updated: 2026-07-21
+updated: 2026-07-22
 status: vigente
-sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md, tasks_buscador_global/DECISIONES.md, tasks_buscador_global/REVISION_FINAL.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/DECISIONES.md, tasks_servicios/REVISION_FINAL.md]
+sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md, tasks_buscador_global/DECISIONES.md, tasks_buscador_global/REVISION_FINAL.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/DECISIONES.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PLAN_PAREO.md]
 ---
 
 # Decisiones e historia
@@ -43,14 +43,26 @@ smokes reales del modo taller.
   conjunto filtrado e Inspecciones lista neumáticos; OR dentro/AND entre facetas; frescura distinta
   de ventana temporal y exclusiones visibles. La ventana quedó sin entregar por cobertura real
   insuficiente. Detalle en `tasks_filtros_facetados/REVISION_FINAL.md`.
-- ADR 0007: definición de servicio ejecutado — **un servicio es una salida** (`direction='exit'`),
-  no una orden ni un renglón, así que una rotación cuenta una vez y no dos. `installation` es tipo
-  sintético de la vista porque la constraint impide llevarlo al enum. El pareo de rotación es
-  estructural (`sequence - 1` sobre `request_items`), nunca textual, con `rotation_pairing` visible
-  como contrato de honestidad cuando la atribución degrada. Servicios **no** es un objeto navegable:
-  aplica el límite de ADR-0005 y enruta a Unidad y Neumático. Fija además la convención de zona
-  horaria del proyecto (`America/Lima`). Limitación aceptada: los servicios no están reconciliados
-  contra cascos. Detalle en `tasks_servicios/DECISIONES.md` y `tasks_servicios/REVISION_FINAL.md`.
+- ADR 0007: definición de servicio ejecutado — **parcialmente superado por ADR-0008 (2026-07-22)**.
+  Sigue vigente: el pareo estructural (`sequence - 1` sobre `request_items`), nunca textual, con
+  `rotation_pairing` como contrato de honestidad; Servicios **no** es objeto navegable (aplica el
+  límite de ADR-0005 y enruta a Unidad y Neumático); la normalización de marca/medida en SQL; la
+  convención de zona horaria del proyecto (`America/Lima`); y la limitación aceptada de que los
+  servicios no están reconciliados contra cascos. **Superado:** su unidad de conteo («un servicio es
+  una salida», «una rotación cuenta una vez») y `installation` como tipo sintético de todo ingreso
+  sin pareo. Detalle en `tasks_servicios/DECISIONES.md` y `tasks_servicios/REVISION_FINAL.md`.
+- ADR 0008: **un servicio es una posición atendida** — el neumático que sale de esa posición y el que
+  entra; un servicio son dos movimientos, y una rotación entre dos posiciones cuenta **2**. Corrige
+  una asimetría real: bajo ADR-0007 un scrap con reemplazo contaba 2 y una rotación 1, para el mismo
+  hecho físico, porque solo las rotaciones tenían pareo. El defecto no estaba en la vista sino en la
+  emisión: `addRotation` mandaba `exit@origen + entry@destino` —un casco reubicándose— y dejaba una
+  posición vacía y un casco sin registro de salida. **No hizo falta cambiar el esquema ni la app
+  móvil**: bastó emitir el par completo por posición y generalizar el pareo de la vista exigiendo
+  misma posición. El origen del neumático que entra se **deriva** dentro de la orden
+  (`entry_origin_position`), no se captura; cuando viene de afuera queda declarado indeterminado,
+  porque resolverlo es el mismo problema que la reconciliación pendiente. Detalle en
+  `tasks_servicios/PLAN_PAREO.md` y `tasks_servicios/REVISION_FINAL_PAREO.md`; lo que quedó fuera,
+  en `tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md`.
 
 ## Principio para futuras decisiones
 

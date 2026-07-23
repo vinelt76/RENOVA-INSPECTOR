@@ -1,8 +1,8 @@
 ---
 title: "Roadmap, deuda y riesgos"
-updated: 2026-07-21
+updated: 2026-07-22
 status: vigente
-sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, code audit 2026-07-12, tasks_buscador_global/AUDIT.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PRUEBA_CAMPO.md, decisions/0007-definicion-de-servicio-ejecutado.md]
+sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, code audit 2026-07-12, tasks_buscador_global/AUDIT.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PRUEBA_CAMPO.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md, tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md]
 ---
 
 # Roadmap, deuda y riesgos
@@ -49,11 +49,11 @@ fuentes de evidencia.
   borrarlos o marcarlos con una columna real (`is_test`, `environment`). Mitigación disponible: la
   faceta `unidad` permite aislarlos a mano.
 - Identidad de cascos sin código: no tienen historial alcanzable
-  (`historial-neumatico.html` filtra por `code=eq.`); el buscador y `neumaticos.html` enrutan a la
-  unidad en su lugar. Resolverlo de raíz exige una fase de identidad de cascos separada
+  (`historial-neumatico.html` filtra por `code=eq.`); el buscador enruta a la unidad en su lugar.
+  Resolverlo de raíz exige una fase de identidad de cascos separada
   (`tasks_puesta_en_marcha_movimientos/REVISION_FINAL.md:512` ya registra ~316 neumáticos afectados).
-- Navegación duplicada a mano en los 8 HTML del dashboard (barra, atajo, enlaces) en vez de un
-  componente compartido — quedó así tras `tasks_buscador_global/task_07` y se amplió a 8 con
+- Navegación duplicada a mano en los 7 HTML del dashboard (barra, atajo, enlaces) en vez de un
+  componente compartido — quedó así tras `tasks_buscador_global/task_07` y se amplió con
   Servicios (`tasks_servicios` D12), sin corregir. Unificar el shell es una fase propia: mezclarla
   con funcionalidad nueva contamina el rollback de ambas.
 - Bundle estático (`scripts/prepare-static-hosting.mjs`): la allowlist omite `renova-animate.js` y
@@ -78,10 +78,16 @@ fuentes de evidencia.
   `complete_tire_movement_order` no valida que `p_items` tenga la misma longitud que `request_items`;
   la cadena actual preserva orden y cardinalidad, pero un cliente futuro puede romperla en silencio.
   Mitigación propuesta: **`request_item_index` escrito por la RPC**, que convierte el pareo en dato
-  y elimina el nivel 2 inferido de `v_tire_services`. Ver ADR-0007.
+  y elimina el nivel 2 inferido de `v_tire_services`. **Sigue viva tras ADR-0008**: la fase del
+  servicio pareado no tocó la RPC a propósito, para no dejar a los operarios sin poder cerrar órdenes
+  con un APK que no supiera satisfacer la validación nueva. Queda nombrada en
+  `tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md` §4.
 - **`reconciliation_status` sigue `pending` al 100 %**: no existe reconciliador entre
   `tire_movement_executions` y casco/ciclo/instalación. Consecuencia directa: Servicios mide
   actividad declarada, no consumo ni vida útil. Se expone como faceta para no aparentar completitud.
+  ADR-0008 dejó claro que **es el mismo problema que el origen externo**: saber si un neumático que
+  entra viene de retén, de reparación o es nuevo exige el historial del casco, o sea la misma
+  consulta mirada desde el otro lado. Hacerlas por separado sería trabajo duplicado.
 - **`tire_movement_executions` no está en la publicación `supabase_realtime`.** Medido en campo el
   2026-07-21 (`tasks_servicios/PRUEBA_CAMPO.md` punto 17): cinco pestañas autenticadas conservaron 0
   filas tras cerrar una orden, mientras una consulta directa desde esas mismas sesiones ya devolvía
@@ -97,6 +103,29 @@ fuentes de evidencia.
 - **`casing_exists` con posible falso negativo por caja**: la comprobación no aplica `upper()`, así
   que un código de casco con grafía distinta puede mostrarse como `SIN HISTORIAL` teniendo historia.
   Mismo origen que la deuda de variantes de caja en `brand_name`.
+
+### Deuda abierta por la fase Servicio pareado (2026-07-22)
+
+- **La ausencia de reemplazo es una convención de payload, no un dato.** Una salida que deja la
+  posición vacía a propósito se declara con la clave `without_entry` dentro del ítem de
+  `request_items`; viaja porque `create_tire_movement_order` ignora las claves extra. Funciona y es
+  explícita, pero nada en el esquema la conoce ni la valida. Remedio: columna propia cuando se abra
+  la fase que toque la RPC. Ver ADR-0008 §6.
+- **El origen externo del neumático que entra queda indeterminado.** `entry_origin_position` solo
+  resuelve dentro de la misma orden. Si el casco viene de retén, de reparación o es nuevo, la
+  pantalla muestra `ORIGEN NO DETERMINADO`. La medida de cuánto importa es cuántas entradas quedan
+  así en uso real: ese número es el disparador de
+  `tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md`, y hoy no se ha medido en producción.
+- **Las filas heredadas del modelo anterior no parean.** La rotación capturada como `exit@P3` +
+  `entry@P7` (mismo casco) produce una salida `not_paired` más una `installation`. Es fiel a cómo se
+  capturó y **no se le inventa un par**; pero convive con el modelo nuevo y cualquier serie que cruce
+  ambos períodos no es comparable.
+- **Sin `sync-migration-reviewer` sobre la migración de la vista.** `20260722090000_tire_services_view_pairing.sql`
+  se aplicó tras verificación manual —`security_invoker`, grants, duplicados, aislamiento, y un
+  `SELECT` de solo lectura contra producción antes de aplicar— pero sin la revisión formal que pide
+  `CLAUDE.md`. Pendiente de correr.
+- **Falta el smoke autenticado de la fase.** La lógica está verificada en SQL y con Vitest, pero
+  nadie emitió y ejecutó una orden real de punta a punta. Es `task_12`, sin ejecutar.
 
 - **Rendimiento de Supabase post-saneamiento**: el índice candidato para el historial de servicios
   es `tire_movement_executions (company_id, captured_at desc, sequence)`, pero no se aplicará con

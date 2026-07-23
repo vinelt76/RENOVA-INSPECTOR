@@ -1,4 +1,5 @@
 import {
+  loadAvailableInventory,
   loadCurrentMovementProfile,
   loadMovementExecutions,
   loadSupervisorMovementOrders,
@@ -9,13 +10,13 @@ import { createDiagramView } from "./diagram-view.js";
 import { createModeToggle, MOVIMIENTOS_MODES } from "./mode-toggle.js";
 import { createMovementOrder } from "./orders-rpc.js";
 import {
-  addOrderItem,
   addRotation,
+  addServiceFromInventory,
   createOrderDraft,
   createOrderId,
   orderDraftKey,
   orderRpcPayload,
-  removeOrderItem,
+  removeOrderPosition,
   SUPERVISOR_ORDER_ROLES,
   validateOrderDraft,
 } from "./supervisor-order-model.js";
@@ -23,7 +24,12 @@ import { projectSupervisorOrder } from "./supervisor-order-projection.js";
 import { createSupervisorOrdersUI } from "./supervisor-orders-ui.js";
 
 const ALLOWED_ROLES = new Set(SUPERVISOR_ORDER_ROLES);
-const REALTIME_TABLES = Object.freeze(["tire_movement_orders", "tire_movement_executions"]);
+const REALTIME_TABLES = Object.freeze([
+  "tire_movement_orders",
+  "tire_movement_executions",
+  "tire_installations",
+  "tire_life_cycles",
+]);
 
 export const movimientosState = {
   mode: MOVIMIENTOS_MODES.INSPECTION,
@@ -32,6 +38,7 @@ export const movimientosState = {
   profile: null,
   unitId: null,
   remoteState: [],
+  inventory: [],
   orders: [],
   executions: [],
   draft: createOrderDraft(),
@@ -144,18 +151,10 @@ function commit(result) {
   return result;
 }
 
-function addExit(position, reason, notes) {
-  return commit(addOrderItem(
+function addInventoryService(position, reason, inventoryItem, notes) {
+  return commit(addServiceFromInventory(
     movimientosState.draft,
-    { direction: "exit", position, reason, notes },
-    configuredPositions(),
-  ));
-}
-
-function addEntry(position, notes) {
-  return commit(addOrderItem(
-    movimientosState.draft,
-    { direction: "entry", position, notes },
+    { position, reason, inventoryItem, notes },
     configuredPositions(),
   ));
 }
@@ -170,8 +169,8 @@ function addOrderRotation(source, target, notes) {
   ));
 }
 
-function removeItem(index) {
-  movimientosState.draft = removeOrderItem(movimientosState.draft, index);
+function removePosition(position) {
+  movimientosState.draft = removeOrderPosition(movimientosState.draft, position);
   saveDraft();
   render();
 }
@@ -235,6 +234,7 @@ export async function loadMovimientosData({ force = false } = {}) {
       if (!unitId) {
         movimientosState.unitId = null;
         movimientosState.remoteState = [];
+        movimientosState.inventory = [];
         movimientosState.orders = [];
         movimientosState.executions = [];
         movimientosState.selected = null;
@@ -244,12 +244,14 @@ export async function loadMovimientosData({ force = false } = {}) {
         return movimientosState;
       }
 
-      const [remoteState, orderData] = await Promise.all([
+      const [remoteState, inventory, orderData] = await Promise.all([
         loadUnitPositionState(unitId, client),
+        loadAvailableInventory(client),
         loadOrders(client, unitId),
       ]);
       movimientosState.unitId = unitId;
       movimientosState.remoteState = remoteState;
+      movimientosState.inventory = inventory;
       movimientosState.orders = orderData.orders;
       movimientosState.executions = orderData.executions;
       restoreDraft();
@@ -345,10 +347,9 @@ function init() {
     details: elements.details,
     workspace: elements.workspace,
     getState: () => movimientosState,
-    onAddExit: addExit,
-    onAddEntry: addEntry,
+    onAddServiceFromInventory: addInventoryService,
     onAddRotation: addOrderRotation,
-    onRemoveItem: removeItem,
+    onRemovePosition: removePosition,
     onDraftHeader: updateDraftHeader,
     onEmit: emitOrder,
     onReload: () => loadMovimientosData({ force: true }),
