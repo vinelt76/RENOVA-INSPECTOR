@@ -47,10 +47,9 @@ Una persona, una unidad real. Cada punto se marca `OK`, `FALLA` o `N/A` **con mo
 1. Emitir una **rotación entre dos posiciones** desde el supervisor web.
 2. Verificar en la base que `request_items` tiene **4 ítems**, agrupados por posición y con cada
    entrada inmediatamente después de su salida.
-3. Tomar la orden desde la app móvil. **Debe funcionar sin cambios**: `draftFromOrder` mapea 1:1, así
-   que aparecen 4 renglones en vez de 2. Si la app falla acá, es un hallazgo grave y la fase se
-   detiene.
-4. Capturar los 4 renglones con datos reales y cerrar la orden.
+3. Tomar la orden desde la app móvil. Deben aparecer **2 tarjetas de servicio**, una por posición,
+   y dentro de cada una los grupos `SALE` y `ENTRA`. El borrador conserva 4 ítems técnicos 1:1.
+4. Completar las 4 capturas técnicas dentro de las 2 tarjetas y cerrar la orden.
 5. **Verificar el estado físico en la base**: las dos posiciones quedan ocupadas y ningún casco quedó
    sin registro de salida. Consultar las tablas, no confiar en la pantalla.
 6. Pantalla de Servicios: la rotación produce **2 servicios**, cada uno con su par en la **misma
@@ -89,8 +88,8 @@ lo suple. La Fase 1 cerró con cinco `N/A` registrados así y fue lo correcto.
 ## 8. Casos de error
 
 - **Si el punto 5 falla**, la fase **no cierra**. Es el defecto que la fase existe para corregir.
-- **Si el punto 3 falla** —la app móvil no maneja 4 renglones—, se detiene todo: la premisa de que
-  esta fase no toca la app resultó falsa, y eso cambia el alcance y el riesgo.
+- **Si el punto 3 falla** —la app no conserva las 4 capturas o no forma los 2 servicios—, se detiene
+  todo: se rompió el contrato de ejecución o su interpretación para el operario.
 - **Si el punto 8 muestra que la asimetría persiste**, volver a `task_11`.
 - **Si el punto 13 falla**, es una regresión de la invariante offline-first de `CLAUDE.md`. Bloquea;
   no es deuda.

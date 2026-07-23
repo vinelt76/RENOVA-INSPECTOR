@@ -1,5 +1,6 @@
 import { createFilterBar } from "../shared/filter-bar.js";
 import { loadServices, loadServicesProfile } from "./data.js";
+import { createServicesRefreshFallback } from "./refresh-fallback.js";
 import {
   casingHistoryHref,
   chipsFromSearch,
@@ -43,6 +44,7 @@ const elements = {
 
 let activeClient = null;
 let unsubscribeRealtime = null;
+let stopRefreshFallback = null;
 
 function createElement(tagName, className, value) {
   const element = document.createElement(tagName);
@@ -283,11 +285,13 @@ function render() {
     : "";
 }
 
-async function reload() {
+async function reload({ silent = false } = {}) {
   if (!activeClient) return;
   const requestId = ++state.requestId;
-  state.status = "loading";
-  render();
+  if (!silent || state.status !== "ready") {
+    state.status = "loading";
+    render();
+  }
   try {
     const result = await loadServices({}, activeClient);
     if (requestId !== state.requestId) return;
@@ -299,6 +303,7 @@ async function reload() {
   } catch (error) {
     if (requestId !== state.requestId) return;
     console.warn("Servicios: no se pudo cargar la vista.", error);
+    if (silent && state.status === "ready") return;
     state.rows = [];
     state.truncated = false;
     state.status = "error";
@@ -344,7 +349,11 @@ async function init(client) {
   }
   await reload();
   unsubscribeRealtime?.();
-  unsubscribeRealtime = client.onDataChange(REALTIME_TABLES, () => void reload());
+  unsubscribeRealtime = client.onDataChange(REALTIME_TABLES, () => void reload({ silent: true }));
+  stopRefreshFallback?.();
+  stopRefreshFallback = createServicesRefreshFallback({
+    refresh: () => reload({ silent: true }),
+  });
 }
 
 globalThis.addEventListener("popstate", () => {
@@ -352,7 +361,10 @@ globalThis.addEventListener("popstate", () => {
   filterBar.setChips(state.chips);
   render();
 });
-globalThis.addEventListener("pagehide", () => unsubscribeRealtime?.(), { once: true });
+globalThis.addEventListener("pagehide", () => {
+  unsubscribeRealtime?.();
+  stopRefreshFallback?.();
+}, { once: true });
 
 render();
 globalThis.onRenovaSupabaseReady(() => void init(globalThis.RenovaSupabase));

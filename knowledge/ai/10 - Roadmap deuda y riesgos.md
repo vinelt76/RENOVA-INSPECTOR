@@ -56,9 +56,6 @@ fuentes de evidencia.
   componente compartido — quedó así tras `tasks_buscador_global/task_07` y se amplió con
   Servicios (`tasks_servicios` D12), sin corregir. Unificar el shell es una fase propia: mezclarla
   con funcionalidad nueva contamina el rollback de ambas.
-- Bundle estático (`scripts/prepare-static-hosting.mjs`): la allowlist omite `renova-animate.js` y
-  `renova-format.js`, hallazgo preexistente detectado en `tasks_buscador_global/task_07`, no
-  corregido en esta fase.
 - **Esquema de Rendimiento fuera de la cadena local**: `v_tire_performance` y la columna remota
   `last_inspection_on` de `v_rendimiento_dashboard_rows` no tienen una migración local fiel;
   `schema_draft.sql` está desactualizado.
@@ -92,11 +89,11 @@ fuentes de evidencia.
   2026-07-21 (`tasks_servicios/PRUEBA_CAMPO.md` punto 17): cinco pestañas autenticadas conservaron 0
   filas tras cerrar una orden, mientras una consulta directa desde esas mismas sesiones ya devolvía
   1; `pg_publication_tables` confirma que la publicación solo incluye `inspections` e
-  `inspection_measurements`. **Servicios refleja los cambios solo al recargar.** No bloquea la
-  definición de terminado de la fase (`tasks_servicios/PLAN.md` §10 no la exige) y se aceptó como
-  deuda por decisión humana en vez de ampliar el esquema dentro de una fase funcional. Remedio:
-  migración propia que publique la tabla, o un fallback explícito de refresco en cliente. Afecta
-  también a cualquier otra superficie que suscriba esa tabla.
+  `inspection_measurements`. **Mitigado en cliente el 2026-07-22:** Servicios conserva la
+  suscripción y además hace una lectura silenciosa al volver a la pestaña y cada 10 segundos mientras
+  está visible. Ya no exige recarga manual ni parpadea durante el sondeo. La deuda restante es de
+  infraestructura/latencia: publicar la tabla permitiría volver al evento inmediato y retirar el
+  polling, pero ya no bloquea la demo.
 - **Límite de 2.000 filas sin paginación** en Servicios (`SERVICES_FETCH_LIMIT`), con banner visible
   cuando la respuesta lo llena. Con ~500 unidades en uso sostenido el banner empezará a aparecer: ese
   es el momento de implementar paginación por cursor o ventana temporal, diseñada y no implementada.
@@ -124,8 +121,18 @@ fuentes de evidencia.
   se aplicó tras verificación manual —`security_invoker`, grants, duplicados, aislamiento, y un
   `SELECT` de solo lectura contra producción antes de aplicar— pero sin la revisión formal que pide
   `CLAUDE.md`. Pendiente de correr.
-- **Falta el smoke autenticado de la fase.** La lógica está verificada en SQL y con Vitest, pero
-  nadie emitió y ejecutó una orden real de punta a punta. Es `task_12`, sin ejecutar.
+- **Smoke autenticado cerrado el 2026-07-22.** `task_12` ejecutó sobre MÓVIL BUS 2145 una
+  rotación P3↔P4 de 2 servicios/4 ejecuciones y un scrap con reemplazo. La app ahora agrupa cada
+  servicio en «sale» + «entra» con origen visible. Resultado: 2 servicios de rotación con
+  origen cruzado exacto, 1 scrap sin instalación fantasma y refresco visible sin reload en menos de
+  8 s. La deuda que permanece es la reconciliación: las ejecuciones quedan en `pending`.
+
+### Correcciones cerradas para la demo (2026-07-22)
+
+- El bundle estático ya incluye `renova-animate.js` y `renova-format.js`; Inspecciones, Rendimiento
+  e Historial cargan desde `deploy-static/` sin errores de recursos propios.
+- Servicios incorpora el fallback de refresco visible descrito arriba, con pruebas unitarias y
+  smoke de navegador sin escritura remota.
 
 - **Rendimiento de Supabase post-saneamiento**: el índice candidato para el historial de servicios
   es `tire_movement_executions (company_id, captured_at desc, sequence)`, pero no se aplicará con

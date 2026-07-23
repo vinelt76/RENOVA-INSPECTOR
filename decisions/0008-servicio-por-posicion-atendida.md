@@ -78,9 +78,11 @@ Se verificó, en modo lectura y antes de escribir nada, que si `addRotation` emi
 en su misma posición, sin instalación fantasma y sin ningún casco sin registro de salida. **El pareo
 estructural de la Fase 1 estaba bien diseñado**; fallaba lo que se le mandaba.
 
-También se verificó que la app móvil no necesitaba cambios: `draftFromOrder` es
-`order.request_items.map(newExecutionItem)`, `validateDraft` itera con `forEach` y `ExecutionScreen`
-hace `draft.items.map(...)`. Nada asume un conteo. Con 4 ítems muestra 4 renglones.
+También se verificó que el contrato de la app móvil no necesitaba cambios: `draftFromOrder` es
+`order.request_items.map(newExecutionItem)` y `validateDraft` itera sobre los N ítems. La revisión
+posterior a campo sí detectó una deuda de presentación: mostrar 4 renglones confundía capturas con
+servicios. La pantalla ahora agrupa por posición y muestra 2 tarjetas, cada una con los grupos
+`SALE` y `ENTRA`; el payload sigue conteniendo los mismos 4 ítems en el mismo orden.
 
 Por eso la fase fue de **4 tareas y una sola migración de vista**, en vez de las 12 con columna
 nueva, enum, validación en la RPC y app móvil que se plantearon primero. Ese plan descartado y su

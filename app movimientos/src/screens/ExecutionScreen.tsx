@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppHeader from '../components/AppHeader';
-import MovementCard from '../components/MovementCard';
-import { draftFromOrder, draftStorageKey, validateDraft } from '../lib/model';
+import ServiceCard from '../components/ServiceCard';
+import { draftFromOrder, draftStorageKey, groupExecutionServices, validateDraft } from '../lib/model';
 import { claimMovementOrder, completeMovementOrder } from '../lib/supabase';
 import type { ExecutionItem, MovementDraft, MovementOrder, OperatorProfile } from '../lib/types';
 
@@ -31,6 +31,7 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
   const [showErrors, setShowErrors] = useState(false);
   const [complete, setComplete] = useState(order.status === 'completed');
   const errors = useMemo(() => validateDraft(draft, order.last_odometer), [draft, order.last_odometer]);
+  const services = useMemo(() => groupExecutionServices(draft.items), [draft.items]);
 
   useEffect(() => {
     if (order.status !== 'issued') return;
@@ -78,7 +79,7 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
           <div className="success-mark">✓</div>
           <div className="section-kicker">ORDEN REGISTRADA</div>
           <h1>BUS {order.plate}</h1>
-          <p>{draft.items.length} movimientos quedaron guardados con trazabilidad del operario.</p>
+          <p>{services.length} servicios quedaron guardados con salida, ingreso y trazabilidad del operario.</p>
           <div className="success-summary">
             <span>KILOMETRAJE</span>
             <strong>{Number(draft.odometer || order.odometer_km || 0).toLocaleString('es-PE')} KM</strong>
@@ -97,7 +98,7 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
           <div>
             <div className="section-kicker">ORDEN DE MOVIMIENTO</div>
             <h1>BUS {order.plate}</h1>
-            <p>CONFIG. {order.vehicle_config} · {order.requested_items_count} MOVIMIENTOS</p>
+            <p>CONFIG. {order.vehicle_config} · {services.length} SERVICIOS · {draft.items.length} CAPTURAS</p>
           </div>
           <span className="status-chip status-chip--in_progress">{claiming ? 'TOMANDO…' : 'EN CURSO'}</span>
         </section>
@@ -129,9 +130,14 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
           {order.last_odometer !== null ? <small>ÚLTIMO CONOCIDO: {order.last_odometer.toLocaleString('es-PE')} KM</small> : null}
         </section>
 
-        <section className="movement-list">
-          {draft.items.map((item, index) => (
-            <MovementCard key={item.id} index={index} item={item} onChange={updateItem} />
+        <section className="service-list" aria-label="Servicios de la orden">
+          {services.map((service, index) => (
+            <ServiceCard
+              key={service.position}
+              ordinal={index + 1}
+              service={service}
+              onChange={updateItem}
+            />
           ))}
         </section>
 

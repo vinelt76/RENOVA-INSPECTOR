@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isActiveAnomaly } from './FormBody';
+import { isActiveAnomaly } from './anomaly-state';
 
 describe('isActiveAnomaly', () => {
   it('no presenta Normal como una anomalía activa', () => {

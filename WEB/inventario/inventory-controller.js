@@ -30,8 +30,6 @@ const elements = {
   discardedList: document.getElementById("inventory-list-discarded"),
   retentionCount: document.getElementById("inventory-count-retention"),
   discardedCount: document.getElementById("inventory-count-discarded"),
-  visibleCount: document.getElementById("inventory-visible-count"),
-  visibleLabel: document.getElementById("inventory-visible-label"),
   search: document.getElementById("inventory-search"),
   status: document.getElementById("inventory-status"),
   main: document.querySelector(".inventory-main"),
@@ -264,11 +262,6 @@ function render() {
   elements.discardedPanel.hidden = showingRetention;
   elements.retentionCount.textContent = String(state.retention.length);
   elements.discardedCount.textContent = String(state.discarded.length);
-  const visible = filteredRows();
-  elements.visibleCount.textContent = state.status === "ready" ? String(visible.length) : "—";
-  elements.visibleLabel.textContent = state.status === "ready"
-    ? `${visible.length === 1 ? "NEUMÁTICO" : "NEUMÁTICOS"} ${state.query ? "ENCONTRADOS" : "EN ESTA PESTAÑA"}`
-    : state.status === "error" ? "SIN DATOS" : "CARGANDO";
   renderStatus();
   if (state.status !== "ready") {
     elements.retentionList.replaceChildren();

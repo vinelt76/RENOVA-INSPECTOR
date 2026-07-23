@@ -28,8 +28,9 @@ atendida, y el supervisor emitía la mitad.**
 
 1. **Cero cambios de tabla, enum, RPC y policy.** La única migración de la fase es
    `create or replace view`.
-2. **Cero cambios en `app movimientos/`.** `draftFromOrder` ya es genérico sobre N ítems. Si la app
-   falla con 4 renglones, es un hallazgo grave: se detiene la fase, no se parcha la app.
+2. **Cero cambios en el contrato de `app movimientos/`.** `draftFromOrder` sigue genérico sobre N
+   ítems. La corrección UX posterior a campo agrupa las 4 capturas en 2 servicios, sin alterar RPC,
+   esquema ni cardinalidad.
 3. **La entrada de cada posición va inmediatamente después de su salida** en `request_items`. La
    vista parea en `sequence - 1`; agruparlas de otra forma rompe el pareo silenciosamente.
 4. **Preservar el 1:1 y el orden** entre `request_items` y las ejecuciones (`AUDIT.md` §6).
@@ -65,8 +66,8 @@ Todas secuenciales. Ninguna pareja comparte archivo. Cada ejecutor actualiza **s
   error más probable de la fase, igual que lo fue en `task_02`.
 - **`task_11`**: si `rotation_pairing` empieza a devolver `inferred` sobre datos reales, `task_10` no
   está emitiendo el par adyacente. El problema está aguas arriba: **no se relaja la vista**.
-- **`task_12` punto 3**: si la app móvil no maneja 4 renglones, la premisa de la fase resultó falsa.
-  **Detener**: cambia el alcance y el riesgo por completo.
+- **`task_12` punto 3**: si la app móvil no conserva las 4 capturas o no forma los 2 servicios, la
+  premisa de la fase resultó falsa. **Detener**: cambia el alcance y el riesgo por completo.
 - **`task_12` punto 5**: si una rotación real deja una posición vacía o un casco sin registro de
   salida, la fase **no cierra**. Es el defecto que existe para corregir.
 - **`task_12` punto 8**: si un scrap con reemplazo sigue contando 2, volver a `task_11`.

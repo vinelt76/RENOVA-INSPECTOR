@@ -10,11 +10,16 @@ continúa alimentando inspecciones y no puede entrar a este flujo.
    indicaciones.
 2. Un operario de la misma empresa inicia sesión, toma la orden y captura el kilometraje que
    muestra la máquina una sola vez.
-3. Completa cada renglón de salida/ingreso: código, posición, marca, medida, diseño, RTD mínimo,
-   condición, diseño de reencauche cuando aplica y observaciones. Las salidas además conservan
-   la razón humana: reparación, retén, reclamo, rotación, scrap, reencauche o balanceo.
+3. Completa una tarjeta por **servicio/posición atendida**. Cada tarjeta contiene dos grupos:
+   **Neumático que sale** (datos + razón) y **Neumático que entra** (datos + origen). En una
+   rotación el origen dice la posición de la misma unidad; desde retén/inventario se muestra y
+   precarga la llanta elegida por el supervisor.
 4. El borrador queda versionado en el equipo. Al completar, la RPC valida usuario, rol,
    empresa, configuración de posiciones y que el odómetro no retroceda.
+
+La presentación agrupada no cambia el contrato técnico: cada grupo sigue enviando una ejecución
+`exit` o `entry`. Por eso una rotación entre dos posiciones se ve como **2 servicios**, aunque la
+RPC reciba 4 ejecuciones ordenadas.
 
 Los registros operativos nacen con `reconciliation_status=pending`. Esto permite empezar a
 capturar desde ahora aunque una empresa todavía tenga la línea base en Excel. No se inventa una

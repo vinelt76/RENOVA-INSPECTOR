@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AppHeader from '../components/AppHeader';
+import { serviceCountFromOrder } from '../lib/model';
 import { loadMovementOrders } from '../lib/supabase';
 import type { MovementOrder, OperatorProfile } from '../lib/types';
 
@@ -82,7 +83,7 @@ export default function OrdersScreen({ profile, onOpen, onSignOut }: Props) {
               <div className="order-card__plate">BUS {order.plate}</div>
               <div className="order-card__meta">
                 <span>{order.vehicle_config}</span>
-                <span>{order.requested_items_count} MOV.</span>
+                <span>{serviceCountFromOrder(order)} SERV.</span>
                 <span>SUP. {order.requested_by_name}</span>
               </div>
               {order.instructions ? <p>{order.instructions}</p> : null}
@@ -104,7 +105,7 @@ export default function OrdersScreen({ profile, onOpen, onSignOut }: Props) {
             {completed.map((order) => (
               <button type="button" key={order.id} onClick={() => onOpen(order)}>
                 <strong>BUS {order.plate}</strong>
-                <span>{fmtDate(order.scheduled_for)} · {order.requested_items_count} MOV.</span>
+                <span>{fmtDate(order.scheduled_for)} · {serviceCountFromOrder(order)} SERV.</span>
                 <b>✓</b>
               </button>
             ))}

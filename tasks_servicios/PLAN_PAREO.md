@@ -53,8 +53,10 @@ Dos servicios, las dos posiciones ocupadas, ningún casco sin registro de salida
 deja de decir «P3 → P7» (engañoso) para decir P3→P3 y P7→P7. **El pareo estructural de la Fase 1
 estaba bien diseñado; lo que estaba mal era lo que el supervisor le mandaba.**
 
-Y la app móvil **no necesita ningún cambio**: `draftFromOrder` es
-`order.request_items.map(newExecutionItem)`, genérico sobre N ítems. Con 4 ítems muestra 4 renglones.
+El contrato móvil **no necesita ningún cambio**: `draftFromOrder` sigue siendo genérico sobre N
+ítems y la RPC conserva el 1:1. Después de la prueba de campo se corrigió únicamente la
+presentación: esos 4 ítems técnicos se agrupan por posición en **2 tarjetas de servicio**, cada una
+con un bloque `SALE` y otro `ENTRA`.
 
 Queda una sola cosa que sí requiere tocar SQL, y es la vista, no una tabla: generalizar el pareo para
 que **cualquier** salida pliegue la entrada de su misma posición, no solo `rotation`.
@@ -86,7 +88,8 @@ sin desmontaje (presión, torque, alineación), paginación (D10), shell de nave
 
 - Una rotación real, emitida y ejecutada de punta a punta, deja **las dos posiciones ocupadas** y
   ningún casco sin registro de salida.
-- La app móvil maneja los 4 renglones **sin cambios**.
+- La app móvil conserva las 4 capturas técnicas, pero las presenta como **2 servicios**, uno por
+  posición, cada uno con salida, razón, entrada y origen.
 - Un scrap con reemplazo produce **1 servicio**, no 2: la asimetría desapareció.
 - El origen derivado es correcto cuando el casco salió en la misma orden, y **nulo** cuando no.
 - Una salida sin entrada no se puede emitir por descuido; con ausencia declarada, sí.

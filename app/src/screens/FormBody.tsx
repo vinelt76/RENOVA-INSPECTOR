@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MONO, ORANGE, NAVY, YELLOW, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatCondicion } from '../db/schema';
 import AutocompleteField from '../components/AutocompleteField';
+import { isActiveAnomaly } from './anomaly-state';
 
 const LABEL_PRIMARY: React.CSSProperties = {
   fontSize: 12, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.1em',
@@ -14,11 +15,6 @@ const LABEL: React.CSSProperties = {
 
 const VALVULA_OK = new Set(['plástica', 'plastica', 'metalica', 'metálica']);
 const CODIGO_ESPECIALES = ['No visible', 'Sin código'];
-
-export function isActiveAnomaly(value: string | null | undefined): boolean {
-  const normalized = String(value ?? '').trim().toLocaleLowerCase('es-PE');
-  return normalized !== '' && normalized !== 'normal';
-}
 
 const sanitizeDecimal = (v: string) => {
   const clean = v.replace(/[^0-9.]/g, '');

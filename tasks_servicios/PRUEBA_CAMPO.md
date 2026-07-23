@@ -32,6 +32,11 @@ de `PLAN.md` §10, así que no bloquea el cierre; el punto 17 era una verificaci
 refleja los cambios al recargar, y eso queda dicho donde se lee: `REVISION_FINAL.md` §5 y
 `knowledge/ai/10 - Roadmap deuda y riesgos.md`. La fase cierra con `task_08` en `APROBADO CON DEUDA`.
 
+**Resolución posterior (2026-07-22):** se implementó el fallback elegido: lectura silenciosa al
+volver a la pestaña y cada 10 segundos mientras Servicios está visible. El punto 17 permanece
+`RECHAZADO CAMPO` como resultado histórico de aquella versión; falta repetirlo con una orden real
+después de la recarga limpia de datos.
+
 ## 2. Evidencia automática
 
 | Verificación | Resultado medido |

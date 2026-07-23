@@ -5,9 +5,9 @@ Proyecto remoto: `fbxupwwgiebhlciqftpw` (producción)
 Autoridad: `STATE.md` para el estado por tarea, `DECISIONES.md` y ADR-0008 para el porqué,
 `PLAN_PAREO.md` §6 para la definición de terminado.
 
-> **Esta fase cierra con evidencia de campo pendiente.** `task_12` no se ejecutó: nadie emitió ni
-> ejecutó una orden real de punta a punta. Todo lo que sigue es evidencia **local y de esquema**, y
-> está separado de la de campo justamente para que esa distinción no se pierda.
+> **Evidencia de campo completada el 2026-07-22.** `task_12` emitió y cerró una rotación real de
+> 2 servicios/4 ejecuciones y un scrap con reemplazo sobre MÓVIL BUS 2145. El detalle separado
+> está en `PRUEBA_CAMPO_PAREO.md`.
 
 ---
 
@@ -34,8 +34,8 @@ por eso tiene ADR.
 
 | Verificación | Resultado |
 |---|---|
-| `WEB/movimientos` | **183/183** (eran 176; +7 nuevas, 1 reescrita con justificación) |
-| `WEB/servicios` | **35/35** (eran 34; +1) |
+| `WEB/movimientos` | **186/186** |
+| `WEB/servicios` | **38/38** |
 | `WEB/shared` | **50/50** — sin modificar |
 | `WEB/buscador` | **19/19** — sin modificar |
 | `WEB/inventario` | **15/15** — sin modificar |
@@ -80,19 +80,17 @@ Filas heredadas (`exit@P3 rotation` + `entry@P7`, mismo casco `CN16-0003`): qued
 
 ## 4. Evidencia de CAMPO
 
-**No hay.** `task_12` está sin ejecutar.
+**Aprobada.** El recorrido usó las interfaces normales y datos reales de MÓVIL BUS 2145:
 
-Falta: emitir una rotación real desde el supervisor, verificar que la app móvil muestra 4 renglones
-**sin actualizar el APK**, capturarlos, cerrar, y confirmar en la base que las dos posiciones quedan
-ocupadas y ningún casco sin registro de salida.
+- rotación P3↔P4: 4 `request_items`, 4 ejecuciones y 2 servicios con pareo `exact`; ambos cascos
+  tienen salida e ingreso, con origen cruzado correcto;
+- scrap con reemplazo P5: 2 ejecuciones y exactamente 1 servicio `discard`;
+- la app operaria manejó las 4 ejecuciones; después del campo su presentación se corrigió a
+  2 tarjetas de servicio, cada una con los grupos de salida e ingreso y su origen;
+- Servicios refrescó sin recarga manual en 7,2 s y 7,4 s;
+- 0 errores de consola o excepciones en las tres superficies.
 
-Ese último punto es el criterio central de `PLAN_PAREO.md` §6. Hasta que se verifique con datos
-reales, lo que está demostrado es que **la lógica es correcta**, no que **el proceso funciona con una
-persona en un taller**.
-
-El punto de mayor riesgo es el de la app móvil. La premisa de que no necesita cambios está
-verificada **leyendo el código** —`draftFromOrder` mapea 1:1, `validateDraft` itera con `forEach`,
-`ExecutionScreen` hace `draft.items.map(...)`— pero no ejecutándola.
+La evidencia completa, incluidos los `N/A` motivados, está en `PRUEBA_CAMPO_PAREO.md`.
 
 ---
 
@@ -121,7 +119,9 @@ Detalle canónico en `knowledge/ai/10`.
    verificó a mano `security_invoker`, grants, duplicados y aislamiento, más un `SELECT` de solo
    lectura contra producción antes de aplicar — pero la revisión formal que pide `CLAUDE.md` no se
    corrió. Pendiente.
-2. **`task_12` sin ejecutar**: falta el smoke autenticado y la prueba de campo.
+2. **Campo ejecutado con reconciliación pendiente**: las 6 ejecuciones reales conservan
+   `reconciliation_status='pending'`, como define el flujo actual; la fase futura sigue siendo la
+   responsable de reconciliarlas contra instalaciones y ciclos.
 3. **La ausencia de reemplazo es una convención de payload** (`without_entry` dentro del ítem), no un
    dato del esquema. Funciona porque `create_tire_movement_order` ignora las claves extra; nada la
    valida.
@@ -132,8 +132,9 @@ Detalle canónico en `knowledge/ai/10`.
 6. **`sequence ↔ request_items` sigue siendo propiedad del cliente**: la RPC no valida longitud.
 7. Sigue viva toda la deuda de la Fase 1 que esta fase no tocó: `reconciliation_status` en `pending`,
    `QA-TEST` en producción, límite de 2.000 sin paginación, navegación duplicada en 8 HTML,
-   `casing_exists` con falso negativo por caja, `tire_movement_executions` fuera de
-   `supabase_realtime`.
+   `casing_exists` con falso negativo por caja y `tire_movement_executions` fuera de
+   `supabase_realtime`. Esta última quedó mitigada en cliente el 2026-07-22 con refresco silencioso
+   al volver a la pestaña y cada 10 segundos visible.
 
 ---
 
@@ -154,8 +155,6 @@ el trabajo del taller.
 
 ## 8. Handoff
 
-`task_12` (prueba de campo) y `task_13` (esta nota) quedan como el único trabajo restante de la fase;
-`task_13` está hecha, `task_12` no. La fase **no puede marcarse cerrada** hasta que el punto 5 de
-`task_12` esté en `OK`, conforme a la regla de bloqueo 6 de `STATE.md`.
-
-Para ejecutarla no hace falta APK nuevo: solo desplegar `deploy-static/web` y emitir una orden real.
+`task_12` y `task_13` están ejecutadas. El punto 5 de `task_12` quedó en `OK`: P3 y P4 tienen salida
+e ingreso registrados y ninguno de los dos cascos quedó sin salida. La fase queda cerrada; la
+reconciliación histórica permanece fuera de alcance según la fase futura documentada.

@@ -17,6 +17,8 @@ export const SUPERVISOR_ORDER_ROLES = Object.freeze([
 ]);
 
 const DIRECTIONS = new Set(["exit", "entry"]);
+const ENTRY_ORIGINS = new Set(["vehicle", "inventory", "unknown"]);
+const ROTATION_ORIGIN_PATTERN = /(?:ROTAR|DESDE)\s+P(\d+)/i;
 
 function positionNumber(value) {
   const position = Number(value);
@@ -38,6 +40,7 @@ function inventoryEntry(item) {
   if (!lifeCycleId) return {};
   return {
     life_cycle_id: lifeCycleId,
+    origin_type: "inventory",
     ...(cleanText(item.casing_code) ? { casing_code: cleanText(item.casing_code) } : {}),
     ...(cleanText(item.brand_name) ? { brand_name: cleanText(item.brand_name) } : {}),
     ...(cleanText(item.model_name) ? { model_name: cleanText(item.model_name) } : {}),
@@ -60,12 +63,28 @@ function normalizeItem(item) {
   // tiene sentido en una salida, y viaja como clave extra dentro de `request_items`:
   // `create_tire_movement_order` valida direction/position/reason e ignora el resto.
   const withoutEntry = direction === "exit" && item?.without_entry === true;
+  const noteOrigin = cleanNotes(item?.notes)?.match(ROTATION_ORIGIN_PATTERN)?.[1];
+  const explicitOriginPosition = positionNumber(item?.origin_position);
+  const originType = direction === "entry"
+    ? ENTRY_ORIGINS.has(item?.origin_type)
+      ? item.origin_type
+      : item?.life_cycle_id
+        ? "inventory"
+        : noteOrigin
+          ? "vehicle"
+          : undefined
+    : undefined;
+  const originPosition = originType === "vehicle"
+    ? explicitOriginPosition ?? positionNumber(noteOrigin)
+    : null;
   return {
     direction,
     position,
     ...(reason ? { reason } : {}),
     ...(withoutEntry ? { without_entry: true } : {}),
     ...(direction === "entry" ? inventoryEntry(item) : {}),
+    ...(originType ? { origin_type: originType } : {}),
+    ...(originPosition ? { origin_position: originPosition } : {}),
     ...(cleanNotes(item?.notes) ? { notes: cleanNotes(item.notes) } : {}),
   };
 }
@@ -270,9 +289,21 @@ export function addRotation(draft, sourcePosition, targetPosition, notes, config
     items: [
       ...(draft.items ?? []),
       normalizeItem({ direction: "exit", position: source, reason: "rotation", notes }),
-      normalizeItem({ direction: "entry", position: source, notes: `Rotar desde P${target}${extra}` }),
+      normalizeItem({
+        direction: "entry",
+        position: source,
+        origin_type: "vehicle",
+        origin_position: target,
+        notes: `Rotar desde P${target}${extra}`,
+      }),
       normalizeItem({ direction: "exit", position: target, reason: "rotation", notes }),
-      normalizeItem({ direction: "entry", position: target, notes: `Rotar desde P${source}${extra}` }),
+      normalizeItem({
+        direction: "entry",
+        position: target,
+        origin_type: "vehicle",
+        origin_position: source,
+        notes: `Rotar desde P${source}${extra}`,
+      }),
     ],
   };
   const errors = validateOrderDraft(next, configuredPositions, { requireCompleteness: false });

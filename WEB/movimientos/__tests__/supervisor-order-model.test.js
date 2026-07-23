@@ -98,9 +98,21 @@ describe("orden del supervisor", () => {
     // `sequence - 1`. Agrupar de otra forma rompe el pareo sin fallar.
     expect(result.draft.items).toEqual([
       { direction: "exit", position: 3, reason: "rotation", notes: "intercambiar gemelos" },
-      { direction: "entry", position: 3, notes: "Rotar desde P5 · intercambiar gemelos" },
+      {
+        direction: "entry",
+        position: 3,
+        origin_type: "vehicle",
+        origin_position: 5,
+        notes: "Rotar desde P5 · intercambiar gemelos",
+      },
       { direction: "exit", position: 5, reason: "rotation", notes: "intercambiar gemelos" },
-      { direction: "entry", position: 5, notes: "Rotar desde P3 · intercambiar gemelos" },
+      {
+        direction: "entry",
+        position: 5,
+        origin_type: "vehicle",
+        origin_position: 3,
+        notes: "Rotar desde P3 · intercambiar gemelos",
+      },
     ]);
   });
 
@@ -128,6 +140,7 @@ describe("orden del supervisor", () => {
         direction: "entry",
         position: 2,
         life_cycle_id: INVENTORY[0].life_cycle_id,
+        origin_type: "inventory",
         casing_code: "CAS-INVENTARIO-1",
         brand_name: "Michelin",
         model_name: "X Multi",

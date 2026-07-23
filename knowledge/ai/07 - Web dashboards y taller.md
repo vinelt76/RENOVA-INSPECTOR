@@ -2,7 +2,7 @@
 title: "Web, dashboards y taller"
 updated: 2026-07-22
 status: vigente
-sources: [WEB/movimientos, WEB/inventario, WEB/buscador, WEB/shared, WEB/servicios, WEB/rendimiento.html, WEB/INSPECCIONES POR FECHA.html, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/PLAN.md, tasks_buscador_global/PLAN.md, tasks_buscador_global/STATE.md, decisions/0005-buscador-global-objetos-navegables.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md]
+sources: [WEB/movimientos, app movimientos/src, WEB/inventario, WEB/buscador, WEB/shared, WEB/servicios, WEB/rendimiento.html, WEB/INSPECCIONES POR FECHA.html, supabase/migrations/20260716100000_baseline_provenance_and_helper.sql, supabase/migrations/20260716110000_baseline_mount_rpc_and_gate.sql, supabase/diagnostics/baseline_profile.sql, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/PLAN.md, tasks_buscador_global/PLAN.md, tasks_buscador_global/STATE.md, decisions/0005-buscador-global-objetos-navegables.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md]
 ---
 
 # Web, dashboards y taller
@@ -104,6 +104,11 @@ código de casco (→ `historial-neumatico.html`) son enlaces; un código sin hi
 `SIN HISTORIAL` sin `href`. Es el mismo límite de ADR-0005: dos objetos navegables, y Servicios
 enruta hacia ellos sin volverse un tercero. Pantalla de solo lectura: ningún camino alcanza una RPC.
 
+La actualización usa dos redes complementarias: conserva la suscripción Realtime y, como
+`tire_movement_executions` todavía no está publicada, vuelve a consultar silenciosamente al enfocar
+la ventana, al regresar a una pestaña visible y cada 10 segundos mientras permanece visible. El
+sondeo conserva los datos actuales si falla y no muestra un estado de carga intermedio.
+
 Límite de 2.000 filas con banner explícito cuando la respuesta lo llena — un recorte silencioso es
 un error de datos disfrazado de rendimiento. Decisiones y porqué: **ADR-0008**
 (`decisions/0008-servicio-por-posicion-atendida.md`) para la unidad de conteo y el origen derivado;
@@ -113,6 +118,14 @@ ADR-0007 para lo que sobrevive (pareo estructural, no navegabilidad, normalizaci
 opción del dropdown se consulta `v_tire_inventory_available` y el clic en una llanta agrega una
 pareja consecutiva `exit + entry` en la misma posición. La entrada conserva `life_cycle_id`, código
 y snapshot visible para que la orden diga explícitamente qué neumático debe entrar.
+
+**En la app del operario**, la unidad visual también es la posición atendida: una tarjeta de
+servicio contiene dos grupos, «Neumático que sale» (datos + razón) y «Neumático que entra»
+(datos + origen). Una rotación P3↔P4 muestra 2 tarjetas, no 4 renglones sueltos, aunque conserva las
+4 ejecuciones técnicas consecutivas que requiere la RPC y la vista. El origen se transporta como
+metadato de la orden (`vehicle` + posición o `inventory`); las órdenes antiguas de rotación se
+interpretan desde su nota `Rotar desde Pn`. Las entradas de retén/inventario precargan código,
+marca, medida, diseño, condición y RTD disponibles para que el operario confirme o corrija.
 
 ## Patrón común
 

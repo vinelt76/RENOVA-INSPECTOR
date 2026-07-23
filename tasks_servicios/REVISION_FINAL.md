@@ -131,8 +131,10 @@ terminado. Todo `PLAN.md` §10 está cubierto.
 **Decisión humana (2026-07-21):** aprobar `task_08` con la deuda registrada, en vez de aplicar la
 migración de excepción. Queda en `knowledge/ai/10` con su remedio nombrado.
 
-Se registra así, y no como «Realtime pendiente», porque la diferencia importa para quien use la
-pantalla: **lo que ve puede estar desactualizado hasta que recargue.**
+**Resolución posterior (2026-07-22):** sin cambiar el esquema, Servicios agregó un fallback de
+lectura silenciosa al enfocar/volver a la pestaña y cada 10 segundos mientras está visible. La
+tabla continúa fuera de `supabase_realtime`, pero la pantalla ya no depende de una recarga manual.
+El fallo de campo anterior se conserva aquí como evidencia histórica de la causa.
 
 ---
 
@@ -153,7 +155,8 @@ Sin maquillar. Detalle canónico en `knowledge/ai/10 - Roadmap deuda y riesgos.m
    shell. Extraerlo es una fase propia.
 6. **`casing_exists` con posible falso negativo por caja:** no aplica `upper()`, así que un código
    con grafía distinta puede mostrarse como `SIN HISTORIAL` teniendo historia.
-7. **`tire_movement_executions` fuera de `supabase_realtime`** (§5).
+7. **`tire_movement_executions` fuera de `supabase_realtime`** (§5), mitigado en la pantalla por
+   refresco silencioso; queda como deuda de infraestructura, no de frescura visible para la demo.
 
 Deuda preexistente que la fase **no** empeoró ni resolvió: grant amplio de
 `v_rendimiento_dashboard_rows` a `anon`, esquema de Rendimiento fuera de la cadena local, variantes
@@ -178,7 +181,8 @@ de caja en `brand_name`.
 1. `request_item_index` en `tire_movement_executions`, escrito por `complete_tire_movement_order`.
 2. Reconciliación de ejecuciones contra `tire_casings` / `tire_life_cycles` / `tire_installations`.
    Desbloquea métricas de consumo y vida útil por servicio.
-3. Publicación de `tire_movement_executions` en `supabase_realtime`, o fallback explícito de refresco.
+3. Publicación de `tire_movement_executions` en `supabase_realtime` si se quiere retirar el fallback
+   de refresco ya implementado.
 4. Paginación por cursor o ventana temporal, cuando el banner de truncado empiece a aparecer.
 5. KPIs operativos: `issued → started → completed`, carga por operario, tasa de completado.
 6. Limpieza o marcado de los datos `QA-TEST`.

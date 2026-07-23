@@ -1,4 +1,6 @@
 import type {
+  EntryOrigin,
+  ExecutionService,
   ExecutionItem,
   MovementDraft,
   MovementOrder,
@@ -23,21 +25,47 @@ export function loginIdentifierToEmail(identifier: string): string {
   return normalized.includes('@') ? normalized : `${normalized}${USERNAME_SUFFIX}`;
 }
 
+const TIRE_CONDITIONS = new Set(['N', 'R1', 'R2', 'R3', 'R4']);
+const ROTATION_ORIGIN_PATTERN = /(?:ROTAR|DESDE)\s+P(\d+)/i;
+
+function entryOrigin(request: RequestedMovement): {
+  type: EntryOrigin;
+  position: number | null;
+} {
+  if (request.direction !== 'entry') return { type: 'unknown', position: null };
+  const explicitPosition = Number(request.origin_position);
+  if (request.origin_type === 'vehicle' && Number.isInteger(explicitPosition) && explicitPosition > 0) {
+    return { type: 'vehicle', position: explicitPosition };
+  }
+  if (request.origin_type === 'inventory' || request.life_cycle_id) {
+    return { type: 'inventory', position: null };
+  }
+  const legacyPosition = request.notes?.match(ROTATION_ORIGIN_PATTERN)?.[1];
+  if (legacyPosition) return { type: 'vehicle', position: Number(legacyPosition) };
+  return { type: 'unknown', position: null };
+}
+
 export function newExecutionItem(request: RequestedMovement): ExecutionItem {
+  const origin = entryOrigin(request);
+  const condition = TIRE_CONDITIONS.has(request.condition ?? '')
+    ? request.condition as ExecutionItem['condition']
+    : 'N';
   return {
     id: crypto.randomUUID(),
     direction: request.direction,
     position: request.position,
     reason: request.direction === 'exit' ? (request.reason ?? '') : '',
-    code: '',
+    code: request.casing_code ?? '',
     code_unreadable: false,
-    brand: '',
-    size: '',
-    design: '',
-    rtd_min_mm: '',
-    condition: 'N',
-    retread_design: '',
+    brand: request.brand_name ?? '',
+    size: request.size_name ?? '',
+    design: request.model_name ?? '',
+    rtd_min_mm: request.last_rtd_mm == null ? '' : String(request.last_rtd_mm),
+    condition,
+    retread_design: request.retread_design ?? '',
     observations: request.notes ?? '',
+    origin_type: origin.type,
+    origin_position: origin.position,
   };
 }
 
@@ -49,6 +77,32 @@ export function draftFromOrder(order: MovementOrder): MovementDraft {
     items: order.request_items.map(newExecutionItem),
     updatedAt: new Date().toISOString(),
   };
+}
+
+export function groupExecutionServices(items: ExecutionItem[]): ExecutionService[] {
+  const groups = new Map<number, ExecutionService>();
+  items.forEach((item, index) => {
+    const current = groups.get(item.position) ?? {
+      position: item.position,
+      exitIndex: null,
+      entryIndex: null,
+      exit: null,
+      entry: null,
+    };
+    if (item.direction === 'exit') {
+      current.exitIndex = index;
+      current.exit = item;
+    } else {
+      current.entryIndex = index;
+      current.entry = item;
+    }
+    groups.set(item.position, current);
+  });
+  return [...groups.values()].sort((left, right) => left.position - right.position);
+}
+
+export function serviceCountFromOrder(order: Pick<MovementOrder, 'request_items'>): number {
+  return new Set(order.request_items.map((item) => item.position)).size;
 }
 
 export function validateDraft(

@@ -26,12 +26,23 @@ export type MovementReason =
   | 'retread'
   | 'balancing';
 export type TireCondition = 'N' | 'R1' | 'R2' | 'R3' | 'R4';
+export type EntryOrigin = 'vehicle' | 'inventory' | 'unknown';
 
 export interface RequestedMovement {
   direction: MovementDirection;
   position: number;
   reason?: MovementReason;
   notes?: string;
+  origin_type?: EntryOrigin;
+  origin_position?: number;
+  life_cycle_id?: string;
+  casing_code?: string;
+  brand_name?: string;
+  model_name?: string;
+  size_name?: string;
+  condition?: TireCondition;
+  retread_design?: string;
+  last_rtd_mm?: number | null;
 }
 
 export interface MovementOrder {
@@ -71,6 +82,8 @@ export interface ExecutionItem {
   condition: TireCondition;
   retread_design: string;
   observations: string;
+  origin_type: EntryOrigin;
+  origin_position: number | null;
 }
 
 export interface MovementDraft {
@@ -79,4 +92,12 @@ export interface MovementDraft {
   odometer: string;
   items: ExecutionItem[];
   updatedAt: string;
+}
+
+export interface ExecutionService {
+  position: number;
+  exitIndex: number | null;
+  entryIndex: number | null;
+  exit: ExecutionItem | null;
+  entry: ExecutionItem | null;
 }

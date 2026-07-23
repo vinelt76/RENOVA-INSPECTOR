@@ -45,30 +45,6 @@
   line-height: 1.6;
 }
 
-.inventory-total {
-  min-width: 132px;
-  padding: 14px 16px;
-  border: 2px solid var(--border-dark);
-  border-radius: 12px;
-  background: var(--field-dark);
-  text-align: right;
-}
-
-.inventory-total span {
-  display: block;
-  color: var(--value-ice);
-  font-size: 28px;
-  line-height: 1;
-}
-
-.inventory-total small {
-  display: block;
-  margin-top: 6px;
-  color: var(--label-blue);
-  font-size: 8px;
-  letter-spacing: .12em;
-}
-
 .inventory-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -418,11 +394,6 @@
   .inventory-toolbar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .inventory-total {
-    width: 100%;
-    text-align: left;
   }
 
   .inventory-tab {
