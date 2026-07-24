@@ -99,6 +99,7 @@ describe("baseline-model", () => {
       last_measurement_id: MEASUREMENT_2,
       last_inspection_tire_code: "INS-004",
     }));
+    model.updateMount(4, { otd_mm: "19.1" });
 
     const payload = model.seal();
     expect(payload).toMatchObject({
@@ -113,7 +114,7 @@ describe("baseline-model", () => {
       { seq: 2, position: 4 },
     ]);
     expect(payload.mounts[0].otd_mm).toBe(18.7);
-    expect(payload.mounts[1].otd_mm).toBeNull();
+    expect(payload.mounts[1].otd_mm).toBe(19.1);
     expect(Object.isFrozen(payload)).toBe(true);
     expect(Object.isFrozen(payload.mounts)).toBe(true);
     expect(Object.isFrozen(payload.mounts[0])).toBe(true);
@@ -126,6 +127,7 @@ describe("baseline-model", () => {
     ];
     const model = createBaselineModel({ unitId: UNIT_ID, uuidFn: () => ids.shift() });
     model.addFromProjection(3, evidence());
+    model.updateMount(3, { otd_mm: 18.7 });
     const first = model.seal();
     expect(model.seal()).toBe(first);
 
@@ -173,7 +175,7 @@ describe("baseline-model", () => {
     });
   });
 
-  it("rechaza una OTD inválida y admite dejarla vacía cuando se desconoce", () => {
+  it("exige OTD y RTD positivos", () => {
     const model = createBaselineModel({ unitId: UNIT_ID });
     model.addFromProjection(3, evidence());
 
@@ -183,7 +185,21 @@ describe("baseline-model", () => {
     ]));
 
     model.updateMount(3, { otd_mm: "" });
-    expect(model.validate().map(({ code }) => code)).not.toContain("otd_invalid");
-    expect(model.seal().mounts[0].otd_mm).toBeNull();
+    expect(model.validate()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "otd_required", position: 3 }),
+    ]));
+
+    model.updateMount(3, { otd_mm: "18.7", rtd_mm: "" });
+    expect(model.validate()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "rtd_required", position: 3 }),
+    ]));
+
+    model.updateMount(3, { rtd_mm: "0" });
+    expect(model.validate()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "rtd_invalid", position: 3 }),
+    ]));
+
+    model.updateMount(3, { rtd_mm: "14.2" });
+    expect(model.seal().mounts[0]).toMatchObject({ otd_mm: 18.7, rtd_mm: 14.2 });
   });
 });

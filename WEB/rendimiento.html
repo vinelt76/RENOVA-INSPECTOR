@@ -115,25 +115,45 @@
   .excluded-note b{color:var(--value-ice)}
   .excluded-note.has-excluded b.excl{color:var(--signal-yellow)}
 
-  /* ───────────────── Lista de resultados ───────────────── */
-  .results-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-  .result-row{
-    display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 14px;
-    width:100%;text-align:left;font-family:var(--mono);cursor:pointer;
-    background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
-    padding:12px 14px;color:var(--value-ice);min-height:44px;
-    transition:border-color .15s ease-out;
+  /* ───────────────── Tabla de resultados ───────────────── */
+  .results-list{
+    margin-top:24px;border:1px solid var(--border-dark);border-radius:12px;
+    background:var(--field-dark);overflow:hidden;
   }
-  .result-row:hover,.result-row:focus-visible{outline:none;border-color:var(--signal-yellow)}
+  .results-head,.result-row{
+    display:grid;grid-template-columns:minmax(170px,1.15fr) minmax(180px,1fr) minmax(100px,.65fr) minmax(90px,.55fr) minmax(150px,.75fr);
+    align-items:center;gap:18px;
+  }
+  .results-head{
+    min-height:42px;padding:0 16px;background:#17233a;border-bottom:1px solid var(--border-dark);
+    color:var(--label-blue);font:800 10px/1.2 var(--mono);letter-spacing:.08em;
+  }
+  .result-row{
+    width:100%;text-align:left;font-family:var(--mono);cursor:pointer;
+    background:transparent;border:0;border-bottom:1px solid var(--border-dark);
+    padding:13px 16px;color:var(--value-ice);min-height:58px;
+    transition:background .15s ease-out,box-shadow .15s ease-out;
+  }
+  .result-row:last-child{border-bottom:0}
+  .result-row:hover{background:rgba(79,126,174,.07)}
+  .result-row:focus-visible{outline:none;box-shadow:inset 3px 0 var(--ember-orange);background:rgba(79,126,174,.1)}
   .result-identity{display:flex;flex-direction:column;gap:3px;min-width:0}
   .result-code{font-size:14px;font-weight:800;overflow-wrap:anywhere}
   .result-sub{font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--label-blue)}
-  .result-model{
-    grid-column:1/-1;font-size:11px;font-weight:700;color:var(--label-blue);
-    overflow-wrap:anywhere;
-  }
-  .result-metric{font-size:13px;font-weight:800;text-align:right;white-space:nowrap}
+  .result-model{font-size:12px;font-weight:700;color:var(--value-ice);overflow-wrap:anywhere}
+  .result-model small{display:block;margin-top:4px;color:var(--label-blue);font-size:9px}
+  .result-metric{font-size:13px;font-weight:800;white-space:nowrap}
   .result-metric.empty{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--label-blue)}
+  .result-status{
+    display:inline-flex;align-items:center;gap:7px;width:max-content;max-width:100%;
+    border-radius:999px;padding:5px 9px;font-size:9px;font-weight:800;
+    letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;
+  }
+  .result-status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+  .result-status.is-critical{color:#ff5a5f;background:rgba(255,90,95,.14)}
+  .result-status.is-warning{color:var(--signal-yellow);background:rgba(255,182,56,.14)}
+  .result-status.is-normal{color:#3bd097;background:rgba(59,208,151,.14)}
+  .result-status.is-no-data,.result-status.is-unknown{color:#669bd2;background:rgba(102,155,210,.14)}
 
   /* ───────────────── Volver del detalle a la lista ───────────────── */
   .detail-back{
@@ -253,28 +273,54 @@
   .a-fill{display:block;height:100%;width:0%;background:var(--bar-steel);border-radius:3px;
     transition:width .6s cubic-bezier(.22,1,.36,1)}
 
-  /* ───────────────── Panel gráfico del conjunto filtrado ─────────────────
-     Dos columnas × dos filas de módulos cuadrados. El costo ocupa una
-     franja completa debajo de los cuatro, porque es una lectura transversal.
-     Las columnas representan valores reales de los neumáticos incluidos. */
+  /* ───────────────── Panel ejecutivo del conjunto filtrado ───────────────── */
   .fleet-kpis{
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;
     margin:0 0 18px;
   }
   .fleet-stat{
     min-width:0;background:var(--field-dark);border:2px solid var(--border-dark);
-    padding:15px 16px;display:flex;flex-direction:column;
-    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+    min-height:242px;padding:20px 16px 18px;display:flex;flex-direction:column;align-items:center;
+    border-radius:14px;
   }
   .fleet-stat .a-label,.fleet-cost .a-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
-  .fleet-stat .a-value,.fleet-cost .a-value{font-size:clamp(22px,2.6vw,34px);font-weight:800;line-height:1;margin-top:9px;color:var(--value-ice)}
-  .fleet-stat .a-unit,.fleet-cost .a-unit{font-size:10px;font-weight:700;color:var(--label-blue);margin-left:3px}
-  .fleet-stat .a-sub,.fleet-cost .a-sub{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);margin-top:7px;line-height:1.45}
+  .fleet-stat .a-label{margin-top:17px}
+  .fleet-stat .a-sub,.fleet-cost .a-sub{font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--label-blue);margin-top:6px;line-height:1.45;text-align:center}
+  .metric-dial{
+    --dial-color:#5f94cf;--dial-progress:100%;
+    position:relative;width:138px;height:138px;border-radius:50%;
+    display:grid;place-items:center;background:#0e192b;
+  }
+  .metric-dial::before{
+    content:"";position:absolute;inset:7px;border-radius:50%;
+    border:8px solid color-mix(in srgb,var(--dial-color) 76%,transparent);
+    box-shadow:0 0 0 4px rgba(65,99,143,.13);
+  }
+  .metric-dial.is-progress::before{
+    inset:0;border:0;background:conic-gradient(var(--dial-color) var(--dial-progress),#1a2740 0);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 10px),#000 0);
+    mask:radial-gradient(farthest-side,transparent calc(100% - 10px),#000 0);
+    box-shadow:none;
+  }
+  .metric-dial-body{position:relative;z-index:1;text-align:center}
+  .metric-dial .a-value{font-size:clamp(23px,2vw,30px);font-weight:800;line-height:1;color:var(--value-ice)}
+  .metric-dial .a-unit{display:block;margin-top:7px;font-size:9px;font-weight:700;color:var(--label-blue)}
+  .fleet-stat.is-kmmm .metric-dial{--dial-color:#5f94cf}
+  .fleet-stat.is-projected .metric-dial{--dial-color:#8b83d8}
+  .fleet-stat.is-consumption .metric-dial{--dial-color:#ffb638}
+  .fleet-stat.is-accumulated .metric-dial{--dial-color:#3bd097}
   /* Mini-gráfico de distribución: barras ordenadas de mayor a menor, con
-     etiqueta de eje X (posición), línea de promedio y tooltip por barra
-     (ID + unidad/marca + valor exacto). Sin esto el gráfico es solo
+     etiqueta de eje X (unidad + posición), línea de promedio y tooltip por
+     barra (ID + unidad/marca + valor exacto). Sin esto el gráfico es solo
      decorativo — ver knowledge/ai/09. */
   .metric-bars{margin-top:14px;background:var(--screen-dark);border-radius:4px}
+  .metric-chart-meta{
+    min-height:20px;padding:7px 10px 0;display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    color:var(--label-blue);font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  }
+  .metric-chart-average{white-space:nowrap}
+  .metric-chart-average b{color:var(--value-ice);font-size:9px;letter-spacing:0}
+  .metric-chart-range{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   .bars-track{position:relative;display:flex;align-items:flex-end;gap:5px;height:64px;padding:9px 10px 0}
   .bar-col{
     flex:1;min-width:3px;height:100%;display:flex;align-items:flex-end;position:relative;
@@ -287,13 +333,9 @@
   .metric-bars.is-consumption .metric-bar,
   .metric-bars.is-cost .metric-bar{background:var(--signal-yellow)}
   .metric-avg-line{position:absolute;left:0;right:0;border-top:1px dashed rgba(122,171,204,.55);pointer-events:none}
-  .metric-avg-line span{
-    position:absolute;right:0;top:-12px;font-size:7px;font-weight:800;letter-spacing:.06em;
-    text-transform:uppercase;color:var(--label-blue);background:var(--screen-dark);padding-left:4px;
-  }
   .bars-labels{display:flex;gap:5px;padding:5px 10px 8px}
   .bar-xlabel{
-    flex:1;min-width:3px;text-align:center;font-size:7px;font-weight:800;letter-spacing:.02em;
+    flex:1;min-width:3px;text-align:center;font-size:clamp(6px,1.7vw,8px);font-weight:800;letter-spacing:0;
     color:var(--label-blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .bar-tooltip{
@@ -317,12 +359,15 @@
   .metric-bars .mi-sub{color:var(--label-blue);font-size:9px;font-weight:700;opacity:.75}
   .fleet-cost{
     grid-column:1/-1;background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
-    padding:20px;display:grid;grid-template-columns:minmax(250px, .7fr) 1fr;gap:24px;align-items:center;
+    padding:18px 22px;display:grid;grid-template-columns:minmax(240px,.7fr) minmax(280px,1fr);
+    gap:28px;align-items:center;
   }
-  .fleet-cost .metric-bars{margin-top:0}
-  .fleet-cost .bars-track{height:56px}
-  .fleet-cost .metric-bars.is-empty,
-  .fleet-cost .metric-bars.is-insufficient{height:68px}
+  .fleet-cost .a-value{font-size:clamp(24px,2.6vw,34px);font-weight:800;line-height:1;margin-top:9px;color:var(--value-ice)}
+  .cost-coverage{display:grid;grid-template-columns:minmax(90px,1fr) auto;align-items:center;gap:12px}
+  .cost-coverage-track{height:8px;background:#19273f;border-radius:999px;overflow:hidden}
+  .cost-coverage-fill{display:block;height:100%;width:var(--coverage);background:#5f94cf;border-radius:inherit}
+  .cost-coverage-label{font-size:10px;font-weight:700;color:var(--label-blue);white-space:nowrap}
+  .cost-coverage-label b{color:var(--value-ice)}
   @keyframes metricBarIn{from{transform:scaleY(.04)}to{transform:scaleY(1)}}
 
   /* Mejor vs. peor posición del eje — panel único de comparación (no cards
@@ -414,6 +459,26 @@
   .source-panel .source-col{padding:12px 18px 16px}
   .source-panel .source-col+.source-col{border-left:2px solid var(--border-dark)}
   .source-panel .metric .m-value{font-size:13px}
+  @media (max-width:1000px){
+    .fleet-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:760px){
+    .results-head{display:none}
+    .results-list{border-radius:10px}
+    .result-row{
+      grid-template-columns:1fr auto;gap:8px 14px;padding:14px;
+    }
+    .result-model{grid-column:1/2}
+    .result-status{grid-column:2/3;grid-row:1/2}
+    .result-metric{
+      display:flex;align-items:baseline;justify-content:flex-end;gap:7px;text-align:right;
+    }
+    .result-metric::before{
+      content:attr(data-label);font-size:8px;font-weight:800;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--label-blue);
+    }
+    .result-consumption{grid-column:2/3;text-align:right}
+  }
   @media (max-width:560px){
     .source-panel .source-cols{grid-template-columns:1fr}
     .source-panel .source-col+.source-col{border-left:none;border-top:2px solid var(--border-dark)}
@@ -431,14 +496,13 @@
     .card-cols{grid-template-columns:1fr}
     .card-col+.card-col{border-left:none;border-top:2px solid var(--border-dark)}
     .avg-kpis{grid-template-columns:1fr}
-    .fleet-stat{padding:12px}
-    .fleet-stat .a-value{font-size:20px}
+    .fleet-kpis{grid-template-columns:1fr}
+    .fleet-stat{padding:18px 12px;min-height:230px}
     .metric-bars{margin-top:10px}
     .bars-track{height:56px;padding:7px 8px 0}
-    .fleet-cost .bars-track{height:56px}
-    .metric-bars.is-empty,.metric-bars.is-insufficient,
-    .fleet-cost .metric-bars.is-empty,.fleet-cost .metric-bars.is-insufficient{height:64px}
     .fleet-cost{grid-template-columns:1fr;gap:12px}
+    .cost-coverage{grid-template-columns:1fr}
+    .cost-coverage-label{white-space:normal}
     .balance{flex-wrap:wrap}
   }
   @media (prefers-reduced-motion:reduce){
@@ -448,8 +512,8 @@
 </head>
 <body>
 
-<header>
-  <div class="head-row office-head">
+<header class="office-header--compact">
+  <div class="head-row office-head office-head--compact">
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">RENDIMIENTO</div>
@@ -459,7 +523,7 @@
         <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="inventario.html">Inventario</a>
         <a href="servicios.html">Servicios</a>
-        <a class="active" href="rendimiento.html">Rendimiento</a>
+        <a class="active" aria-current="page" href="rendimiento.html">Rendimiento</a>
         <a href="importar.html">Importar</a>
       </nav>
       <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
@@ -802,7 +866,22 @@ const fmtKm  = v => nf.format(Math.round(v));
 const fmtMm  = v => (Math.round(v*10)/10).toFixed(1);
 const fmtKmMm= v => nf.format(Math.round(v));
 const fmtPct = v => (Math.round(v*10)/10).toFixed(1);
-const fmtCost= v => "$ " + v.toFixed(4);
+const fmtCost= v => "S/ " + v.toFixed(4);
+const fmtCompact = value => {
+  const number = Number(value);
+  if(!Number.isFinite(number)) return "—";
+  if(Math.abs(number) >= 1000000){
+    return `${(number / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if(Math.abs(number) >= 1000){
+    return `${Math.round(number / 1000)}K`;
+  }
+  return nf.format(Math.round(number));
+};
+const escapeHtml = value => String(value ?? "").replace(
+  /[&<>"']/g,
+  char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]),
+);
 
 /* =========================================================================
    ESTADO DE UI — un solo flujo: eje seleccionado → posición seleccionada.
@@ -847,27 +926,31 @@ function excludedNote(group, freshness){
   return `<div class="${cls}"><b class="num">${group.valid}</b> de <b class="num">${total}</b> neumáticos aportan al promedio${detail}${staleDetail}${futureDetail}.</div>`;
 }
 
-// tire → {label, sub, value} para un mini-chart: label es la posición (eje X,
-// corto por diseño), sub es unidad+marca (solo aparece en el tooltip).
+// tire → {label, sub, value} para un mini-chart. El eje X lleva unidad +
+// posición: P3 se repite entre unidades y no se puede desambiguar con solo la
+// posición. `sub` conserva unidad + marca para el tooltip detallado.
 function barRowFrom(row, metricKey){
   const tire = row.tire;
+  const position = tire.pos || "—";
   return {
-    label: tire.pos || "—",
+    label: tire.plate ? `${tire.plate}-${position}` : position,
     sub: [tire.plate, tireModelLabel(tire)].filter(Boolean).join(" · "),
     value: row.m[metricKey],
   };
 }
 
 // Mini-chart de distribución por neumático: barras ordenadas de mayor a
-// menor (F: "de un vistazo quién está por encima/debajo"), línea de
-// promedio, etiqueta de posición en el eje X y tooltip con ID + marca +
-// valor exacto al pasar el mouse o enfocar con teclado/tap.
+// menor (F: "de un vistazo quién está por encima/debajo"), línea de promedio
+// sin texto inline (no compite con barras altas), etiqueta visible de
+// unidad-posicion y tooltip con ID + marca + valor exacto al pasar el mouse o
+// enfocar con teclado/tap.
 function distributionBars(rows, opts = {}){
   const {
     variant = "",
     format = value => nf.format(Math.round(value)),
     emptyMsg = "Sin datos",
     emptySub = "",
+    rangeSummary = null,
   } = opts;
   const valid = rows.filter(row => Number.isFinite(row.value) && row.value >= 0);
   if(!valid.length){
@@ -880,10 +963,12 @@ function distributionBars(rows, opts = {}){
   // Una muestra uniforme sobre el orden ya descendente evita que una flota
   // grande convierta el panel en una masa ilegible, manteniendo siempre
   // valores reales (nunca interpolados) y el orden mayor→menor.
-  const sample = sorted.length <= 12
+  // Ocho columnas mantienen legible la etiqueta "unidad-Px" también en móvil.
+  const sample = sorted.length <= 8
     ? sorted
-    : Array.from({length:12}, (_, index) => sorted[Math.round(index * (sorted.length - 1) / 11)]);
+    : Array.from({length:8}, (_, index) => sorted[Math.round(index * (sorted.length - 1) / 7)]);
   const max = Math.max(...sample.map(row => row.value), 0.0001);
+  const min = Math.min(...sample.map(row => row.value));
   const average = mean(valid.map(row => row.value));
   const avgPct = Math.min(100, Math.max(0, (average / max) * 100));
   const bars = sample.map(row => {
@@ -901,9 +986,16 @@ function distributionBars(rows, opts = {}){
       </button>`;
   }).join("");
   const labels = sample.map(row => `<span class="bar-xlabel">${row.label}</span>`).join("");
+  const range = typeof rangeSummary === "function"
+    ? rangeSummary({ min, max, average, count: valid.length })
+    : "";
   return `<div class="metric-bars ${variant}" aria-label="Distribución de ${valid.length} valores, promedio ${format(average)}">
+      <div class="metric-chart-meta">
+        <span class="metric-chart-average">Prom.: <b class="num">${format(average)}</b></span>
+        ${range ? `<span class="metric-chart-range">${range}</span>` : ""}
+      </div>
       <div class="bars-track">
-        <span class="metric-avg-line" style="bottom:${avgPct}%"><b>Prom.</b></span>
+        <span class="metric-avg-line" style="bottom:${avgPct}%" aria-hidden="true"></span>
         ${bars}
       </div>
       <div class="bars-labels">${labels}</div>
@@ -916,44 +1008,64 @@ function aggregateKpis(group){
   }
   const countLabel = `Promedio de ${group.valid} neumático${group.valid===1?"":"s"}`;
   const withCost = group.valids.filter(row => Number.isFinite(row.m.costoKm));
+  const coverage = group.valid ? Math.round((withCost.length / group.valid) * 100) : 0;
+  const consumptionProgress = Math.min(100, Math.max(0, group.avgPct));
+  const accumulatedAverage = group.totalKmAcumulado / group.valid;
   return `
-    <section class="fleet-kpis" aria-label="Gráficos de rendimiento del conjunto filtrado">
-      <article class="fleet-stat">
-        <div class="a-label">Km Acumulado</div>
-        <div class="a-value num">${fmtKm(group.totalKmAcumulado / group.valid)}<span class="a-unit">km</span></div>
-        <div class="a-sub">Promedio de ${group.valid} neumático${group.valid===1?"":"s"}</div>
-        ${distributionBars(group.valids.map(row => barRowFrom(row, "kmAcumulado")), {format: v => fmtKm(v) + " km"})}
-      </article>
-      <article class="fleet-stat">
-        <div class="a-label">Km Proyectado</div>
-        <div class="a-value num">${fmtKm(group.avgKmProyectado)}<span class="a-unit">km</span></div>
-        <div class="a-sub">${countLabel}</div>
-        ${distributionBars(group.valids.map(row => barRowFrom(row, "kmProyectado")), {format: v => fmtKm(v) + " km"})}
-      </article>
-      <article class="fleet-stat">
+    <section class="fleet-kpis" aria-label="Indicadores de rendimiento del conjunto filtrado">
+      <article class="fleet-stat is-kmmm">
+        <div class="metric-dial" aria-label="${fmtKmMm(group.avgKmMm)} kilómetros por milímetro">
+          <div class="metric-dial-body">
+            <div class="a-value num">${fmtCompact(group.avgKmMm)}</div>
+            <span class="a-unit">km/mm</span>
+          </div>
+        </div>
         <div class="a-label">Km/mm</div>
-        <div class="a-value num">${fmtKmMm(group.avgKmMm)}<span class="a-unit">km/mm</span></div>
         <div class="a-sub">${countLabel}</div>
-        ${distributionBars(group.valids.map(row => barRowFrom(row, "kmMm")), {format: v => fmtKmMm(v) + " km/mm"})}
       </article>
-      <article class="fleet-stat">
-        <div class="a-label">Consumo</div>
-        <div class="a-value num">${fmtPct(group.avgPct)}<span class="a-unit">%</span></div>
+      <article class="fleet-stat is-projected">
+        <div class="metric-dial" aria-label="${fmtKm(group.avgKmProyectado)} kilómetros proyectados">
+          <div class="metric-dial-body">
+            <div class="a-value num">${fmtCompact(group.avgKmProyectado)}</div>
+            <span class="a-unit">km</span>
+          </div>
+        </div>
+        <div class="a-label">Km Proyectado</div>
         <div class="a-sub">${countLabel}</div>
-        ${distributionBars(group.valids.map(row => barRowFrom(row, "pctConsumo")), {format: v => fmtPct(v) + " %", variant: "is-consumption"})}
+      </article>
+      <article class="fleet-stat is-consumption">
+        <div class="metric-dial is-progress" style="--dial-progress:${consumptionProgress}%"
+             aria-label="${fmtPct(group.avgPct)} por ciento de consumo">
+          <div class="metric-dial-body">
+            <div class="a-value num">${fmtPct(group.avgPct)}%</div>
+            <span class="a-unit">consumo</span>
+          </div>
+        </div>
+        <div class="a-label">Consumo</div>
+        <div class="a-sub">% de vida útil consumida · ${group.valid} neumático${group.valid===1?"":"s"}</div>
+      </article>
+      <article class="fleet-stat is-accumulated">
+        <div class="metric-dial" aria-label="${fmtKm(accumulatedAverage)} kilómetros acumulados promedio">
+          <div class="metric-dial-body">
+            <div class="a-value num">${fmtCompact(accumulatedAverage)}</div>
+            <span class="a-unit">km</span>
+          </div>
+        </div>
+        <div class="a-label">Km Acumulado</div>
+        <div class="a-sub">${countLabel}</div>
       </article>
       <article class="fleet-cost">
         <div>
           <div class="a-label">Costo/Km promedio</div>
           <div class="a-value">${group.avgCostoKm != null ? `<span class="num">${fmtCost(group.avgCostoKm)}</span>` : "Sin costo fuente"}</div>
-          <div class="a-sub">${group.avgCostoKm != null ? "Solo neumáticos con costo registrado" : "Ningún neumático del conjunto tiene costo cargado"}</div>
+          <div class="a-sub">${group.avgCostoKm != null ? "Calculado solo con costos registrados" : "Ningún neumático del conjunto tiene costo cargado"}</div>
         </div>
-        ${distributionBars(withCost.map(row => barRowFrom(row, "costoKm")), {
-          format: fmtCost,
-          variant: "is-cost",
-          emptyMsg: "Sin costo registrado",
-          emptySub: `0 de ${group.valid} neumáticos tienen costo cargado`,
-        })}
+        <div class="cost-coverage" aria-label="${withCost.length} de ${group.valid} neumáticos con costo registrado">
+          <div class="cost-coverage-track" aria-hidden="true">
+            <span class="cost-coverage-fill" style="--coverage:${coverage}%"></span>
+          </div>
+          <div class="cost-coverage-label"><b class="num">${withCost.length} de ${group.valid}</b> neumáticos con costo registrado</div>
+        </div>
       </article>
     </section>`;
 }
@@ -964,24 +1076,49 @@ function tireModelLabel(tire){
   return [tire.brand_name, tire.model_name].filter(Boolean).join(" ") || tire.size_name || "—";
 }
 
+function resultStatus(tire, metric){
+  if(!metric.valid) return {label:"Datos insuficientes", cls:"is-no-data"};
+  const source = tire.fuente || {};
+  const rtdState = String(source.last_rtd_state || "").trim();
+  if(rtdState === "Para Reencauche") return {label:"Para reencauche", cls:"is-critical"};
+  if(rtdState === "Próximo a Reencauche") return {label:"Observación", cls:"is-warning"};
+  if(source.has_anomaly) return {label:"Revisar anomalía", cls:"is-warning"};
+  if(rtdState === "Normal") return {label:"Normal", cls:"is-normal"};
+  return {label:"Sin clasificar", cls:"is-unknown"};
+}
+
 function resultRow(tire, index){
   const m = computeTire(tire);
   const identity = tire.casingCode || "SIN CÓDIGO";
-  const sub = [tire.plate, tire.pos, tire.axleName].filter(Boolean).join(" · ");
   const model = tireModelLabel(tire);
-  const metric = m.valid
-    ? `<span class="result-metric num">${fmtKmMm(m.kmMm)}<span class="a-unit"> km/mm</span></span>`
-    : `<span class="result-metric empty">Sin datos suficientes</span>`;
+  const status = resultStatus(tire, m);
+  const kmMm = m.valid ? fmtKmMm(m.kmMm) : "—";
+  const consumption = m.valid ? `${fmtPct(m.pctConsumo)}%` : "—";
   return `
     <button class="result-row" type="button" onclick="openResultRow(${index})"
             aria-label="Ver detalle de ${identity}, unidad ${tire.plate}, posición ${tire.pos}">
       <span class="result-identity">
-        <span class="result-code num">${identity}</span>
-        <span class="result-sub">${sub}</span>
+        <span class="result-code num">${escapeHtml(tire.plate || "—")} · ${escapeHtml(tire.pos || "—")}</span>
+        <span class="result-sub">${escapeHtml(tire.axleName || "Sin eje")}</span>
       </span>
-      ${metric}
-      <span class="result-model">${model}</span>
+      <span class="result-model">
+        ${escapeHtml(identity)}
+        <small>${escapeHtml(model)}</small>
+      </span>
+      <span class="result-metric num" data-label="Km/mm">${kmMm}</span>
+      <span class="result-metric result-consumption num" data-label="Consumo">${consumption}</span>
+      <span class="result-status ${status.cls}">${status.label}</span>
     </button>`;
+}
+
+function resultsHeader(){
+  return `<div class="results-head" aria-hidden="true">
+    <span>Unidad · Posición</span>
+    <span>Neumático</span>
+    <span>Km/mm</span>
+    <span>Consumo</span>
+    <span>Estado</span>
+  </div>`;
 }
 
 function renderResults(tires, chips, freshness){
@@ -1003,7 +1140,7 @@ function renderResults(tires, chips, freshness){
 
   const group = computeGroup(tires);
   aggMount.innerHTML = excludedNote(group, freshness) + aggregateKpis(group);
-  listMount.innerHTML = tires.map((t, i) => resultRow(t, i)).join("");
+  listMount.innerHTML = resultsHeader() + tires.map((t, i) => resultRow(t, i)).join("");
 }
 
 function openResultRow(index){

@@ -156,24 +156,30 @@
     font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--label-blue);
   }
 
-  /* ───────────────── Grid de unidades ───────────────── */
+  /* ───────────────── Grid de neumáticos ─────────────────
+     Tres tarjetas por fila mantienen cada registro legible y evitan que una
+     pantalla ancha convierta el listado en una pared de tarjetas pequeñas. */
   .fleet-grid{
     display:grid;gap:12px;
-    grid-template-columns:repeat(auto-fill,minmax(158px,1fr));
+    grid-template-columns:repeat(3,minmax(0,1fr));
   }
   .unit-card{
     background:var(--field-dark);
     border:2px solid var(--border-dark);
     border-radius:12px;
     padding:12px 12px 11px;
-    cursor:pointer;
     display:flex;flex-direction:column;gap:10px;
     transition:transform .12s ease-out,border-color .15s ease-out,background .15s ease-out;
     text-align:left;font-family:var(--mono);
   }
+  .unit-card-open{
+    appearance:none;background:none;border:0;color:inherit;cursor:pointer;padding:0;
+    display:flex;flex:1;flex-direction:column;gap:10px;text-align:left;font:inherit;
+  }
   .unit-card:hover{background:#132538}
-  .unit-card:focus-visible{outline:none;border-color:var(--value-ice)}
-  .unit-card.pressable:active{transform:scale(.97)}
+  .unit-card:focus-within{border-color:var(--value-ice)}
+  .unit-card-open:focus-visible{outline:2px solid var(--value-ice);outline-offset:4px;border-radius:5px}
+  .unit-card:active{transform:scale(.99)}
   .unit-card.status-critical{border-color:var(--crit);background:linear-gradient(180deg,var(--crit-bg),transparent 60%),var(--field-dark)}
   .unit-card.status-warning{border-color:var(--warn);background:linear-gradient(180deg,var(--warn-bg),transparent 60%),var(--field-dark)}
 
@@ -198,6 +204,13 @@
     text-transform:uppercase;
   }
   .uc-history-note{font-size:9px;font-weight:800;letter-spacing:.05em;color:var(--label-blue);text-transform:uppercase}
+  .uc-install-action{
+    min-height:38px;border:2px solid var(--ember-orange);border-radius:8px;
+    background:rgba(240,104,34,.09);color:var(--ember-orange);cursor:pointer;
+    font:800 9px var(--mono);letter-spacing:.07em;text-transform:uppercase;
+  }
+  .uc-install-action:hover{background:rgba(240,104,34,.18);color:var(--value-ice)}
+  .uc-install-action:focus-visible{outline:2px solid var(--value-ice);outline-offset:2px}
   .uc-status{
     margin-top:auto;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);
     font-size:15px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
@@ -220,6 +233,14 @@
     font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);opacity:.7;text-align:center;
   }
 
+  @media (max-width:900px){
+    .fleet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+
+  @media (max-width:600px){
+    .fleet-grid{grid-template-columns:minmax(0,1fr)}
+  }
+
   @media (max-width:520px){
     .brand .logo{font-size:26px}
     .header-tools{width:100%;justify-content:flex-start}
@@ -233,15 +254,15 @@
 </head>
 <body>
 
-<header>
-  <div class="head-row office-head">
+<header class="office-header--compact">
+  <div class="head-row office-head office-head--compact">
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">INSPECCIONES</div>
     </div>
     <div class="header-tools">
       <nav class="screen-nav" aria-label="Pantallas">
-        <a class="active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+        <a class="active" aria-current="page" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
         <a href="inventario.html">Inventario</a>
         <a href="servicios.html">Servicios</a>
         <a href="rendimiento.html">Rendimiento</a>
@@ -302,6 +323,7 @@ function buildTireInspectionRowsFromSupabase(rows){
     condition: r.condition || null, retread_design: r.retread_design || null,
     tireStatus: r.tire_status || "no_data",
     retreadObservation: r.retread_observation || null,
+    installationPending: r.installation_pending === true,
     // La vista decide Desecho con el catálogo de anomalías o el descarte
     // manual. Solo se muestra la razón que vino de esa decisión; no se
     // recalcula en el cliente.
@@ -329,6 +351,20 @@ function openInspection(tire){
 function openResultRow(index){
   const tire = currentResultTires[index];
   if(tire) openInspection(tire);
+}
+
+function completeCurrentInstallation(index){
+  const tire = currentResultTires[index];
+  if(!tire?.installationPending) return;
+  const qs = new URLSearchParams({
+    inspection_id: tire.inspectionId,
+    plate: tire.plate,
+    date: tire.inspectedOn,
+    pos: String(tire.positionNumber),
+    mode: "movimientos",
+    action: "complete-installation",
+  });
+  location.href = `Inspecciones por unidad.html?${qs.toString()}`;
 }
 
 /* =========================================================================
@@ -475,25 +511,33 @@ function renderGrid(tires, chips, scope){
     const modelLine = [t.brand_name, t.model_name, t.size_name].filter(Boolean).join(" ");
     const retreadLine = t.retreadObservation
       ? `<div class="uc-retread">${RETREAD_LABEL[t.retreadObservation] || t.retreadObservation}${t.discardReason ? ` · ${t.discardReason}` : ""}</div>` : "";
-    const historyNote = t.casingCode
+    const historyNote = t.installationPending
+      ? `<div class="uc-history-note">Instalación en esta unidad pendiente</div>`
+      : t.casingCode
       ? ""
       : `<div class="uc-history-note">Sin historial · falta vincular casco</div>`;
-    return `<button class="unit-card pressable status-${status}"
-              style="animation-delay:${delay}ms"
-              onclick="openResultRow(${i})"
-              aria-label="${identity}, unidad ${t.plate}, posición ${t.pos}, estado ${STATUS_LABEL[status]}. Abrir inspección.">
-      <div class="uc-top">
-        <div>
-          <div class="uc-plate">${identity}</div>
-          <div class="uc-meta">${t.plate} · ${t.pos} · ${formatDate(t.inspectedOn)}</div>
+    const installationAction = t.installationPending
+      ? `<button class="uc-install-action" type="button" onclick="completeCurrentInstallation(${i})">
+          Completar instalación en esta unidad
+        </button>`
+      : "";
+    return `<article class="unit-card status-${status}" style="animation-delay:${delay}ms">
+      <button class="unit-card-open" type="button" onclick="openResultRow(${i})"
+        aria-label="${identity}, unidad ${t.plate}, posición ${t.pos}, estado ${STATUS_LABEL[status]}. Abrir inspección.">
+        <div class="uc-top">
+          <div>
+            <div class="uc-plate">${identity}</div>
+            <div class="uc-meta">${t.plate} · ${t.pos} · ${formatDate(t.inspectedOn)}</div>
+          </div>
+          <span class="uc-dot"></span>
         </div>
-        <span class="uc-dot"></span>
-      </div>
-      <div class="uc-config">${modelLine || "—"}</div>
-      ${retreadLine}
-      ${historyNote}
-      <div class="uc-status">${STATUS_LABEL[status]}</div>
-    </button>`;
+        <div class="uc-config">${modelLine || "—"}</div>
+        ${retreadLine}
+        ${historyNote}
+        <div class="uc-status">${STATUS_LABEL[status]}</div>
+      </button>
+      ${installationAction}
+    </article>`;
   }).join("");
 }
 
@@ -681,6 +725,52 @@ function scopeSignature(scope){
   return `${scope.column || ""}:${(scope.values || []).join(",")}`;
 }
 
+function normalizedObservedCode(value){
+  const code = String(value ?? "").trim().toLocaleUpperCase();
+  return code || null;
+}
+
+async function attachCurrentInstallationState(rows){
+  const unitIds = [...new Set(rows.map(row => row.unit_id).filter(Boolean))];
+  if(!unitIds.length) return rows;
+
+  try{
+    const chunks = [];
+    for(let index=0; index<unitIds.length; index+=40){
+      chunks.push(unitIds.slice(index,index+40));
+    }
+    const statePages = await Promise.all(chunks.map(ids => RenovaSupabase.fetchView(
+      "v_unit_position_state",
+      {
+        select: "unit_id,position_number,installation_id,baseline_pending,last_inspected_on,last_inspection_tire_code",
+        unit_id: `in.(${ids.join(",")})`,
+        order: "unit_id.asc,position_number.asc",
+      },
+    )));
+    const stateByPosition = new Map(statePages.flat().map(state => [
+      `${state.unit_id}:${state.position_number}`,
+      state,
+    ]));
+    return rows.map(row => {
+      const state = stateByPosition.get(`${row.unit_id}:${row.position_number}`);
+      const rowCode = normalizedObservedCode(row.casing_code || row.tire_code);
+      const stateCode = normalizedObservedCode(state?.last_inspection_tire_code);
+      const isLatestEvidence = Boolean(
+        state?.last_inspected_on &&
+        state.last_inspected_on === row.inspected_on &&
+        rowCode === stateCode
+      );
+      return {
+        ...row,
+        installation_pending: state?.baseline_pending === true && isLatestEvidence,
+      };
+    });
+  }catch(error){
+    console.warn("Inspecciones: no se pudo verificar la instalación actual.", error);
+    return rows.map(row => ({...row, installation_pending:false}));
+  }
+}
+
 async function loadRowsForScope(scope, { force = false } = {}){
   const signature = scopeSignature(scope);
   if(!force && signature === loadedScopeSignature){
@@ -701,6 +791,7 @@ async function loadRowsForScope(scope, { force = false } = {}){
     const params = { order: "inspected_on.desc,plate.asc,position_number.asc" };
     params[filter.column] = filter.value;
     rows = await RenovaSupabase.fetchView("v_inspection_dashboard_rows", params);
+    rows = await attachCurrentInstallationState(rows);
   }
   if(requestId !== scopeRequestSequence) return; // respuesta vieja: no pisa un filtro más reciente
   loadedScopeSignature = signature;
@@ -714,7 +805,7 @@ async function loadFacetCatalog(){
   if(facetCatalogPromise) return facetCatalogPromise;
   facetCatalogPromise = RenovaSupabase.fetchView("v_inspection_latest_facets", {
     order: "plate.asc,position_number.asc",
-  }).then((rows) => {
+  }).then(attachCurrentInstallationState).then((rows) => {
     inspectionFacetSourceRows = rows;
     inspectionFacetRows = window.RenovaInspecciones.mapRows(rows);
     filterBar.setRows(facetRows());

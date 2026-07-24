@@ -60,7 +60,7 @@ function validationMessage(result) {
   return result?.violations
     ?.map(({ message }) => message)
     .filter(Boolean)
-    .join(" ") || "No se pudo actualizar el primer montaje.";
+    .join(" ") || "No se pudo completar la instalación en esta unidad.";
 }
 
 export function createBaselineUI({
@@ -179,31 +179,27 @@ export function createBaselineUI({
       required: mount.condition !== "N",
     });
     appendField(documentObject, grid, {
-      label: "OTD original (mm, opcional)",
+      label: "OTD original (mm)",
       field: "otd_mm",
       value: mount.otd_mm,
       position: mount.position,
       type: "number",
+      required: true,
       step: "0.1",
-      min: "0",
+      min: "0.1",
     });
     appendField(documentObject, grid, {
-      label: "RTD MOVI (mm)",
+      label: "RTD al instalar (mm)",
       field: "rtd_mm",
       value: mount.rtd_mm,
       position: mount.position,
       type: "number",
-      step: "0.1",
-    });
-    appendField(documentObject, grid, {
-      label: "Medición fuente",
-      field: "source_measurement_id",
-      value: mount.source_measurement_id,
-      position: mount.position,
       required: true,
+      step: "0.1",
+      min: "0.1",
     });
     appendField(documentObject, grid, {
-      label: "Notas",
+      label: "Nota de instalación (opcional)",
       field: "notes",
       value: mount.notes,
       position: mount.position,
@@ -269,7 +265,7 @@ export function createBaselineUI({
     for (const control of elements.form.querySelectorAll("input, select, button")) {
       control.disabled = busy;
     }
-    elements.confirm.textContent = busy ? "Confirmando…" : "Confirmar primer montaje";
+    elements.confirm.textContent = busy ? "Confirmando…" : "Confirmar instalación";
     if (!busy) render();
   }
 
@@ -290,7 +286,6 @@ export function createBaselineUI({
     }
     if (result?.ok === false) setFeedback(validationMessage(result), "error");
     else setFeedback();
-    render();
   }
 
   function onClick(event) {

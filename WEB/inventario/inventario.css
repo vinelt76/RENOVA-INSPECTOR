@@ -46,8 +46,8 @@
 }
 
 .inventory-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
   gap: 4px;
   padding: 4px;
   border: 2px solid var(--border-dark);
@@ -56,7 +56,7 @@
 }
 
 .inventory-tab {
-  min-height: 48px;
+  min-height: 42px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -398,6 +398,11 @@
 
   .inventory-tab {
     font-size: 10px;
+  }
+
+  .inventory-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .inventory-facts {

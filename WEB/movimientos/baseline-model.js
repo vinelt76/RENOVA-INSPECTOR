@@ -139,15 +139,34 @@ function validateDraft(state) {
       ));
     }
 
-    if (mount.otd_mm !== null && mount.otd_mm !== "") {
-      const otd = Number(mount.otd_mm);
-      if (!Number.isFinite(otd) || otd < 0) {
-        violations.push(violation(
-          "otd_invalid",
-          `La OTD de P${position} debe ser un número no negativo o quedar vacía.`,
-          position,
-        ));
-      }
+    const otd = Number(mount.otd_mm);
+    if (mount.otd_mm === null || mount.otd_mm === "") {
+      violations.push(violation(
+        "otd_required",
+        `La OTD de P${position} es obligatoria.`,
+        position,
+      ));
+    } else if (!Number.isFinite(otd) || otd <= 0) {
+      violations.push(violation(
+        "otd_invalid",
+        `La OTD de P${position} debe ser un número mayor que cero.`,
+        position,
+      ));
+    }
+
+    const rtd = Number(mount.rtd_mm);
+    if (mount.rtd_mm === null || mount.rtd_mm === "") {
+      violations.push(violation(
+        "rtd_required",
+        `El RTD al instalar de P${position} es obligatorio.`,
+        position,
+      ));
+    } else if (!Number.isFinite(rtd) || rtd <= 0) {
+      violations.push(violation(
+        "rtd_invalid",
+        `El RTD al instalar de P${position} debe ser un número mayor que cero.`,
+        position,
+      ));
     }
   }
   return violations;

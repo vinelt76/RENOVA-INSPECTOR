@@ -6,9 +6,16 @@ import {
   loadUnitPositionState,
   resolveUnitId,
 } from "./data.js";
+import { createBaselineModel } from "./baseline-model.js";
+import { createBaselineUI } from "./baseline-ui.js";
 import { createDiagramView } from "./diagram-view.js";
 import { createModeToggle, MOVIMIENTOS_MODES } from "./mode-toggle.js";
 import { createMovementOrder } from "./orders-rpc.js";
+import {
+  applyPendingBaselineBatch,
+  classifyBatchError,
+  isRetryableNetworkError,
+} from "./rpc.js";
 import {
   addRotation,
   addServiceFromInventory,
@@ -68,6 +75,10 @@ let activeScopeKey = null;
 let activeClient = null;
 let realtimeUnsubscribe = null;
 let busy = false;
+let baselineModel = null;
+let baselineUI = null;
+let baselineScope = null;
+let baselineConfirming = false;
 
 function emitState() {
   for (const listener of subscribers) listener(movimientosState);
@@ -83,17 +94,222 @@ function selectedRow() {
   ) ?? null;
 }
 
+function isInstallationPending(position = movimientosState.selected) {
+  const row = movimientosState.remoteState.find(
+    (candidate) => Number(candidate.position_number) === Number(position),
+  );
+  return row?.is_empty === true && row?.baseline_pending === true;
+}
+
 function renderSidebar() {
   const row = selectedRow();
   const visual = movimientosState.projection.get(movimientosState.selected);
   const visible = movimientosState.mode === MOVIMIENTOS_MODES.MOVEMENTS && Boolean(row && visual);
   elements.details.hidden = !visible;
-  elements.baselineOpen.hidden = true;
+  elements.baselineOpen.hidden = !(visible && isInstallationPending());
   if (!visible) return;
   elements.selectedPosition.textContent = `POSICIÓN ${movimientosState.selected}`;
   elements.selectedIdentity.textContent = row.casing_code || row.last_inspection_tire_code ||
     (row.is_empty ? "SIN NEUMÁTICO REGISTRADO" : "CÓDIGO NO VISIBLE");
   elements.selectedState.textContent = visual.label;
+}
+
+function currentBaselineScope() {
+  if (!movimientosState.profile?.id || !movimientosState.unitId) return null;
+  return [
+    movimientosState.profile.id,
+    movimientosState.profile.company_id ?? "-",
+    movimientosState.unitId,
+  ].join(":");
+}
+
+function ensureBaselineModel() {
+  const scope = currentBaselineScope();
+  if (!scope) return null;
+  if (scope !== baselineScope || !baselineModel) {
+    baselineScope = scope;
+    baselineModel = createBaselineModel({ unitId: movimientosState.unitId, today: "" });
+  }
+  return baselineModel;
+}
+
+function resetBaselineModel() {
+  baselineScope = currentBaselineScope();
+  baselineModel = movimientosState.unitId
+    ? createBaselineModel({ unitId: movimientosState.unitId, today: "" })
+    : null;
+}
+
+function installationEvidence(row) {
+  return {
+    last_measurement_id: row?.last_measurement_id,
+    last_inspected_on: row?.last_inspected_on,
+    last_inspection_tire_code: row?.last_inspection_tire_code,
+    last_brand_name: row?.last_brand_name,
+    last_model_name: row?.last_model_name,
+    last_size_name: row?.last_size_name,
+    last_condition: row?.last_condition,
+    last_retread_design: row?.last_retread_design,
+  };
+}
+
+function openCurrentInstallation(position, trigger = document.activeElement) {
+  const normalized = Number(position);
+  const row = movimientosState.remoteState.find(
+    (candidate) => Number(candidate.position_number) === normalized,
+  );
+  if (!row || !isInstallationPending(normalized)) return false;
+  movimientosState.selected = normalized;
+  const model = ensureBaselineModel();
+  if (!model) return false;
+  model.addFromProjection(normalized, installationEvidence(row));
+  render();
+  baselineUI?.setFeedback();
+  baselineUI?.render();
+  return baselineUI?.open({ trigger }) ?? false;
+}
+
+function updateBaselineHeader(changes) {
+  const model = ensureBaselineModel();
+  if (!model) return { ok: false, violations: [{ message: "La unidad todavía no está disponible." }] };
+  model.editAfterSeal();
+  model.updateHeader(changes);
+  return { ok: true };
+}
+
+function updateBaselineMount(position, changes) {
+  const model = ensureBaselineModel();
+  if (!model) return { ok: false, violations: [{ message: "La unidad todavía no está disponible." }] };
+  model.editAfterSeal();
+  return model.updateMount(position, changes);
+}
+
+function removeBaselineMount(position) {
+  const model = ensureBaselineModel();
+  model?.editAfterSeal();
+  return model?.remove(position) ?? false;
+}
+
+function baselineErrorMessage(error) {
+  const classification = classifyBatchError(error);
+  if (classification === "duplicate_code") {
+    return error?.message || "Ese código ya existe. Revisa si corresponde a un neumático disponible.";
+  }
+  if (classification === "occupied_position") {
+    return "La posición ya fue ocupada por otra operación. Actualizamos el estado para revisarlo.";
+  }
+  if (classification === "invalid_evidence") {
+    return "La inspección usada como evidencia ya no corresponde a esta posición.";
+  }
+  if (classification === "forbidden") {
+    return "Tu sesión no tiene permiso para completar instalaciones.";
+  }
+  if (classification === "invalid_batch") {
+    return error?.message || "Revisa los datos de instalación antes de confirmar.";
+  }
+  if (isRetryableNetworkError(error)) {
+    return "La red no respondió. Puedes volver a confirmar con los mismos datos.";
+  }
+  return error?.message || "No se pudo completar la instalación en esta unidad.";
+}
+
+async function confirmCurrentInstallation() {
+  if (baselineConfirming || !activeClient?.supabase) return null;
+  const model = ensureBaselineModel();
+  if (!model) return null;
+  let sealed;
+  try {
+    sealed = model.seal();
+  } catch (error) {
+    baselineUI?.setFeedback(
+      error?.violations?.map(({ message }) => message).join(" ") ||
+        error?.message || "Revisa los datos de instalación.",
+      "error",
+    );
+    return null;
+  }
+
+  baselineConfirming = true;
+  baselineUI?.setBusy(true);
+  baselineUI?.setFeedback();
+  try {
+    const result = await applyPendingBaselineBatch(sealed, {
+      client: activeClient.supabase,
+      onClearSealed: async () => {},
+      onDiscardDraft: async () => resetBaselineModel(),
+      onReload: async () => {
+        resetBaselineModel();
+        const state = await loadMovimientosData({ force: true });
+        if (state.status === "error") throw state.error;
+      },
+    });
+    baselineUI?.setFeedback(
+      "Instalación completada. El historial conocido de esta unidad quedó actualizado.",
+      "success",
+    );
+    return result;
+  } catch (error) {
+    model.editAfterSeal();
+    const classification = classifyBatchError(error);
+    if (classification === "occupied_position") await loadMovimientosData({ force: true });
+    baselineUI?.setFeedback(baselineErrorMessage(error), "error", {
+      canRetry: isRetryableNetworkError(error),
+      canSearch: classification === "duplicate_code",
+    });
+    return null;
+  } finally {
+    baselineConfirming = false;
+    baselineUI?.setBusy(false);
+    render();
+  }
+}
+
+function searchBaselineInventory() {
+  const model = ensureBaselineModel();
+  const mount = model?.mounts.find((item) => item.casing_code);
+  if (!mount) {
+    baselineUI?.setFeedback("No hay un código pendiente para buscar.", "warning");
+    return false;
+  }
+  const code = String(mount.casing_code).trim().toLocaleUpperCase();
+  const item = movimientosState.inventory.find(
+    (candidate) => String(candidate.casing_code ?? "").trim().toLocaleUpperCase() === code,
+  );
+  if (!item?.life_cycle_id) {
+    baselineUI?.setFeedback(
+      `El código ${mount.casing_code} no aparece disponible en inventario.`,
+      "warning",
+    );
+    return false;
+  }
+  model.editAfterSeal();
+  model.updateMount(mount.position, {
+    life_cycle_id: item.life_cycle_id,
+    ...(item.otd_mm != null ? { otd_mm: item.otd_mm } : {}),
+  });
+  baselineUI?.render();
+  baselineUI?.setFeedback(
+    `${mount.casing_code} conservará su ciclo existente y su historial anterior.`,
+    "success",
+  );
+  return true;
+}
+
+function consumeRequestedInstallationAction() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("action") !== "complete-installation") return;
+  const position = Number(params.get("pos"));
+  if (isInstallationPending(position)) {
+    openCurrentInstallation(position, elements.baselineOpen);
+  } else {
+    ordersUI?.setFeedback(
+      "Esta posición ya no tiene una instalación pendiente. Se cargó su estado actual.",
+      "warning",
+    );
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.delete("action");
+  history.replaceState(history.state, "", url);
 }
 
 function render() {
@@ -262,6 +478,7 @@ export async function loadMovimientosData({ force = false } = {}) {
       loaded = true;
       configureRealtime(client);
       render();
+      consumeRequestedInstallationAction();
       return movimientosState;
     } catch (error) {
       loaded = false;
@@ -331,6 +548,7 @@ function onModeChange(mode) {
   const active = mode === MOVIMIENTOS_MODES.MOVEMENTS;
   diagramView.setActive(active);
   ordersUI.setActive(active);
+  baselineUI?.setActive(active);
   if (active) {
     render();
     void loadMovimientosData();
@@ -354,6 +572,18 @@ function init() {
     onEmit: emitOrder,
     onReload: () => loadMovimientosData({ force: true }),
   });
+  baselineUI = createBaselineUI({
+    getModel: () => baselineModel,
+    onHeaderChange: updateBaselineHeader,
+    onMountChange: updateBaselineMount,
+    onRemove: removeBaselineMount,
+    onConfirm: confirmCurrentInstallation,
+    onRetry: confirmCurrentInstallation,
+    onSearchInventory: searchBaselineInventory,
+  });
+  elements.baselineOpen.addEventListener("click", () => {
+    openCurrentInstallation(movimientosState.selected, elements.baselineOpen);
+  });
   modeToggle = createModeToggle({ onChange: onModeChange });
   renderSidebar();
 }
@@ -373,6 +603,10 @@ export const movimientosController = {
   selectPosition: selectMovimientosPosition,
   reload: () => loadMovimientosData({ force: true }),
   emit: emitOrder,
+  installation: {
+    open: (position = movimientosState.selected) => openCurrentInstallation(position),
+    confirm: confirmCurrentInstallation,
+  },
   setMode: (mode) => modeToggle.setMode(mode),
 };
 

@@ -1,8 +1,8 @@
 ---
 title: "Flujo de trabajo para no olvidarme"
-updated: 2026-07-12
+updated: 2026-07-23
 status: vigente
-sources: [scripts/sync-project-docs.mjs, CLAUDE.md, knowledge/ai/14]
+sources: [scripts/sync-project-docs.mjs, scripts/knowledge-day.mjs, CLAUDE.md, knowledge/ai/14]
 ---
 
 # Flujo de trabajo para no olvidarme
@@ -38,6 +38,26 @@ No hace falta sincronizar por cada color, texto o arreglo pequeño. Conviene act
 - permisos/usuarios/empresas;
 - arquitectura, dependencias o despliegue;
 - qué está terminado y qué falta.
+
+## Saber qué se hizo cada día
+
+Además de las explicaciones por tema, existe una bitácora ordenada por fecha. Para crear o
+actualizar la entrada de hoy:
+
+```bash
+npm run docs:day
+```
+
+La nota queda en `knowledge/ai/bitacora/AÑO/AAAA-MM-DD.md`. Allí se escribe qué cambió, por qué,
+qué archivos se tocaron, cómo se probó y en qué commit quedó. El comando también busca los commits
+de esa fecha; si todavía no se hizo commit, lo deja claramente como pendiente.
+
+Para reconstruir un problema más adelante:
+
+1. Abrir la fecha aproximada en la bitácora.
+2. Leer la razón y los riesgos anotados.
+3. Usar el hash con `git show HASH`.
+4. Comparar los archivos actuales con ese commit antes de revertir o corregir.
 
 ## Al terminar una sesión importante
 
@@ -84,4 +104,3 @@ Debe responder que la documentación está al día.
 ## Regla simple para recordar
 
 > Si el cambio haría que otra persona explique mal cómo funciona RENOVA, hay que actualizar la documentación antes de sincronizar.
-

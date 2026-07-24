@@ -108,6 +108,7 @@
   .th-inst .r-km{font-size:15px;font-weight:800;color:var(--value-ice)}
   .th-inst .r-km small{font-size:10px;font-weight:700;color:var(--label-blue);margin-left:3px}
   .th-inst .r-dates{font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--label-blue);margin-top:7px}
+  .th-inst .r-note{font-size:12px;line-height:1.45;color:var(--label-blue);margin-top:9px;padding-left:10px;border-left:2px solid rgba(255,255,255,.16)}
   .th-chip-actual{
     font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--verified-green);
     border:2px solid var(--verified-green);border-radius:6px;padding:2px 8px;
@@ -143,8 +144,8 @@
 </head>
 <body>
 
-<header>
-  <div class="head-inner finder-header-row office-head">
+<header class="office-header--compact">
+  <div class="head-inner finder-header-row office-head office-head--compact">
     <div class="brand">
       <div class="logo">RENOVA<b>·</b></div>
       <div class="screen-name">HISTORIAL DE NEUMÁTICO</div>
@@ -222,6 +223,7 @@ async function loadHistorial(code){
       motivoRetiro: i.removal_reason || null,
       placaDestino: i.next_plate || null,
       posicionDestino: i.next_position_number != null ? Number(i.next_position_number) : null,
+      notaInstalacion: i.installation_notes || null,
     })),
     inspecciones: inspRows.map(i => ({
       fecha: i.inspected_on, placa: i.plate, posicion: i.position_number != null ? `P${i.position_number}` : "—",
@@ -361,6 +363,9 @@ function render(){
     }else if(i.motivoRetiro){
       trayectoria = `${origen} · Retiro: ${i.motivoRetiro}`;
     }
+    const nota = i.notaInstalacion
+      ? `<div class="r-note"><strong>Nota de instalación:</strong> ${esc(i.notaInstalacion)}</div>`
+      : "";
     return `
       <div class="th-inst">
         <div class="r-top">
@@ -368,6 +373,7 @@ function render(){
           <span class="r-km num">${km}</span>
         </div>
         <div class="r-dates">${fmtDate(i.desde)} → ${hasta}</div>
+        ${nota}
       </div>`;
   }).join("");
   const instBlock = `

@@ -1,98 +1,168 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RENOVA — Inventario</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="renova-office-shell.css">
-  <link rel="stylesheet" href="buscador/buscador.css">
-  <link rel="stylesheet" href="inventario/inventario.css">
-  <script src="supabase-config.public.js"></script>
-  <script src="renova-ready.js"></script>
-  <script type="module" src="supabase-demo.js"></script>
-</head>
-<body>
-  <header>
-    <div class="inventory-head office-head">
-      <div class="brand">
-        <div class="logo">RENOVA<b>·</b></div>
-        <div class="screen-name">INVENTARIO DE NEUMÁTICOS</div>
-      </div>
-      <nav class="nav" aria-label="Pantallas">
-        <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
-        <a class="active" href="inventario.html" aria-current="page">Inventario</a>
-        <a href="servicios.html">Servicios</a>
-        <a href="rendimiento.html">Rendimiento</a>
-        <a href="importar.html">Importar</a>
-      </nav>
-      <button class="finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
-        Buscar unidad o neumático <kbd>Ctrl K</kbd>
-      </button>
-    </div>
-  </header>
-
-  <main class="inventory-main">
-    <section class="inventory-note" aria-label="Descripción de la pantalla">
-      <p>Consulta los neumáticos disponibles en retén y los descartados. Esta pantalla no modifica movimientos.</p>
-    </section>
-
-    <div class="inventory-tabs" role="tablist" aria-label="Estado del inventario">
-      <button id="inventory-tab-retention" class="inventory-tab" type="button" role="tab"
-        aria-selected="true" aria-controls="inventory-panel-retention" data-inventory-tab="reten">
-        Retén <span class="inventory-count" id="inventory-count-retention">0</span>
-      </button>
-      <button id="inventory-tab-discarded" class="inventory-tab" type="button" role="tab"
-        aria-selected="false" aria-controls="inventory-panel-discarded" data-inventory-tab="descartados" tabindex="-1">
-        Descartados <span class="inventory-count" id="inventory-count-discarded">0</span>
-      </button>
-    </div>
-
-    <section class="inventory-toolbar" aria-label="Buscar en inventario">
-      <div class="inventory-search-block">
-        <label for="inventory-search">Buscar</label>
-        <div class="inventory-search-wrap">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-          <input id="inventory-search" type="search" autocomplete="off"
-            placeholder="Código, marca, modelo, medida o condición">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RENOVA — Inventario</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="renova-office-shell.css" />
+    <link rel="stylesheet" href="buscador/buscador.css" />
+    <link rel="stylesheet" href="inventario/inventario.css" />
+    <script src="supabase-config.public.js"></script>
+    <script src="renova-ready.js"></script>
+    <script type="module" src="supabase-demo.js"></script>
+  </head>
+  <body>
+    <header class="office-header--compact">
+      <div class="inventory-head office-head office-head--compact">
+        <div class="brand">
+          <div class="logo">RENOVA<b>·</b></div>
+          <div class="screen-name">INVENTARIO DE NEUMÁTICOS</div>
         </div>
+        <nav class="nav" aria-label="Pantallas">
+          <a href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+          <a class="active" href="inventario.html" aria-current="page"
+            >Inventario</a
+          >
+          <a href="servicios.html">Servicios</a>
+          <a href="rendimiento.html">Rendimiento</a>
+          <a href="importar.html">Importar</a>
+        </nav>
+        <button
+          class="finder-trigger"
+          data-finder-trigger
+          type="button"
+          aria-haspopup="dialog"
+          aria-keyshortcuts="Control+K Meta+K"
+        >
+          Buscar unidad o neumático <kbd>Ctrl K</kbd>
+        </button>
       </div>
-    </section>
+    </header>
 
-    <div id="inventory-status" class="inventory-status" role="status" aria-live="polite">
-      <span class="inventory-spinner" aria-hidden="true"></span>
-      <span>Cargando inventario…</span>
-    </div>
+    <main class="inventory-main">
+      <section class="inventory-note" aria-label="Descripción de la pantalla">
+        <p></p>
+      </section>
 
-    <section id="inventory-panel-retention" class="inventory-panel" role="tabpanel"
-      aria-labelledby="inventory-tab-retention">
-      <div id="inventory-list-retention" class="inventory-grid"></div>
-    </section>
-    <section id="inventory-panel-discarded" class="inventory-panel" role="tabpanel"
-      aria-labelledby="inventory-tab-discarded" hidden>
-      <div id="inventory-list-discarded" class="inventory-grid"></div>
-    </section>
-  </main>
+      <div
+        class="inventory-tabs"
+        role="tablist"
+        aria-label="Estado del inventario"
+      >
+        <button
+          id="inventory-tab-retention"
+          class="inventory-tab"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="inventory-panel-retention"
+          data-inventory-tab="reten"
+        >
+          Retén
+          <span class="inventory-count" id="inventory-count-retention">0</span>
+        </button>
+        <button
+          id="inventory-tab-discarded"
+          class="inventory-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="inventory-panel-discarded"
+          data-inventory-tab="descartados"
+          tabindex="-1"
+        >
+          Descartados
+          <span class="inventory-count" id="inventory-count-discarded">0</span>
+        </button>
+      </div>
 
-  <footer class="inventory-footer">Datos protegidos por la sesión y la empresa activa · Vista de solo lectura</footer>
-  <script type="module" src="inventario/inventory-controller.js"></script>
-  <script type="module">
-  import { createFinderController } from "./buscador/finder-controller.js";
+      <section class="inventory-toolbar" aria-label="Buscar en inventario">
+        <div class="inventory-search-block">
+          <label for="inventory-search">Buscar</label>
+          <div class="inventory-search-wrap">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+            <input
+              id="inventory-search"
+              type="search"
+              autocomplete="off"
+              placeholder="Código, marca, modelo, medida o condición"
+            />
+          </div>
+        </div>
+      </section>
 
-  const finderTrigger = document.querySelector("[data-finder-trigger]");
-  const finderReady = new Promise((resolve) => {
-    window.onRenovaSupabaseReady(() => resolve(createFinderController()));
-  });
-  const openFinder = async () => (await finderReady).open(finderTrigger);
-  finderTrigger.addEventListener("click", () => void openFinder());
-  document.addEventListener("keydown", (event) => {
-    if (event.key.toLowerCase() !== "k" || (!event.ctrlKey && !event.metaKey)) return;
-    if (event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
-    event.preventDefault();
-    void openFinder();
-  });
-  </script>
-</body>
+      <div
+        id="inventory-status"
+        class="inventory-status"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="inventory-spinner" aria-hidden="true"></span>
+        <span>Cargando inventario…</span>
+      </div>
+
+      <section
+        id="inventory-panel-retention"
+        class="inventory-panel"
+        role="tabpanel"
+        aria-labelledby="inventory-tab-retention"
+      >
+        <div id="inventory-list-retention" class="inventory-grid"></div>
+      </section>
+      <section
+        id="inventory-panel-discarded"
+        class="inventory-panel"
+        role="tabpanel"
+        aria-labelledby="inventory-tab-discarded"
+        hidden
+      >
+        <div id="inventory-list-discarded" class="inventory-grid"></div>
+      </section>
+    </main>
+
+    <footer class="inventory-footer">
+      Datos protegidos por la sesión y la empresa activa · Vista de solo lectura
+    </footer>
+    <script type="module" src="inventario/inventory-controller.js"></script>
+    <script type="module">
+      import { createFinderController } from "./buscador/finder-controller.js";
+
+      const finderTrigger = document.querySelector("[data-finder-trigger]");
+      const finderReady = new Promise((resolve) => {
+        window.onRenovaSupabaseReady(() => resolve(createFinderController()));
+      });
+      const openFinder = async () => (await finderReady).open(finderTrigger);
+      finderTrigger.addEventListener("click", () => void openFinder());
+      document.addEventListener("keydown", (event) => {
+        if (
+          event.key.toLowerCase() !== "k" ||
+          (!event.ctrlKey && !event.metaKey)
+        )
+          return;
+        if (
+          event.target?.closest?.(
+            "input, textarea, select, [contenteditable='true']",
+          )
+        )
+          return;
+        event.preventDefault();
+        void openFinder();
+      });
+    </script>
+  </body>
 </html>

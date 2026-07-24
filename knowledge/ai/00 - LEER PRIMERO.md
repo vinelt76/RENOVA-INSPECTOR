@@ -1,6 +1,6 @@
 ---
 title: "RENOVA INSPECTOR - Leer primero"
-updated: 2026-07-13
+updated: 2026-07-23
 status: vigente
 sources: [CLAUDE.md, PRODUCT.md, DESIGN.md, tasks_opencode/STATE.md, git]
 ---
@@ -20,6 +20,7 @@ RENOVA INSPECTOR digitaliza la inspección y gestión de neumáticos de flotas p
 4. [[04 - Flujo de inspeccion y sincronizacion]]: recorrido exacto de una captura.
 5. [[06 - Reglas de negocio]]: invariantes que nunca deben improvisarse.
 6. [[10 - Roadmap deuda y riesgos]]: decisiones abiertas y siguiente trabajo.
+7. [[15 - Bitacora diaria]]: cronología de cambios, razones, validaciones y commits.
 
 ## Reglas duras
 

@@ -162,6 +162,43 @@ header > .office-head .finder-trigger {
   grid-area: finder;
 }
 
+/* Variante compacta opt-in: conserva las pastillas industriales originales
+   y solo reduce la altura/composición de la cabecera. */
+header.office-header--compact {
+  padding-block: 10px;
+}
+
+header > .office-head--compact {
+  align-items: center;
+  gap: 12px;
+  grid-template-areas: "brand nav finder";
+  /* Columnas estables: el largo del nombre de pantalla no debe desplazar
+     la navegación al cambiar de sección. */
+  grid-template-columns: 220px minmax(0, 1fr) 253px;
+  /* La marca y el buscador anclan los extremos de la ventana. La columna
+     central absorbe el ancho extra sin desplazar la navegación. */
+  max-width: none;
+}
+
+header > .office-head--compact > .brand {
+  min-width: 0;
+}
+
+header > .office-head--compact .brand .logo {
+  font-size: 28px;
+}
+
+header > .office-head--compact .brand .screen-name {
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+header > .office-head--compact .nav,
+header > .office-head--compact .screen-nav {
+  justify-content: center;
+  margin-inline: 0;
+}
+
 /* Entrada visible al buscador global. El atajo acompaña a la barra; nunca la
    reemplaza, porque no se presupone uso experto de teclado. */
 .finder-trigger {
@@ -216,6 +253,21 @@ a.casing-history-link:hover,
 a.casing-history-link:focus-visible {
   color: var(--ember-orange);
   outline: none;
+}
+
+@media (max-width: 1080px) {
+  header > .office-head--compact {
+    grid-template-areas:
+      "brand finder"
+      "nav nav";
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  header > .office-head--compact .nav,
+  header > .office-head--compact .screen-nav {
+    justify-content: flex-start;
+    margin-inline: 0;
+  }
 }
 
 @media (max-width: 780px) {

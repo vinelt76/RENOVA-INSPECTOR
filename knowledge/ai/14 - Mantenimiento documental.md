@@ -1,8 +1,8 @@
 ---
 title: "Mantenimiento documental"
-updated: 2026-07-13
+updated: 2026-07-23
 status: vigente
-sources: [scripts/sync-project-docs.mjs, package.json]
+sources: [scripts/sync-project-docs.mjs, scripts/knowledge-day.mjs, package.json]
 ---
 
 # Mantenimiento documental
@@ -14,6 +14,14 @@ sources: [scripts/sync-project-docs.mjs, package.json]
 Antes de decidir, buscar desde [[00 - LEER PRIMERO]] por tema y seguir `sources` hasta la spec,
 ADR, migración, código o diseño primario. Preferir actualizar una nota canónica y enlazarla; no
 crear otra explicación del mismo concepto.
+
+La documentación tiene dos ejes complementarios:
+
+- Las notas temáticas explican **cómo funciona RENOVA hoy**.
+- [[15 - Bitacora diaria]] explica **qué se cambió cada día, por qué y dónde encontrarlo en Git**.
+
+La bitácora no reemplaza una spec, ADR o nota vigente. Sirve para reconstruir contexto y localizar
+regresiones sin convertir las notas temáticas en una lista cronológica interminable.
 
 ## Registrar y enlazar
 
@@ -44,6 +52,48 @@ humana; cuando se resuelva, actualizar la fuente ganadora y marcar la otra como 
 | Concepto para Facundo | nota equivalente en `knowledge/human` |
 
 Actualizar `updated`, `status` y `sources`. Marcar historia como `historico`; no borrarla para ocultar contradicciones.
+
+## Bitácora diaria
+
+Al comenzar o cerrar una jornada:
+
+```bash
+npm run docs:day
+```
+
+Para registrar otro día:
+
+```bash
+npm run docs:day -- --date 2026-07-23
+```
+
+El comando crea `knowledge/ai/bitacora/YYYY/YYYY-MM-DD.md`, actualiza
+[[15 - Bitacora diaria]] y refresca los commits encontrados por Git para esa fecha. No sobrescribe
+el resumen ni las decisiones escritas manualmente.
+
+Para reconstruir fechas anteriores desde el historial completo:
+
+```bash
+npm run docs:backfill
+```
+
+El backfill no reemplaza entradas existentes. Genera una reconstrucción por cada día con commits:
+hash, mensaje, autor, archivos, estadísticas, áreas afectadas y enlaces a GitHub. Un mensaje pobre
+no se completa con una explicación inventada: queda marcado y se orienta a revisar el diff y las
+fuentes contextuales. `--since YYYY-MM-DD` y `--until YYYY-MM-DD` limitan el rango; `--force` existe
+para regenerar notas automáticas, pero no debe usarse sobre días editados manualmente.
+
+Cada cambio diario debe responder:
+
+1. Qué cambió.
+2. Por qué se hizo.
+3. Qué archivos o migraciones tocó.
+4. Cómo se validó.
+5. Qué riesgo o rollback tiene.
+6. En qué commit o PR quedó.
+
+Si todavía no existe commit, escribir **pendiente**. Después de publicar, volver a ejecutar
+`npm run docs:day` y completar el hash exacto en el cambio correspondiente.
 
 ## Publicación
 

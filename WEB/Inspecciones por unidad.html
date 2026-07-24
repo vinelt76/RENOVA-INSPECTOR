@@ -61,15 +61,21 @@ body{
 
 /* ============ HEADER ============ */
 header{
-  height:60px;flex:none;
+  height:70px;flex:none;
   background:var(--navy);
-  border-bottom:2px solid var(--border);
-  border-image:none;
-  display:flex;align-items:center;gap:20px;
+  border-bottom:4px solid transparent;
+  border-image:repeating-linear-gradient(45deg,var(--orange) 0 6px,transparent 6px 12px) 4;
   padding:0 20px;
 }
+.unit-office-head{
+  width:100%;max-width:none;height:100%;margin:0 auto;
+  display:grid;grid-template-columns:310px minmax(0,1fr) 356px;
+  align-items:center;gap:12px;
+}
+.unit-brand-cluster{display:flex;align-items:center;gap:20px;min-width:0}
 .wordmark{display:flex;flex-direction:column;line-height:1}
-.wordmark .l1{font-family:var(--display);font-size:26px;letter-spacing:.06em;color:#fff}
+.wordmark .l1{font-family:var(--display);font-size:28px;letter-spacing:.06em;color:#fff}
+.wordmark .l1 b{color:var(--orange);font-weight:400}
 .wordmark .l2{font-family:var(--display);font-size:12px;letter-spacing:.24em;color:var(--orange)}
 .hdr-sep{width:2px;height:30px;background:var(--border)}
 .hdr-empresa{display:flex;align-items:center;gap:10px}
@@ -80,16 +86,20 @@ header{
 }
 .hdr-empresa .name{font-size:13px;color:#fff}
 .hdr-empresa .sub{font-size:9px;letter-spacing:.12em;color:var(--label);margin-top:2px}
-.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.unit-nav,.unit-tools{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.unit-nav{justify-content:center}
+.unit-tools{justify-content:flex-end}
 .chip{
   display:flex;align-items:center;gap:8px;
   background:var(--field);border:2px solid var(--border);border-radius:8px;
-  padding:7px 12px;font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--label);
+  box-sizing:border-box;height:44px;padding:7px 12px;
+  font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--label);
 }
 a.chip{text-decoration:none}
 a.chip.active{color:var(--orange);border-color:var(--orange)}
 button.chip{font-family:inherit;cursor:pointer;transition:border-color .15s ease-out}
 button.chip:hover{border-color:var(--orange)}
+#user-chip{line-height:1.2}
 .dot{width:8px;height:8px;border-radius:50%;flex:none}
 .dot.g{background:var(--green)}
 .dot.y{background:var(--yellow)}
@@ -430,26 +440,32 @@ main{flex:1;display:flex;min-height:0}
 
 <div class="dash">
   <header>
-    <div class="wordmark">
-      <span class="l1">RENOVA</span>
-      <span class="l2">PANEL DE TALLER</span>
-    </div>
-    <div class="hdr-sep"></div>
-    <div class="hdr-empresa">
-      <div class="hdr-avatar">T</div>
-      <div>
-        <div class="name" id="hdr-company-name">RENOVA</div>
-        <div class="sub" id="hdr-company-sub">CARGANDO DATOS DEL EXCEL</div>
+    <div class="unit-office-head">
+      <div class="unit-brand-cluster">
+        <div class="wordmark">
+          <span class="l1">RENOVA<b>·</b></span>
+          <span class="l2">VISTA DE UNIDAD</span>
+        </div>
+        <div class="hdr-sep"></div>
+        <div class="hdr-empresa">
+          <div class="hdr-avatar">T</div>
+          <div>
+            <div class="name" id="hdr-company-name">RENOVA</div>
+            <div class="sub" id="hdr-company-sub">CARGANDO DATOS DEL EXCEL</div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="hdr-right">
-      <a class="chip active" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
-      <a class="chip" href="inventario.html">Inventario</a>
-      <a class="chip" href="servicios.html">Servicios</a>
-      <a class="chip" href="rendimiento.html">Rendimiento</a>
-      <a class="chip" href="importar.html">Importar</a>
-      <button class="chip finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">BUSCAR <kbd>Ctrl K</kbd></button>
-      <button class="chip" id="user-chip" type="button"><span class="ice">SN</span>· SUPERVISOR DE NEUMÁTICOS</button>
+      <nav class="unit-nav" aria-label="Pantallas">
+        <a class="chip active" aria-current="page" href="INSPECCIONES%20POR%20FECHA.html">Inspecciones</a>
+        <a class="chip" href="inventario.html">Inventario</a>
+        <a class="chip" href="servicios.html">Servicios</a>
+        <a class="chip" href="rendimiento.html">Rendimiento</a>
+        <a class="chip" href="importar.html">Importar</a>
+      </nav>
+      <div class="unit-tools">
+        <button class="chip" id="user-chip" type="button"><span class="ice">SN</span>· SUPERVISOR DE NEUMÁTICOS</button>
+        <button class="chip finder-trigger" data-finder-trigger type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">BUSCAR <kbd>Ctrl K</kbd></button>
+      </div>
     </div>
   </header>
 
@@ -517,7 +533,7 @@ main{flex:1;display:flex;min-height:0}
         <div class="tc-selected-identity" id="movimientos-selected-position">POSICIÓN —</div>
         <span class="tc-selected-state" id="movimientos-selected-state">—</span>
         <button class="tc-retry tc-baseline-open" id="movimientos-baseline-open" type="button" hidden>
-          Registrar primer montaje
+          Completar instalación en esta unidad
         </button>
       </section>
 
@@ -648,13 +664,17 @@ main{flex:1;display:flex;min-height:0}
     </div>
   </div>
 
-  <!-- Primer montaje: confirma la identidad observada, no inventa historia previa. -->
+  <!-- Regularización: registra la instalación actual sin inventar historia previa. -->
   <div class="overlay tc-baseline-overlay" id="movimientos-baseline-overlay"
     role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="movimientos-baseline-title">
     <div class="modal tc-baseline-dialog" id="movimientos-baseline-dialog" tabindex="-1">
-      <h3 id="movimientos-baseline-title">Registrar primer montaje</h3>
+      <h3 id="movimientos-baseline-title">Completar instalación en esta unidad</h3>
       <p class="modal-sub" id="movimientos-baseline-source">
         Selecciona una posición pendiente para comenzar.
+      </p>
+      <p class="tc-baseline-context">
+        Registra desde cuándo está instalado aquí. Esto no afirma que sea el primer montaje físico
+        del neumático ni inventa recorridos anteriores.
       </p>
       <p class="tc-baseline-realtime" id="movimientos-baseline-realtime" role="status" hidden>
         El estado cambió; revisa antes de confirmar.
@@ -662,12 +682,12 @@ main{flex:1;display:flex;min-height:0}
       <form id="movimientos-baseline-form" novalidate>
         <div class="tc-baseline-header">
           <label class="tc-baseline-field">
-            <span>Fecha de confirmación</span>
+            <span>Fecha de instalación en esta unidad</span>
             <input id="movimientos-baseline-performed-at" data-baseline-field="performed_at"
               type="date" required>
           </label>
           <label class="tc-baseline-field">
-            <span>Odómetro</span>
+            <span>Odómetro al instalar</span>
             <input id="movimientos-baseline-odometer" data-baseline-field="odometer"
               type="number" min="0" step="1" inputmode="numeric">
           </label>
@@ -689,7 +709,7 @@ main{flex:1;display:flex;min-height:0}
             Agregar otra posición
           </button>
           <button class="btn-accion tc-baseline-confirm" id="movimientos-baseline-confirm" type="submit">
-            Confirmar primer montaje
+            Confirmar instalación
           </button>
         </div>
       </form>

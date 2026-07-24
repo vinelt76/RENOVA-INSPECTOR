@@ -1,6 +1,6 @@
 ---
 title: "Roadmap, deuda y riesgos"
-updated: 2026-07-22
+updated: 2026-07-23
 status: vigente
 sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, code audit 2026-07-12, tasks_buscador_global/AUDIT.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PRUEBA_CAMPO.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md, tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md]
 ---
@@ -65,10 +65,61 @@ fuentes de evidencia.
 - **Consumo por ventana no disponible**: 2.183/2.247 mediciones carecen de `life_cycle_id`; al
   2026-07-19 hubo 0 cascos calculables en 30/60 días y 4/24 en 90 días. Mejorar cadencia/enlace antes
   de volver a ofrecer la capacidad; no aproximar con la última inspección.
+- **Tendencias y comparación temporal de Rendimiento** (decisión 2026-07-23): el rediseño puede
+  adoptar ahora KPIs agregados y una tabla sin sparklines ni “vs. mes anterior”. Esas señales
+  requieren varias mediciones comparables del mismo casco/ciclo, fechas y odómetros confiables, y
+  suficiente cobertura dentro de dos ventanas equivalentes. No dibujar líneas con un solo punto,
+  repetir el último valor ni convertir la diferencia entre neumáticos en una falsa tendencia
+  temporal. Reabrir cuando la vinculación `life_cycle_id` y la cadencia real permitan definir un
+  mínimo de muestras; entonces resolverlo en una vista/RPC agregada para evitar una consulta por
+  neumático, mostrar el período comparado y conservar “datos insuficientes” cuando no se cumpla el
+  mínimo.
 - El umbral de frescura de Rendimiento vive como constante única de 30 días; falta exponer una
   configuración por empresa sin repartir el número por componentes.
+- **Identidad de neumático desincronizada entre inspección y `tire_installations`** (confirmado
+  2026-07-22, consulta directa a Supabase): la última inspección puede capturar un neumático
+  distinto (código, marca, medida, diseño de reencauche) al del ciclo de vida activo, sin que
+  exista movimiento (`tire_movement_executions`) ni remontaje (`baseline_mount_batches`) que lo
+  explique. Caso: unidad `225` (MÓVIL BUS), posición 3, mismo `life_cycle_id`
+  (`2ec374d2-9381-5259-8905-41e8032b59d7`) — inspección 2026-05-07 registra MICHELIN 241088 /
+  IZE2W; inspección 2026-07-06 registra HANKOOK 241679 / DV-RM 258. Cero filas en
+  `tire_movement_executions` y cero en `baseline_mount_batches` para esa unidad. Efecto:
+  `v_rendimiento_dashboard_rows` (alimentada por `tire_installations`) sigue exponiendo el
+  neumático viejo, y la faceta de reencauche de Rendimiento nunca ofrece el diseño realmente
+  vigente. Es más estrecho que el reconciliador ya pendiente (ver Decisiones bloqueantes): acá no
+  hay ni siquiera un movimiento que reconciliar — la inspección detectó el cambio físico y nada lo
+  propagó a instalación/ciclo. No se propone remedio automático: decidir si la app debe forzar un
+  remontaje/movimiento cuando la identidad capturada en inspección difiere de la instalación
+  activa, o si la reconciliación sigue siendo manual.
 - La fase de filtros conserva pendiente su smoke humano autenticado en móvil/escritorio y el
   aislamiento visual entre dos empresas; 260 pruebas locales no sustituyen esa evidencia.
+
+### Deuda arquitectónica futura — posible migración de dashboards a React (2026-07-23)
+
+Esta deuda queda **registrada, pero fuera del alcance actual**. No autoriza migrar, preparar una
+migración ni introducir React en `WEB/` mientras se mejora la interfaz existente.
+
+- La aplicación de campo en `app/` ya usa React/TypeScript y tiene responsabilidades offline,
+  captura y sincronización. Los dashboards de supervisión en `WEB/` son HTML, CSS y JavaScript
+  modular desplegados como una superficie estática aparte. No se deben fusionar por conveniencia
+  técnica: atienden contextos operativos diferentes.
+- React no es requisito para alcanzar una interfaz visual de alta calidad. La mejora vigente debe
+  hacerse sobre la arquitectura actual, conservando URLs, cálculos, contratos de datos, pruebas,
+  accesibilidad y despliegue.
+- El beneficio potencial de React sería de mantenibilidad —shell, encabezados, filtros, tablas,
+  paneles de detalle y estados reutilizables—, no de capacidad gráfica. También puede empeorar
+  bundle, rendimiento y acoplamiento si se mezcla con la app offline o se migra todo de una vez.
+- Reabrir esta evaluación solo cuando la duplicación de UI o la complejidad interactiva haga
+  objetivamente costoso evolucionar `WEB/`. Debe existir una fase explícita con ADR, presupuesto de
+  regresión y comparación de rendimiento; no iniciarla solo por preferencia de framework.
+- Si se aprueba en el futuro, usar migración gradual por rutas, con una pantalla de solo lectura
+  como piloto, paridad de datos y URLs, ejecución paralela y rollback. No combinar en una misma
+  fase el rediseño visual y el cambio de framework, ni retirar una pantalla HTML antes de demostrar
+  paridad funcional, visual, accesible y de rendimiento.
+- La evaluación futura debe decidir si los dashboards viven en una aplicación React web separada
+  o comparten únicamente tokens, tipos y reglas con `app/`. Incorporarlos directamente a la app de
+  campo no es la opción predeterminada.
+
 ### Deuda abierta por la fase Servicios (2026-07-21)
 
 - **La alineación `sequence ↔ request_items` es propiedad del cliente, no invariante del esquema.**
@@ -160,6 +211,16 @@ fuentes de evidencia.
 - Más tipos/configuraciones de vehículo tras validar buses.
 - Analytics sobre series de casco/ciclo/instalación sin alterar tablas de hechos.
 - Materialized views solo si las vistas se vuelven lentas y la medición lo justifica.
+- **Selector de widgets para Rendimiento** (idea explorada 2026-07-23, sin decisión ni diseño): al
+  revisar Fleetio, MWM y TrackObit como referencia de dashboards de flota, ningún lenguaje visual
+  convenció (el de Fleetio en particular es SaaS genérico, blanco, iconos redondeados — no encaja
+  con el sistema visual de RENOVA). Lo aprovechable no es el estilo sino el patrón de interacción:
+  Fleetio deja activar/desactivar qué tarjetas-métrica se muestran, reordenarlas y guardar vistas
+  distintas por rol (operador vs. dueño de flota). Rendimiento ya es un conjunto de tarjetas-métrica
+  (KM/mm, consumo, costo/km, KM acumulado…), así que encaja como candidato natural: un panel
+  "agregar widget" con métricas por categoría, reordenar/ocultar, y vistas guardadas por rol.
+  Pendiente antes de convertirlo en fase: decidir si aplica solo a Rendimiento o a otras pantallas,
+  y si las vistas guardadas necesitan persistencia por usuario o alcanza con `localStorage`.
 
 ## Riesgos que ameritan test
 

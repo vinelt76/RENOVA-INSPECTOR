@@ -1,0 +1,196 @@
+{
+  "main": {
+    "id": "cb138f517d34a2ce",
+    "type": "split",
+    "children": [
+      {
+        "id": "a201438111977535",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "140d210c6624edf9",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "03 - Arquitectura del sistema.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "03 - Arquitectura del sistema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "2c851af2d51ba783",
+    "type": "split",
+    "children": [
+      {
+        "id": "4804c6b0d1451571",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a8f8717d8736bdf3",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "3170a2b4cbe74d56",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "b4e209c8d141874f",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "af1fe5e763f8f0cc",
+    "type": "split",
+    "children": [
+      {
+        "id": "235747267d3d7f6f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "73c9ec07a1f00452",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "03 - Arquitectura del sistema.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes de 03 - Arquitectura del sistema"
+            }
+          },
+          {
+            "id": "654e689287af232a",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "03 - Arquitectura del sistema.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes de 03 - Arquitectura del sistema"
+            }
+          },
+          {
+            "id": "5a0df6b051ad4815",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "cf942491f94eb5be",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "7e863eea43dab45b",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "03 - Arquitectura del sistema.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema de 03 - Arquitectura del sistema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "140d210c6624edf9",
+  "lastOpenFiles": [
+    "02 - Estado actual.md",
+    "03 - Arquitectura del sistema.md",
+    "05 - Datos y Supabase.md",
+    "10 - Roadmap deuda y riesgos.md",
+    "bitacora/2026/2026-07-23.md",
+    "15 - Bitacora diaria.md",
+    "07 - Web dashboards y taller.md"
+  ]
+}

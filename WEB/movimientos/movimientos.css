@@ -728,19 +728,50 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   color:var(--orange);
 }
 
-.tc-baseline-dialog{
-  width:min(760px, 94vw);
+.overlay .tc-baseline-dialog{
+  width:min(960px, calc(100vw - 40px));
+  max-width:none;
+  max-height:calc(100dvh - 32px);
+  padding:22px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
 }
 
-.tc-baseline-header,
-.tc-baseline-grid{
+.tc-baseline-dialog h3{
+  font-size:18px;
+  line-height:1.2;
+}
+
+.tc-baseline-dialog .modal-sub{
+  margin-top:6px;
+  font-size:10px;
+  line-height:1.45;
+}
+
+.tc-baseline-context{
+  margin:0 0 16px;
+  padding:10px 12px;
+  border-left:3px solid var(--label);
+  color:var(--label);
+  font-size:10px;
+  font-weight:700;
+  line-height:1.5;
+}
+
+.tc-baseline-header{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;
 }
 
+.tc-baseline-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+
 .tc-baseline-header{
-  margin-bottom:12px;
+  margin-bottom:16px;
 }
 
 .tc-baseline-field{
@@ -758,6 +789,7 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
 .tc-baseline-field input,
 .tc-baseline-field select{
   width:100%;
+  min-height:44px;
   padding:9px 10px;
   border:2px solid var(--border);
   border-radius:8px;
@@ -769,8 +801,8 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
 }
 
 .tc-baseline-mount{
-  margin:0 0 12px;
-  padding:12px;
+  margin:0 0 14px;
+  padding:16px;
   border:2px solid var(--border);
   border-radius:10px;
 }
@@ -817,9 +849,25 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   margin-bottom:10px;
 }
 
+.tc-baseline-actions{
+  position:sticky;
+  bottom:-22px;
+  z-index:2;
+  margin-top:4px;
+  padding:14px 0 4px;
+  border-top:2px solid var(--border);
+  background:var(--field);
+}
+
 .tc-baseline-confirm{
   border-color:var(--orange);
   color:var(--orange);
+}
+
+@media (max-width:1000px){
+  .tc-baseline-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
 }
 
 @media (max-width:900px){
