@@ -1,0 +1,41 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/facundo/Vídeos/RENOVA-INSPECTOR/reference
+plugins: asyncio-1.4.0, anyio-4.13.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 31 items
+
+test_calculations_golden.py::TestRtdMovi::test_tres_canales_devuelve_minimo PASSED [  3%]
+test_calculations_golden.py::TestRtdMovi::test_cuatro_canales_devuelve_minimo PASSED [  6%]
+test_calculations_golden.py::TestRtdMovi::test_todos_iguales PASSED      [  9%]
+test_calculations_golden.py::TestRtdMovi::test_rtd_cero_valido PASSED    [ 12%]
+test_calculations_golden.py::TestRtdMovi::test_rtd_negativo_rechazado PASSED [ 16%]
+test_calculations_golden.py::TestRtdMovi::test_cuatro_canales_sin_rtd_d_usa_tres PASSED [ 19%]
+test_calculations_golden.py::TestIdi::test_bus_8260_pos7_idi_6 PASSED    [ 22%]
+test_calculations_golden.py::TestIdi::test_desgaste_parejo_idi_0 PASSED  [ 25%]
+test_calculations_golden.py::TestIdi::test_idi_tres_canales PASSED       [ 29%]
+test_calculations_golden.py::TestEstadoRtd::test_para_reencauche PASSED  [ 32%]
+test_calculations_golden.py::TestEstadoRtd::test_exactamente_en_limite_cambio PASSED [ 35%]
+test_calculations_golden.py::TestEstadoRtd::test_proximo_reencauche PASSED [ 38%]
+test_calculations_golden.py::TestEstadoRtd::test_normal PASSED           [ 41%]
+test_calculations_golden.py::TestEstadoRtd::test_secuencial_no_paralelo PASSED [ 45%]
+test_calculations_golden.py::TestEstadoPresion::test_sin_medir_flag PASSED [ 48%]
+test_calculations_golden.py::TestEstadoPresion::test_presion_none_es_sin_medir PASSED [ 51%]
+test_calculations_golden.py::TestEstadoPresion::test_alta_presion_direccion PASSED [ 54%]
+test_calculations_golden.py::TestEstadoPresion::test_baja_presion_direccion PASSED [ 58%]
+test_calculations_golden.py::TestEstadoPresion::test_normal_direccion PASSED [ 61%]
+test_calculations_golden.py::TestEstadoPresion::test_alta_presion_traccion PASSED [ 64%]
+test_calculations_golden.py::TestEstadoPresion::test_baja_presion_traccion PASSED [ 67%]
+test_calculations_golden.py::TestEstadoPresion::test_en_limite_exacto_alto_es_alta PASSED [ 70%]
+test_calculations_golden.py::TestVur::test_vur_normal PASSED             [ 74%]
+test_calculations_golden.py::TestVur::test_tasa_none_retorna_none PASSED [ 77%]
+test_calculations_golden.py::TestVur::test_tasa_cero_retorna_none PASSED [ 80%]
+test_calculations_golden.py::TestVur::test_tasa_negativa_retorna_none PASSED [ 83%]
+test_calculations_golden.py::TestVur::test_rtd_en_limite_retorna_cero PASSED [ 87%]
+test_calculations_golden.py::TestVur::test_rtd_bajo_limite_retorna_cero PASSED [ 90%]
+test_calculations_golden.py::TestTasaDesgaste::test_calculo_normal PASSED [ 93%]
+test_calculations_golden.py::TestTasaDesgaste::test_mismo_km_retorna_none PASSED [ 96%]
+test_calculations_golden.py::TestTasaDesgaste::test_km_menor_retorna_none PASSED [100%]
+
+============================== 31 passed in 0.04s ==============================

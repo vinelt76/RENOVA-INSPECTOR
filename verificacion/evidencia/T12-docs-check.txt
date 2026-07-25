@@ -1,0 +1,6 @@
+
+> docs:check
+> node scripts/sync-project-docs.mjs --check
+
+[ok] IA: 38 notas validadas
+[ok] humano: 12 notas validadas

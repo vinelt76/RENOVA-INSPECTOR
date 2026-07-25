@@ -1,8 +1,8 @@
 ---
 title: "RENOVA INSPECTOR - Leer primero"
-updated: 2026-07-23
+updated: 2026-07-24
 status: vigente
-sources: [CLAUDE.md, PRODUCT.md, DESIGN.md, tasks_opencode/STATE.md, git]
+sources: [CLAUDE.md, PRODUCT.md, DESIGN.md, git]
 ---
 
 # RENOVA INSPECTOR - Leer primero
@@ -40,7 +40,9 @@ La autoridad depende de qué se intenta determinar:
 1. **Comportamiento deseado:** especificaciones aprobadas en `specs/` y ADRs vigentes en `decisions/`.
 2. **Estado implementado:** migraciones remotas en orden cronológico; código/esquema local actual y tests reproducibles.
 3. **Mapa y estado resumido:** notas `status: vigente` de `knowledge/ai`, que deben citar sus fuentes.
-4. **Historia o exploración:** `docs/run*`, `tasks_opencode/`, planes, ideas y notas marcadas `historico`.
+4. **Historia o exploración:** `docs/run*`, los directorios `tasks_*/` (bitácora por iniciativa;
+   `tasks_opencode/` es un flujo de trabajo abandonado, leer solo como archivo), `deuda_tecnica/`,
+   `FASE_02/`, planes, ideas y notas marcadas `historico`.
 
 El código demuestra qué ocurre hoy, pero no modifica por sí solo una regla aprobada. Si código y spec difieren, no elegir silenciosamente: registrar la evidencia y confirmar si es un bug o un cambio de negocio; después actualizar código, spec/ADR y knowledge juntos. Entre documentos contradictorios manda la fuente primaria vigente; si dos fuentes del mismo nivel siguen en conflicto, detener la decisión y pedir resolución humana. No copiar la contradicción a otra nota.
 
@@ -56,7 +58,7 @@ El código demuestra qué ocurre hoy, pero no modifica por sí solo una regla ap
 | Esquema remoto vigente | `supabase/migrations/` en orden cronológico |
 | Esquema local | `app/src/db/sqlite.ts` y `app/src/db/schema.ts` |
 | Estado comprobable | código + tests + Git; `STATE.md` es bitácora, no autoridad absoluta |
-| Historia y alternativas descartadas | `docs/run*`, `tasks_opencode/`, [[12 - Decisiones e historia]] |
+| Historia y alternativas descartadas | `docs/run*`, `tasks_*/` (incl. `tasks_opencode/`, abandonado), [[12 - Decisiones e historia]] |
 
 ## Navegación por tarea
 

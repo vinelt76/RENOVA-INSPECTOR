@@ -1,6 +1,6 @@
 ---
 title: "Mapa del repositorio y runbook"
-updated: 2026-07-12
+updated: 2026-07-24
 status: vigente
 sources: [repository tree, package.json, app/package.json, CLAUDE.md]
 ---
@@ -11,17 +11,21 @@ sources: [repository tree, package.json, app/package.json, CLAUDE.md]
 
 | Zona | Responsabilidad |
 |---|---|
-| `app/src/screens/` | Flujo y pantallas móviles |
+| `app/src/screens/` | Flujo y pantallas móviles de inspección |
 | `app/src/db/` | SQLite, migraciones, seed, repositorios |
 | `app/src/sync/` | Supabase, pull/push, cola y cierre |
 | `app/src/core/` | Cálculos puros |
+| `app movimientos/` | App Android separada del operario: login propio, empresa derivada del perfil, órdenes y borrador local |
 | `supabase/migrations/` | Historia ejecutable del esquema remoto |
 | `supabase/tests/` | Pruebas SQL |
-| `WEB/` | Dashboards y operaciones web estáticas |
+| `WEB/` | Dashboards, operaciones de taller y pestaña Movimientos (emite órdenes, no ejecuta retiros/instalaciones) |
 | `specs/` | Reglas/flujo/catálogo |
 | `decisions/` | ADRs |
-| `docs/` | Auditorías, mapeos y resultados de runs |
-| `tasks_opencode/` | Bitácora histórica y specs de lotes |
+| `docs/` | Auditorías, mapeos y resultados de runs — histórico |
+| `deuda_tecnica/` | Inventario de deuda técnica — histórico/planificación |
+| `FASE_02/` | Prompts y planificación de una fase — histórico |
+| `tasks_*/` (`tasks_puesta_en_marcha_movimientos/`, `tasks_buscador_global/`, etc.) | Bitácora y specs de lotes de trabajo — histórico, uno por iniciativa |
+| `tasks_opencode/` | Bitácora de un flujo de trabajo abandonado — leer solo como archivo, nunca como pendientes |
 | `UI/` | Prototipos visuales, no app activa |
 | `reference/` | Cálculos Python y fixtures golden |
 | `knowledge/` | Fuente de estas notas para Obsidian |

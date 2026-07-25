@@ -6,10 +6,14 @@ Cuando exista backend/tests/fixtures/real_sample.xlsx, reemplazar los casos
 de DATOS_EXCEL por los valores reales extraídos de ese archivo.
 
 Ver decisions/0002-calc-parity.md para el protocolo completo.
+
+Correr desde este directorio:  cd reference && python -m pytest test_calculations_golden.py -v
+La paridad real contra la implementación TypeScript la verifica
+.claude/skills/verify-data-flow/scripts/compare_golden.mjs sobre un fixture compartido.
 """
 
 import pytest
-from app.core.calculations import (
+from calculations import (
     calcular_rtd_movi,
     calcular_idi,
     calcular_estado_rtd,

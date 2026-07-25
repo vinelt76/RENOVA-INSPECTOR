@@ -1,19 +1,25 @@
 # RENOVA INSPECTOR
 
-App Android para inspección de neumáticos de flotas peruanas. Inspectores de campo capturan
-unidad, posición, identidad del neumático, RTD, presión y anomalías aun sin señal; jefes de flota
-y taller consultan y operan sobre la información consolidada.
+Sistema de inspección y gestión de neumáticos para flotas peruanas. Inspectores de campo capturan
+unidad, posición, identidad del neumático, RTD, presión y anomalías aun sin señal; supervisores
+emiten órdenes de movimiento que ejecutan operarios; jefes de flota y taller consultan y operan
+sobre la información consolidada.
 
 ## Arquitectura y límites
 
-- `app/`: React + Vite + TypeScript + Capacitor. SQLite es la copia de trabajo offline y
-  `app/src/sync/` envía una cola durable a Supabase sin bloquear la captura.
-- `supabase/migrations/`: esquema remoto ejecutable, RLS, vistas y RPCs. `WEB/` contiene los
-  dashboards estáticos. Supabase es la verdad consolidada multiempresa.
+- `app/`: app Android de inspección. React + Vite + TypeScript + Capacitor. SQLite es la copia de
+  trabajo offline y `app/src/sync/` envía una cola durable a Supabase sin bloquear la captura.
+- `app movimientos/`: app Android separada del operario. Login propio, empresa derivada del perfil
+  (nunca seleccionable), bandeja de órdenes y borrador local de salida/ingreso.
+- `supabase/migrations/`: esquema remoto ejecutable, RLS, vistas y RPCs. Supabase es la verdad
+  consolidada multiempresa.
+- `WEB/`: HTML/JS estático autenticado. Dashboards de inspecciones, flota, rendimiento e historial,
+  más operaciones de taller y la pestaña Movimientos, que solo emite órdenes y observa su captura;
+  no ejecuta retiros ni instalaciones canónicas. Las reglas compartidas viven en SQL, no en cada HTML.
 - `app/src/core/calculations.ts` debe conservar paridad con `reference/calculations.py` y sus
   pruebas golden.
-- El MVP de inspección cubre buses 2-4 y 2-4-2. No ampliar alcance ni cambiar el stack salvo
-  pedido explícito.
+- El MVP de la app de inspección cubre buses 2-4 y 2-4-2. No ampliar alcance ni cambiar el stack
+  salvo pedido explícito.
 
 Mapa detallado y comandos: `knowledge/ai/11 - Mapa del repo y runbook.md`.
 
@@ -24,15 +30,18 @@ Antes de planificar o implementar cambios de negocio, arquitectura, datos, sync 
 
 1. Leer `knowledge/ai/00 - LEER PRIMERO.md`.
 2. Abrir las notas y fuentes primarias que esa nota indique para la tarea.
-3. Contrastar con el código, tests y migraciones que realmente se modificarán.
+3. Revisar `knowledge/ai/15 - Bitacora diaria.md` para el trabajo más reciente y sus validaciones.
+4. Contrastar con el código, tests y migraciones que realmente se modificarán.
 
 No duplicar especificaciones extensas en instrucciones. Actualizar knowledge cuando cambien el
 estado, un contrato, una decisión, una regla o un patrón visual; seguir
 `knowledge/ai/14 - Mantenimiento documental.md` y ejecutar `npm run docs:check`.
 
 Autoridad resumida: specs aprobadas y ADRs vigentes definen la intención; código, esquema y tests
-definen el estado implementado; knowledge lo resume y navega; `docs/run*` y `tasks_opencode/` son
-historia. Un conflicto entre intención e implementación no se resuelve silenciosamente: detenerse,
+definen el estado implementado; knowledge lo resume y navega; `docs/run*`, `deuda_tecnica/`,
+`FASE_02/` y los directorios `tasks_*/` son historia y planificación pasada, no estado vigente.
+`tasks_opencode/` en particular corresponde a un flujo de trabajo abandonado: leerlo como archivo,
+nunca como pendientes por ejecutar. Un conflicto entre intención e implementación no se resuelve silenciosamente: detenerse,
 mostrar la evidencia y confirmar si corresponde corregir código o aprobar/documentar el cambio.
 
 ## Invariantes críticas
@@ -46,6 +55,10 @@ mostrar la evidencia y confirmar si corresponde corregir código o aprobar/docum
 - Supabase: leer migraciones en orden antes de tocar el esquema. Preservar RLS por empresa,
   `security_invoker` donde corresponda, idempotencia, compatibilidad legacy y operaciones
   transaccionales. Nunca exponer `service_role`, secretos o contraseñas.
+- Línea base de Movimientos: la flota no está sembrada. Una posición vacía con medición reciente es
+  `baseline_pending`, evidencia de un neumático pero no una instalación. Una persona confirma el
+  primer montaje y declara la fecha; nunca inferirla desde la inspección. Preservar `origin` y
+  `source_measurement_id` y el gate que impide montar inventario sobre evidencia pendiente.
 - No inventar tablas, campos, rutas o contratos. Buscar usos y pruebas existentes; separar UI,
   persistencia local, sync, reglas de negocio y agregaciones SQL.
 - Diseño: leer `DESIGN.md`, `PRODUCT.md`, `knowledge/ai/09 - Diseno y UX.md` y el prototipo

@@ -1,0 +1,59 @@
+
+  Fixture: 48 casos — specs/reglas_negocio.md §1-§8
+  Python : reference/calculations.py
+  TS     : app/src/core/calculations.ts
+
+  CASO                                     PYTHON                 TS                     ESPERADO (spec)        PAR SPEC
+  ---------------------------------------- ---------------------- ---------------------- ---------------------- --- ----
+  rtdmovi-3-canales                        11.8                   11.8                   11.8                    ok  ok 
+  rtdmovi-4-canales                        4                      4                      4                       ok  ok 
+  rtdmovi-d-en-direccion                   13.5                   13.5                   13.5                    ok  ok 
+  rtdmovi-todos-iguales                    8                      8                      8                       ok  ok 
+  rtdmovi-cero-valido                      0                      0                      0                       ok  ok 
+  rtdmovi-negativo-a                       ERROR                  ERROR                  ERROR                   ok  ok 
+  rtdmovi-negativo-d                       ERROR                  ERROR                  ERROR                   ok  ok 
+  rtdmovi-sobre-22mm                       23                     23                     23                      ok  ok 
+  idi-bus8260-pos7                         6                      6                      6                       ok  ok 
+  idi-parejo-cero                          0                      0                      0                       ok  ok 
+  idi-leve-2                               2                      2                      2                       ok  ok 
+  idi-alerta-4                             4                      4                      4                       ok  ok 
+  idi-3-canales-ignora-d                   3                      3                      3                       ok  ok 
+  idi-negativo-mismo-criterio-que-rtdmovi  7                      7                      ERROR                   ok  ~~ 
+  estadortd-para-reencauche-bajo           Para Reencauche        Para Reencauche        Para Reencauche         ok  ok 
+  estadortd-para-reencauche-limite         Para Reencauche        Para Reencauche        Para Reencauche         ok  ok 
+  estadortd-proximo-limite                 Próximo a Reencauche   Próximo a Reencauche   Próximo a Reencauche    ok  ok 
+  estadortd-proximo-medio                  Próximo a Reencauche   Próximo a Reencauche   Próximo a Reencauche    ok  ok 
+  estadortd-normal-limite                  Normal                 Normal                 Normal                  ok  ok 
+  estadortd-normal-alto                    Normal                 Normal                 Normal                  ok  ok 
+  estadortd-umbrales-personalizados        Próximo a Reencauche   Próximo a Reencauche   Próximo a Reencauche    ok  ok 
+  estadortd-cero                           Para Reencauche        Para Reencauche        Para Reencauche         ok  ok 
+  presion-sin-medir-null                   Sin Medir              Sin Medir              Sin Medir               ok  ok 
+  presion-sin-medir-flag                   Sin Medir              Sin Medir              Sin Medir               ok  ok 
+  presion-dir-normal-ref                   Normal                 Normal                 Normal                  ok  ok 
+  presion-dir-alta-116                     Alta Presión           Alta Presión           Alta Presión            ok  ok 
+  presion-dir-limite-alto-1155             Normal                 Normal                 Normal                  ok  ok 
+  presion-dir-99-exacto                    Normal                 Normal                 Normal                  ok  ~~ 
+  presion-dir-baja-98                      Baja Presión           Baja Presión           Baja Presión            ok  ok 
+  presion-trac-normal-115                  Normal                 Normal                 Normal                  ok  ok 
+  presion-trac-121-excel-dice-normal       Alta Presión           Alta Presión           Alta Presión            ok  ~~ 
+  presion-trac-alta-122                    Alta Presión           Alta Presión           Alta Presión            ok  ok 
+  presion-trac-baja-103                    Baja Presión           Baja Presión           Baja Presión            ok  ok 
+  presion-cero                             Baja Presión           Baja Presión           Baja Presión            ok  ok 
+  vur-normal                               16000                  16000                  16000                   ok  ok 
+  vur-tasa-null                            null                   null                   null                    ok  ok 
+  vur-tasa-cero                            null                   null                   null                    ok  ok 
+  vur-tasa-negativa                        null                   null                   null                    ok  ok 
+  vur-cambio-inmediato                     0                      0                      0                       ok  ok 
+  vur-cambio-inmediato-bajo                0                      0                      0                       ok  ok 
+  vur-cambio-inmediato-sin-tasa            null                   null                   null                    ok  ~~ 
+  tasa-normal                              0.04                   0.04                   0.04                    ok  ok 
+  tasa-km-iguales                          null                   null                   null                    ok  ok 
+  tasa-km-retrocede                        null                   null                   null                    ok  ~~ 
+  tasa-rtd-aumenta                         -0.04                  -0.04                  -0.04                   ok  ok 
+  tasa-sin-desgaste                        0                      0                      0                       ok  ok 
+  isa-desecho                              5                      5                      5                       ok  ok 
+  isa-anomalia-sin-desecho                 1                      1                      1                       ok  ok 
+
+  PARIDAD Python↔TS : OK
+  CONFORMIDAD spec  : OK (5 casos marcados spec_ambigua, no cuentan)
+
