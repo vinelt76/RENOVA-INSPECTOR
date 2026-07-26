@@ -33,6 +33,8 @@ Nunca colocar `service_role` ni una clave secreta en la app.
 El campo `USUARIO` acepta correo o un nombre corto. Un nombre como `jrojas` se convierte de
 forma determinista a `jrojas@operarios.renova.local`; la cuenta de Auth debe aprovisionarse con
 ese correo interno y tener una fila `profiles` activa con `role='operator'` y su `company_id`.
+Si Auth usa otro dominio interno, configurarlo en `VITE_SUPABASE_LOGIN_EMAIL_DOMAINS` (lista
+separada por comas). La app prueba los dominios en orden antes de dar el login por inválido.
 
 ## Desarrollo y Android
 

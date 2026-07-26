@@ -1,4 +1,7 @@
 {
+  "name": "renova-inspector",
+  "private": true,
+  "license": "UNLICENSED",
   "scripts": {
     "docs:check": "node scripts/sync-project-docs.mjs --check",
     "docs:backfill": "node scripts/knowledge-backfill.mjs",

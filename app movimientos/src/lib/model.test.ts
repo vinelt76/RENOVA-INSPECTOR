@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   draftFromOrder,
   groupExecutionServices,
+  loginIdentifierCandidates,
   loginIdentifierToEmail,
   serviceCountFromOrder,
   validateDraft,
@@ -35,6 +36,7 @@ function order(): MovementOrder {
 
 describe('modelo de captura de movimientos', () => {
   it('convierte un usuario corto al correo interno sin alterar un correo real', () => {
+    expect(loginIdentifierCandidates('  JROJAS ')).toEqual(['jrojas@operarios.renova.local']);
     expect(loginIdentifierToEmail('  JROJAS ')).toBe('jrojas@operarios.renova.local');
     expect(loginIdentifierToEmail('j@empresa.pe')).toBe('j@empresa.pe');
   });

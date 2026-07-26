@@ -1,7 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import type { AuthError, Session } from '@supabase/supabase-js';
 import { loadOperatorProfile, supabase } from '../lib/supabase';
-import { loginIdentifierToEmail } from '../lib/model';
+import { loginIdentifierCandidates } from '../lib/model';
 import type { OperatorProfile } from '../lib/types';
 
 interface AuthValue {
@@ -17,6 +17,10 @@ interface AuthValue {
 export const AuthContext = createContext<AuthValue | null>(null);
 
 const PROFILE_CACHE = 'renova:movements:profile:v1';
+
+function isInvalidCredentials(error: AuthError | null): boolean {
+  return error?.code === 'invalid_credentials';
+}
 
 function cachedProfile(userId: string): OperatorProfile | null {
   try {
@@ -73,12 +77,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (identifier: string, password: string) => {
     if (!supabase) throw new Error('La app no está conectada a RENOVA.');
     setError(null);
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: loginIdentifierToEmail(identifier),
-      password,
-    });
-    if (authError) throw new Error('Usuario o contraseña incorrectos.');
-    await hydrateProfile(data.session);
+
+    const candidates = loginIdentifierCandidates(identifier);
+    if (candidates.length === 0) throw new Error('Ingresa tu usuario o correo.');
+
+    let lastInvalidCredentials = false;
+    for (const email of candidates) {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        if (isInvalidCredentials(authError)) {
+          lastInvalidCredentials = true;
+          continue;
+        }
+        if (authError.code === 'email_not_confirmed') {
+          throw new Error('Tu cuenta existe, pero el correo todavía no fue confirmado en Supabase Auth.');
+        }
+        throw new Error(authError.message || 'No se pudo iniciar sesión en Supabase.');
+      }
+
+      await hydrateProfile(data.session);
+      return;
+    }
+
+    if (lastInvalidCredentials) throw new Error('Usuario o contraseña incorrectos.');
+    throw new Error('No se pudo iniciar sesión en Supabase.');
   }, [hydrateProfile]);
 
   const signOut = useCallback(async () => {

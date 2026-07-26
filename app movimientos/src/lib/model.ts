@@ -18,11 +18,26 @@ export const REASON_LABELS: Readonly<Record<MovementReason, string>> = {
   balancing: 'BALANCEO',
 };
 
-const USERNAME_SUFFIX = '@operarios.renova.local';
+const DEFAULT_LOGIN_DOMAIN = 'operarios.renova.local';
+
+function configuredLoginDomains(): string[] {
+  const raw = import.meta.env.VITE_SUPABASE_LOGIN_EMAIL_DOMAINS as string | undefined;
+  const parsed = raw
+    ?.split(',')
+    .map((value) => value.trim().toLowerCase().replace(/^@+/, ''))
+    .filter(Boolean);
+  return parsed?.length ? [...new Set(parsed)] : [DEFAULT_LOGIN_DOMAIN];
+}
+
+export function loginIdentifierCandidates(identifier: string): string[] {
+  const normalized = identifier.trim().toLowerCase();
+  if (!normalized) return [];
+  if (normalized.includes('@')) return [normalized];
+  return configuredLoginDomains().map((domain) => `${normalized}@${domain}`);
+}
 
 export function loginIdentifierToEmail(identifier: string): string {
-  const normalized = identifier.trim().toLowerCase();
-  return normalized.includes('@') ? normalized : `${normalized}${USERNAME_SUFFIX}`;
+  return loginIdentifierCandidates(identifier)[0] ?? '';
 }
 
 const TIRE_CONDITIONS = new Set(['N', 'R1', 'R2', 'R3', 'R4']);
