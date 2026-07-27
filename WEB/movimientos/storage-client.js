@@ -195,7 +195,7 @@ export async function prepareDiscardPhoto(file, {
     if (error instanceof DiscardPhotoError) throw error;
     throw new DiscardPhotoError(
       "compression_failed",
-      "No se pudo procesar la foto. Probá con otra imagen JPEG o WebP.",
+      "No se pudo procesar la foto. Prueba con otra imagen JPEG o WebP.",
       { cause: error },
     );
   } finally {

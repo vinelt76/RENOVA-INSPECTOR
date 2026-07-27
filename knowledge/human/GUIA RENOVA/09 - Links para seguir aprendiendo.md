@@ -1,8 +1,8 @@
 ---
 title: "Links para seguir aprendiendo"
-updated: 2026-07-12
+updated: 2026-07-26
 status: vigente
-sources: [official documentation checked 2026-07-12]
+sources: [official documentation checked 2026-07-26]
 ---
 
 # Links para seguir aprendiendo
@@ -11,6 +11,8 @@ sources: [official documentation checked 2026-07-12]
 
 - [Qué es la base de Supabase](https://supabase.com/docs/guides/database/overview)
 - [RLS: cómo se separan las filas](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Cómo proteger la API de datos](https://supabase.com/docs/guides/api/securing-your-api)
+- [Seguridad de productos Supabase](https://supabase.com/docs/guides/security/product-security)
 - [Documentación de PostgreSQL](https://www.postgresql.org/docs/current/)
 - [SQLite explicado por su documentación](https://www.sqlite.org/docs.html)
 
@@ -38,3 +40,4 @@ sources: [official documentation checked 2026-07-12]
 
 No hace falta aprender todo para entender el negocio. Primero poder contar [[02 - El viaje de una inspeccion]] y [[04 - La vida de un neumatico]] sin palabras técnicas.
 
+Seguir con [[10 - Flujo de trabajo para no olvidarme]].

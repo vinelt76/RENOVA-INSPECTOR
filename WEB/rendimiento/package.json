@@ -1,0 +1,14 @@
+{
+  "name": "renova-rendimiento",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pantalla de rendimiento — agregación por grupo, frescura y distribución.",
+  "scripts": {
+    "test": "../movimientos/node_modules/.bin/vitest run",
+    "test:watch": "../movimientos/node_modules/.bin/vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.9"
+  }
+}

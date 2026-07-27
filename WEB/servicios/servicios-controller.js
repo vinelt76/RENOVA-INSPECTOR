@@ -234,9 +234,9 @@ function renderStatus(visibleRows) {
   const messages = {
     loading: "Cargando servicios ejecutados…",
     unconfigured: "Supabase no está configurado para esta pantalla.",
-    unauthorized: "Iniciá sesión para consultar los servicios de tu empresa.",
+    unauthorized: "Inicia sesión para consultar los servicios de tu empresa.",
     forbidden: "Tu rol no tiene acceso a los servicios de movimiento.",
-    error: "No se pudieron cargar los servicios. Verificá la conexión e intentá nuevamente.",
+    error: "No se pudieron cargar los servicios. Verifica la conexión e intenta nuevamente.",
   };
   if (messages[state.status]) {
     elements.status.hidden = false;

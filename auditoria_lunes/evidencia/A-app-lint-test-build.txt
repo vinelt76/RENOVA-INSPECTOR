@@ -1,0 +1,39 @@
+
+> app@0.0.0 lint
+> oxlint
+
+=== TEST ===
+
+> app@0.0.0 test
+> vitest run --run
+
+
+ RUN  v4.1.9 /home/facundo/Vídeos/RENOVA-INSPECTOR/app
+
+
+ Test Files  7 passed (7)
+      Tests  47 passed (47)
+   Start at  20:00:37
+   Duration  581ms (transform 568ms, setup 0ms, import 903ms, tests 154ms, environment 1ms)
+
+=== BUILD ===
+dist/assets/jetbrains-mono-latin-800-normal-D2mQHRMK.woff2       21.23 kB
+dist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB
+dist/assets/jetbrains-mono-latin-700-normal-BYuf6tUa.woff2       21.90 kB
+dist/assets/jetbrains-mono-latin-800-normal-Dj9qwObk.woff        27.38 kB
+dist/assets/jetbrains-mono-latin-400-normal-6-qcROiO.woff        27.49 kB
+dist/assets/jetbrains-mono-latin-500-normal-CJOVTJB7.woff        28.20 kB
+dist/assets/jetbrains-mono-latin-700-normal-D3wTyLJW.woff        28.20 kB
+dist/assets/index-Dfingcz9.css                                   48.01 kB │ gzip:  27.81 kB
+dist/assets/loader-DUU4PxC_.js                                    1.65 kB │ gzip:   0.72 kB
+dist/assets/web-d63rBZI6.js                                       9.46 kB │ gzip:   1.31 kB
+dist/assets/index-68ac790b-Ct2wTEm3.js                           14.21 kB │ gzip:   6.15 kB
+dist/assets/jeep-sqlite.entry-DRWvVdU2.js                       291.99 kB │ gzip:  79.20 kB
+dist/assets/index-Bpg5FXMF.js                                   560.58 kB │ gzip: 155.76 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 333ms

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RENOVA — Supervisión de Neumáticos</title>
+<link rel="icon" href="data:,">
 <!-- Dashboard web: inspecciones de lectura y emisión/seguimiento de órdenes de movimiento. -->
 <script src="supabase-config.public.js"></script>
 <script src="renova-ready.js"></script>
@@ -44,7 +45,7 @@
 html,body{height:100%}
 body{
   font-size:13px;
-  overflow-x:auto;
+  overflow-x:hidden;
   overflow-y:hidden;
 }
 .dash{
@@ -52,6 +53,7 @@ body{
   height:100vh;
   display:flex;
   flex-direction:column;
+  transform-origin:top left;
 }
 .num{font-variant-numeric:tabular-nums}
 .lbl{
@@ -721,6 +723,24 @@ main{flex:1;display:flex;min-height:0}
 
 <script>
 'use strict';
+/* Escala el panel de 1280px al ancho real cuando es menor (iPad, portátil chica).
+   Mismo truco de "escenario escalado" que usa el deck de la presentación. */
+(function(){
+  var dash = document.querySelector('.dash');
+  function fitDash(){
+    var s = Math.min(1, window.innerWidth / 1280);
+    if (s < 1){
+      dash.style.transform = 'scale(' + s + ')';
+      dash.style.height = (100 / s) + 'vh';
+    } else {
+      dash.style.transform = '';
+      dash.style.height = '100vh';
+    }
+  }
+  fitDash();
+  window.addEventListener('resize', fitDash);
+  window.addEventListener('orientationchange', fitDash);
+})();
 /* ============================================================
    DATOS REALES — este panel lee Supabase/Excel.
    Umbrales: SIEMPRE configuración por empresa y medida.
@@ -791,8 +811,13 @@ function rowsToPositions(rows){
       canales,
       canalStates,
       presion: r.pressure_psi == null ? null : Number(r.pressure_psi),
-      // pressure_state_fixed: regla fija 100/130, calculada en la vista (fn_pressure_state_fixed).
+      // pressure_state_fixed conserva el nombre por compatibilidad, pero ya NO es la vieja
+      // regla plana 100/130: la vista lo calcula con fn_pressure_state() contra el rango
+      // por empresa/medida/eje de pressure_thresholds. El rango viaja aparte para poder
+      // imprimirlo — antes estaba hardcodeado acá y mentía en las posiciones direccionales.
       pressure_state: r.pressure_state_fixed || null,
+      presionMin: r.pressure_min_psi == null ? null : Number(r.pressure_min_psi),
+      presionMax: r.pressure_max_psi == null ? null : Number(r.pressure_max_psi),
       rtd_state: r.rtd_state || null,
       // has_anomaly ya excluye "Normal" (calculado en la vista) — el HTML no filtra texto.
       // is_critical = is_discard (check manual) OR anomaly_is_severe (catálogo
@@ -870,7 +895,7 @@ async function loadSupabaseInspection(){
 
 /* ---- Solo mapeo de texto/color de UI. El ESTADO (rtd_state, rtd_a_state..d_state,
    pressure_state_fixed) ya viene calculado por Supabase (fn_rtd_state,
-   fn_channel_rtd_state, fn_pressure_state_fixed) — nunca se recalcula acá. ---- */
+   fn_channel_rtd_state, fn_pressure_state) — nunca se recalcula acá. ---- */
 const rtdMovi = c => {
   const vals = Object.values(c || {}).filter(v => Number.isFinite(Number(v))).map(Number);
   return vals.length ? Math.min(...vals) : null;
@@ -971,9 +996,13 @@ function renderPanel(n){
   }).join('');
 
   document.getElementById('presion-val').innerHTML = d.presion == null ? `— <small>PSI</small>` : `${d.presion} <small>PSI</small>`;
+  // El rango sale de la vista (pressure_thresholds por empresa/medida/eje). Si no hay
+  // umbral sembrado no se inventa uno: se dice que no está definido, que es la verdad.
+  const rangoPresion = (d.presionMin != null && d.presionMax != null)
+    ? `RANGO NORMAL: ${d.presionMin}–${d.presionMax} PSI`
+    : 'RANGO NORMAL NO DEFINIDO PARA ESTA POSICIÓN';
   document.getElementById('presion-sub').textContent =
-    d.presion == null ? (d.pressure_state || 'Sin presión registrada') :
-    'RANGO NORMAL: 100–130 PSI';
+    d.presion == null ? (d.pressure_state || 'Sin presión registrada') : rangoPresion;
   const pB = document.getElementById('presion-badge');
   pB.textContent = (eP.cls==='normal'?'':'⚠ ')+eP.txt;
   pB.className = 'badge '+eP.cls;

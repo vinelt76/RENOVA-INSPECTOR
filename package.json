@@ -8,6 +8,7 @@
     "docs:day": "node scripts/knowledge-day.mjs",
     "docs:status": "node scripts/sync-project-docs.mjs --status",
     "docs:sync": "node scripts/sync-project-docs.mjs",
+    "verify": "node scripts/verify-all.mjs",
     "deploy:bundle": "cd app && npm run build && cd .. && node scripts/prepare-static-hosting.mjs"
   },
   "dependencies": {

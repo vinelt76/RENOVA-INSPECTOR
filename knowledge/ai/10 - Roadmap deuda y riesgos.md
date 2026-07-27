@@ -1,6 +1,6 @@
 ---
 title: "Roadmap, deuda y riesgos"
-updated: 2026-07-23
+updated: 2026-07-26
 status: vigente
 sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, code audit 2026-07-12, tasks_buscador_global/AUDIT.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PRUEBA_CAMPO.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md, tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md]
 ---
@@ -26,7 +26,8 @@ fuentes de evidencia.
 - Precargar desde Supabase reencola datos espejo y puede hacer un push redundante.
 - `rtd_removal_mm` se mapea al snapshot `rtd_normal`, conceptos distintos aunque hoy no afecte vistas.
 - Backfill de `isa_peso_snap` omite algunas filas legacy sin RTD.
-- `umbral_presion` local existe pero no participa del flujo.
+- `umbral_presion` local (SQLite) existe pero no participa del flujo; la regla remota vive en
+  `pressure_thresholds` desde ADR-0009.
 - Pull/versionado/borrado de catálogos no está completo.
 - `vite.config.ts` no tiene `manualChunks`; el punto de task 18 sigue abierto.
 - Hay documentos run/STATE con afirmaciones vencidas.
@@ -56,12 +57,9 @@ fuentes de evidencia.
   componente compartido — quedó así tras `tasks_buscador_global/task_07` y se amplió con
   Servicios (`tasks_servicios` D12), sin corregir. Unificar el shell es una fase propia: mezclarla
   con funcionalidad nueva contamina el rollback de ambas.
-- **Esquema de Rendimiento fuera de la cadena local**: `v_tire_performance` y la columna remota
-  `last_inspection_on` de `v_rendimiento_dashboard_rows` no tienen una migración local fiel;
-  `schema_draft.sql` está desactualizado.
-- **Grant amplio de Rendimiento**: `v_rendimiento_dashboard_rows` conserva acceso para `anon`,
-  divergente de `v_search_index` (solo `authenticated`). Revisarlo en una fase de seguridad propia,
-  no escondido dentro de una migración funcional.
+- **Esquema de Rendimiento parcialmente consolidado**: desde 2026-07-26 las fórmulas vigentes y las
+  columnas de inspección anterior tienen migraciones locales; `schema_draft.sql` aún está
+  desactualizado. Ambas vistas conservan `security_invoker` y solo `authenticated/SELECT`.
 - **Consumo por ventana no disponible**: 2.183/2.247 mediciones carecen de `life_cycle_id`; al
   2026-07-19 hubo 0 cascos calculables en 30/60 días y 4/24 en 90 días. Mejorar cadencia/enlace antes
   de volver a ofrecer la capacidad; no aproximar con la última inspección.
@@ -76,6 +74,12 @@ fuentes de evidencia.
   mínimo.
 - El umbral de frescura de Rendimiento vive como constante única de 30 días; falta exponer una
   configuración por empresa sin repartir el número por componentes.
+- **Tasa por vida/ciclo actual — resuelta 2026-07-26.** Rendimiento usa
+  `km acumulado del ciclo / (OTD − RTD actual)`. Rotaciones, retén y traslados conservan ambos
+  acumulados; un reencauche abre una vida nueva. `casing_km_accumulated`, que suma todas las vidas,
+  queda reservado para Historial de neumático. La suma del ciclo usa
+  `bool_and(km_run is not null)`: si falta cualquier tramo devuelve `NULL` en vez de publicar un
+  total parcial. Así vuelve a cumplirse `km ciclo + VUR = km proyectado`.
 - **Identidad de neumático desincronizada entre inspección y `tire_installations`** (confirmado
   2026-07-22, consulta directa a Supabase): la última inspección puede capturar un neumático
   distinto (código, marca, medida, diseño de reencauche) al del ciclo de vida activo, sin que
@@ -88,7 +92,9 @@ fuentes de evidencia.
   neumático viejo, y la faceta de reencauche de Rendimiento nunca ofrece el diseño realmente
   vigente. Es más estrecho que el reconciliador ya pendiente (ver Decisiones bloqueantes): acá no
   hay ni siquiera un movimiento que reconciliar — la inspección detectó el cambio físico y nada lo
-  propagó a instalación/ciclo. No se propone remedio automático: decidir si la app debe forzar un
+  propagó a instalación/ciclo. Desde 2026-07-26 Rendimiento detecta el RTD creciente, excluye la
+  fila del KPI y declara si parece cambio sin registrar, medición o ausencia de código. No se
+  propone remedio automático: decidir si la app debe forzar un
   remontaje/movimiento cuando la identidad capturada en inspección difiere de la instalación
   activa, o si la reconciliación sigue siendo manual.
 - La fase de filtros conserva pendiente su smoke humano autenticado en móvil/escritorio y el

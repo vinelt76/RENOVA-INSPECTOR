@@ -1,8 +1,8 @@
 ---
 title: "Flujo de trabajo para no olvidarme"
-updated: 2026-07-23
+updated: 2026-07-26
 status: vigente
-sources: [scripts/sync-project-docs.mjs, scripts/knowledge-day.mjs, CLAUDE.md, knowledge/ai/14]
+sources: [scripts/sync-project-docs.mjs, scripts/knowledge-day.mjs, scripts/verify-all.mjs, CLAUDE.md, knowledge/ai/14]
 ---
 
 # Flujo de trabajo para no olvidarme
@@ -63,25 +63,34 @@ Para reconstruir un problema más adelante:
 
 1. Actualizar las notas correspondientes dentro de `knowledge/ai` y `knowledge/human`.
 2. Dejar escrito qué funcionaba antes si explica una decisión importante. No hace falta guardar copias completas de todo.
-3. Validar:
+3. Ejecutar la verificación integral:
+
+```bash
+npm run verify
+```
+
+Esto cuenta las ocho suites para no dar por bueno un resultado que omitió pruebas. También ejecuta
+lint, chequeo documental y los builds de las dos apps.
+
+4. Validar las notas por separado si se está trabajando solo en documentación:
 
 ```bash
 npm run docs:check
 ```
 
-4. Mirar qué se va a copiar:
+5. Mirar qué se va a copiar:
 
 ```bash
 npm run docs:sync -- --dry-run
 ```
 
-5. Sincronizar:
+6. Sincronizar:
 
 ```bash
 npm run docs:sync
 ```
 
-6. Confirmar que quedó al día:
+7. Confirmar que quedó al día:
 
 ```bash
 npm run docs:status
@@ -101,6 +110,16 @@ Debe responder que la documentación está al día.
 
 `docs:sync` reemplaza en Obsidian las notas que administra. No toca contraseñas, `.obsidian/`, comandos personales ni otras notas manuales. Las versiones anteriores de las notas se recuperan desde Git si fueron guardadas en un commit; las decisiones importantes también deben quedar resumidas en la nota de historia.
 
+## Publicar no es lo mismo que compilar
+
+Al 26 de julio las dos apps compilan localmente, pero los workflows automáticos de APK y web fueron
+retirados del repositorio. No decir “está publicado” solo porque `npm run build` termina bien.
+
+Para una demo privada existe `npm run deploy:bundle`, que prepara `deploy-static/` para subirlo
+manualmente a un hosting. La instalación del APK y la URL final deben verificarse por separado.
+
 ## Regla simple para recordar
 
 > Si el cambio haría que otra persona explique mal cómo funciona RENOVA, hay que actualizar la documentación antes de sincronizar.
+
+Seguir con [[11 - Seguridad usuarios y empresas]].

@@ -1,6 +1,6 @@
 ---
 title: "Decisiones e historia"
-updated: 2026-07-22
+updated: 2026-07-26
 status: vigente
 sources: [decisions, docs/ARCHITECTURE_DECISIONS.md, tasks_opencode, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_cambios_neumaticos_ui/PRUEBA_CAMPO.md, tasks_buscador_global/DECISIONES.md, tasks_buscador_global/REVISION_FINAL.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/DECISIONES.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PLAN_PAREO.md]
 ---
@@ -63,6 +63,9 @@ smokes reales del modo taller.
   porque resolverlo es el mismo problema que la reconciliación pendiente. Detalle en
   `tasks_servicios/PLAN_PAREO.md` y `tasks_servicios/REVISION_FINAL_PAREO.md`; lo que quedó fuera,
   en `tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md`.
+- ADR 0011: Rendimiento usa profundidad útil para el desgaste y agregación ponderada para todo
+  conjunto, incluso una unidad. Un RTD creciente se excluye y se declara. OTD permanece como base
+  provisional hasta resolver D1 con un casco montado usado.
 
 ## Principio para futuras decisiones
 

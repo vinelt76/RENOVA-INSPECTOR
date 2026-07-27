@@ -1,64 +1,109 @@
 ---
 title: "Tableros y taller"
-updated: 2026-07-22
+updated: 2026-07-26
 status: vigente
-sources: [WEB, WEB/movimientos, WEB/inventario, supabase/migrations/20260712*, supabase/migrations/20260714*, tasks_cambios_neumaticos_ui/REVISION_FINAL.md, tasks_pantalla_inventario/STATE.md]
+sources: [WEB, WEB/movimientos, WEB/inventario, WEB/buscador, WEB/shared, WEB/servicios, app movimientos, supabase/migrations, decisions/0005, decisions/0006, decisions/0008, decisions/0011, repository audit 2026-07-26]
 ---
 
 # Tableros y taller
 
-## Los tableros
+## Las siete pantallas web
 
-- **Por fecha:** muestra cómo está la flota en un día.
-- **Por unidad:** baja al detalle de posiciones de un bus.
-- **Rendimiento:** calcula kilómetros, desgaste y costo/rendimiento de instalaciones.
+- **Inspecciones por fecha:** muestra el último estado o una fecha histórica elegida.
+- **Inspecciones por unidad:** baja al detalle de las posiciones de un bus y permite emitir órdenes.
+- **Rendimiento:** calcula kilómetros, desgaste y proyección de la vida actual.
 - **Historial:** cuenta la película completa de un casco.
-- **Inventario:** separa lo disponible en Retén de las bajas definitivas en Descartados.
+- **Inventario:** separa Retén de Descartados.
 - **Importar:** carga inspecciones mediante el mismo guardado central.
+- **Servicios:** muestra el trabajo que ya ejecutaron los operarios.
 
-## El taller
+Todas exigen sesión. La empresa se obtiene del perfil del usuario; no debería elegirse libremente
+desde el navegador.
 
-La pantalla separada de Instalación se retiró por redundante. El supervisor prepara el trabajo
-desde el modo **Servicios** del tablero Por unidad. Una rotación conserva su flujo entre dos
-posiciones. Para cualquier otro servicio, se elige debajo una llanta disponible del inventario;
-la orden guarda juntas la salida actual y la entrada seleccionada en la misma posición.
+## Buscador y filtros
 
-Un retiro puede indicar que el neumático va a reencauche, pero la creación del siguiente ciclo R1/R2 no forma parte del RPC actual.
+Las siete pantallas comparten un buscador global, que también abre con `Ctrl/Cmd+K`. Busca solo dos
+cosas navegables:
 
-## Servicios de neumáticos
+- una unidad;
+- un neumático/casco.
 
-Dentro del tablero **Por unidad** hay dos modos: **Inspección** y **Servicios**. En Servicios,
-el supervisor ve el mismo dibujo del bus y arma una orden para el operario.
+No ejecuta acciones. Los filtros dentro de una pantalla son distintos: reducen lo que se ve sin
+navegar. Se pueden combinar por fecha, unidad, marca, medida, condición, eje y otras facetas. Cada
+filtro queda visible como una etiqueta y también en la URL.
 
-- **Rotación:** se elige la otra posición y el sistema arma las dos salidas y las dos entradas.
-- **Los demás servicios:** se muestra Inventario/Retén debajo del dropdown y un clic elige la
-  llanta que entrará en reemplazo.
-- La misma llanta de inventario no puede elegirse para dos posiciones del borrador.
+## El taller: ordenar no es ejecutar
 
-Al emitir, el operario recibe la orden con el ciclo y el código elegidos; la captura técnica de la
-ejecución sigue correspondiendo al operario.
+Dentro de **Inspecciones por unidad** hay dos modos:
 
-El 14 de julio se probó de punta a punta con un bus de prueba real (`QA-CN16`) haciendo los
-cuatro tipos de movimiento a la vez: funcionó, la foto de descarte se guardó y el estado quedó
-bien tras recargar la página.
+- **Inspección:** consulta lo medido.
+- **Servicios:** el supervisor arma y emite una orden por posición.
 
-## Inventario actual y lo que sigue retirado
+La pantalla separada de Instalación se retiró por redundante. El flujo actual es:
 
-La pantalla actual de **Inventario** es de consulta: Retén muestra neumáticos disponibles para
-montaje y Descartados organiza las bajas definitivas. Se actualiza a partir de los movimientos
-confirmados y permite abrir el Historial por código.
+1. El supervisor ve el dibujo de la unidad.
+2. Elige la posición y el servicio.
+3. Para una rotación elige la otra posición.
+4. Para otros servicios elige debajo un neumático disponible del Retén.
+5. RENOVA emite una orden.
+6. El operario la toma en su app y confirma qué sale y qué entra.
+7. La página **Servicios** permite consultar lo ejecutado.
 
-La pantalla **Comparativo** y las operaciones antiguas exclusivas de reinstalar/reencauchar desde
-Inventario siguen retiradas. Elegir un neumático del Retén se hace desde Servicios.
+La misma llanta de inventario no puede usarse en dos posiciones del mismo borrador.
 
-## Las rutas
+## Cómo se cuentan los servicios
 
-Una unidad puede cambiar de ruta. Por eso la ruta no se pega para siempre a la ficha del bus: se guardan períodos con fecha desde/hasta. Así se puede atribuir el rendimiento al recorrido que realmente hizo durante esa instalación.
+Un servicio es una **posición atendida**: el neumático que sale y el que entra.
+
+- Rotar P3 con P4 cuenta como dos servicios, uno por posición.
+- Desechar y reemplazar en P3 cuenta como un servicio.
+- Montar sobre una posición vacía cuenta como instalación.
+- Presión, torque y alineación sin desmontar no aparecen en esta pantalla.
+
+La entrada puede mostrar de qué posición vino si salió en la misma orden. Si viene de Retén,
+reparación o es nueva, el origen queda como no determinado. No se inventa.
+
+## Inventario actual y lo retirado
+
+**Inventario sí existe hoy.** Es una pantalla de consulta:
+
+- **Retén:** ciclos activos disponibles para montar.
+- **Descartados:** bajas definitivas que no pueden volver a montarse.
+
+Permite abrir el Historial por código. Elegir un neumático del Retén para trabajar se hace desde el
+modo Servicios de una unidad.
+
+Lo que sigue retirado es:
+
+- la pantalla Comparativo;
+- las operaciones antiguas de reinstalar o reencauchar directamente desde Inventario;
+- la pantalla separada de Instalación.
+
+## Rendimiento sin números engañosos
+
+Rendimiento usa la profundidad útil del ciclo. Un neumático en el umbral de retiro marca 100 % de
+desgaste. Los grupos se calculan con los kilómetros y milímetros totales, no promediando cada fila
+por igual.
+
+Por defecto aparta inspecciones de más de 30 días y permite incluirlas con un filtro visible. Esto
+es frescura del dato, no consumo ocurrido en treinta días. La comparación temporal real sigue
+pendiente porque faltan series enlazadas suficientes.
+
+## Rutas
+
+Una unidad puede cambiar de ruta. La ruta se guarda como un período con fecha desde/hasta, no como
+un texto pegado para siempre al bus. Así el rendimiento puede atribuirse al recorrido de cada
+instalación. Las tablas y RPC existen, pero las rutas remotas estaban vacías durante la auditoría y
+el proceso todavía requiere validación operativa.
 
 ## Estado prudente
 
-El código de taller y rutas existe desde el 12 de julio. El modo Cambios de neumáticos ya pasó su
-prueba real de punta a punta el 14 de julio; para instalación/retiro/traslado y rutas todavía
-conviene repetir pruebas con los distintos roles antes de darlo por proceso definitivo.
+Hay pruebas reales anteriores de movimientos y servicios, además de 411 pruebas automáticas verdes.
+Eso no reemplaza:
+
+- repetir el APK en campo;
+- probar cámara y pérdida de señal;
+- verificar todos los roles y dos empresas;
+- reconciliar los movimientos ejecutados con la historia canónica.
 
 Seguir con [[06 - Diccionario en criollo]].

@@ -33,18 +33,24 @@
       vista embebida: es una pantalla separada que se referencia).
 
   Fórmulas por neumático:
-    RTD Gastado   = RTD Instalación − RTD Actual
-    % de Consumo  = RTD Gastado / OTD
-    Km Recorrido  = Km Actual − Km Instalación
-    Km/mm         = Km Recorrido / RTD Gastado
-    Km Proyectado = Km/mm × (OTD − RTD Retiro recomendado)
-    Costo/Km      = Costo $ / Km Recorrido
-    Km Acumulado  = km_previo_acumulado + Km Recorrido
-  Agregados del eje (sobre posiciones con datos válidos):
+    RTD Gastado   = OTD del ciclo − RTD Actual
+    Km del ciclo  = Σ Km de las instalaciones de la vida actual
+    Km/mm         = Km del ciclo / RTD Gastado
+    Profundidad útil = OTD − RTD Retiro recomendado (D1)
+    % de Consumo  = RTD Gastado / Profundidad útil × 100
+    Km Proyectado = Km/mm × Profundidad útil
+    Costo/Km      = Costo $ / Km del ciclo
+    Km Acumulado  = Km del ciclo actual
+  Agregados (sobre posiciones/neumáticos con datos válidos). Nunca promedio de
+  razones: las tasas van por razón de sumas y la proyección ponderada por los mm
+  gastados, que son la evidencia. Ver ratioOfSums() y computeGroup().
     Km Acumulado (total)   = suma(Km Acumulado)
-    Km Proyectado promedio = promedio(Km Proyectado)
-    Km/mm promedio         = promedio(Km/mm)
-    % de Consumo promedio  = promedio(% de Consumo)
+    Km/mm                  = Σ Km del ciclo / Σ RTD Gastado
+    % de Consumo           = Σ RTD Gastado / Σ Profundidad útil
+    Km Proyectado          = Σ(Km Proyectado × RTD Gastado) / Σ RTD Gastado
+                             ( ≡ Km/mm × Profundidad útil cuando es igual
+                               para todo el conjunto )
+    Costo/Km               = Σ Costo / Σ Km del ciclo
     Mejor / peor posición  = máximo / mínimo Km/mm
     Diferencia Izq/Der     = |prom(Izq) − prom(Der)| / promedio(Izq,Der) × 100
 -->
@@ -99,6 +105,7 @@
   .filter-block{margin-bottom:18px;position:relative;max-width:1200px}
   .filter-block .selector-label{margin-bottom:9px}
   .freshness-control{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}
+  .freshness-control[hidden]{display:none}
   .freshness-chip{
     min-height:44px;padding:8px 13px;border:2px solid var(--border-dark);border-radius:999px;
     background:var(--field-dark);color:var(--value-ice);font:800 11px/1.25 var(--mono);
@@ -283,9 +290,9 @@
     min-height:242px;padding:20px 16px 18px;display:flex;flex-direction:column;align-items:center;
     border-radius:14px;
   }
-  .fleet-stat .a-label,.fleet-cost .a-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
+  .fleet-stat .a-label,.fleet-cost .a-label,.fleet-vur .a-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--label-blue)}
   .fleet-stat .a-label{margin-top:17px}
-  .fleet-stat .a-sub,.fleet-cost .a-sub{font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--label-blue);margin-top:6px;line-height:1.45;text-align:center}
+  .fleet-stat .a-sub,.fleet-cost .a-sub,.fleet-vur .a-sub{font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--label-blue);margin-top:6px;line-height:1.45;text-align:center}
   .metric-dial{
     --dial-color:#5f94cf;--dial-progress:100%;
     position:relative;width:138px;height:138px;border-radius:50%;
@@ -357,12 +364,23 @@
   .metric-bars.is-insufficient{border:2px dashed var(--border-dark);background:transparent}
   .metric-bars .mi-msg{color:var(--label-blue);font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
   .metric-bars .mi-sub{color:var(--label-blue);font-size:9px;font-weight:700;opacity:.75}
-  .fleet-cost{
-    grid-column:1/-1;background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
-    padding:18px 22px;display:grid;grid-template-columns:minmax(240px,.7fr) minmax(280px,1fr);
-    gap:28px;align-items:center;
+  /* VUR y Costo comparten fila: dos rectángulos iguales bajo las cuatro esferas.
+     `span 2` en una grilla de 4 los deja mitad y mitad, y en los breakpoints de
+     2 y 1 columna cada uno pasa a ocupar el ancho completo sin regla extra. */
+  .fleet-vur,.fleet-cost{
+    grid-column:span 2;background:var(--field-dark);border:2px solid var(--border-dark);border-radius:12px;
+    padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) auto;
+    gap:24px;align-items:center;
   }
-  .fleet-cost .a-value{font-size:clamp(24px,2.6vw,34px);font-weight:800;line-height:1;margin-top:9px;color:var(--value-ice)}
+  /* `nowrap`: al pasar de una tarjeta de ancho completo a dos de media fila, "S/ 0.0012"
+     se partía en dos líneas. La cifra principal nunca debe quebrarse. */
+  .fleet-vur .a-value,.fleet-cost .a-value{font-size:clamp(22px,2.2vw,32px);font-weight:800;line-height:1;margin-top:9px;color:var(--value-ice);white-space:nowrap}
+  .fleet-vur .a-sub,.fleet-cost .a-sub{text-align:left}
+  .vur-urgent{text-align:right;min-width:0}
+  .vur-urgent-value{font-size:clamp(26px,2.8vw,36px);font-weight:800;line-height:1;color:var(--label-blue)}
+  .vur-urgent-value.is-urgent{color:var(--ember-orange)}
+  .vur-urgent-label{font-size:10px;font-weight:700;color:var(--label-blue);margin-top:6px;line-height:1.4}
+  .vur-urgent-label b{color:var(--value-ice)}
   .cost-coverage{display:grid;grid-template-columns:minmax(90px,1fr) auto;align-items:center;gap:12px}
   .cost-coverage-track{height:8px;background:#19273f;border-radius:999px;overflow:hidden}
   .cost-coverage-fill{display:block;height:100%;width:var(--coverage);background:#5f94cf;border-radius:inherit}
@@ -590,6 +608,10 @@ const AXLE_BALANCE_THRESHOLD_PERCENT = 15;
 // F12: punto único configurable de la pantalla. No pertenece al componente
 // compartido porque cada empresa aún no expone este umbral como dato.
 const RENDIMIENTO_FRESHNESS_DAYS = 30;
+/* Km restantes por debajo de los cuales un neumático se considera urgente.
+   Pendiente de acordar con RENOVA según la operación real (cada cuánto pasa la
+   unidad por taller). Editar SOLO aquí; no repartir el número por el código. */
+const VUR_URGENT_KM = 10000;
 
 /* Dataset activo: SOLO datos reales desde Supabase/Excel. */
 let UNITS = [];
@@ -645,8 +667,20 @@ function buildTireRowsFromSupabase(rows){
       otd:            num(r.otd_mm),
       rtdRetiro:      num(r.rtd_removal_mm),   // umbral por empresa (rtd_thresholds) — nunca hardcodeado
       costo:          num(r.cost),
-      // Km Acumulado del casco = previo + recorrido de esta instalación
-      kmPrevioAcumulado: Math.max(0, (num(r.casing_km_accumulated) || 0) - (num(r.km_run) || 0)),
+      // Km acumulado de la VIDA/CICLO ACTUAL. No usar casing_km_accumulated:
+      // incluiría vidas/reencauches anteriores.
+      kmCicloAcumulado: num(r.cycle_km_accumulated),
+      // Evidencia de calidad dentro de la ventana de ESTA instalación. El RTD
+      // no puede crecer: si lo hace, la fila mezcla neumáticos o mediciones y
+      // queda visible, pero no produce métricas.
+      prevInspectionRtd:     num(r.prev_inspection_rtd_mm),
+      prevInspectionOn:      r.prev_inspection_on || null,
+      lastInspectionTireCode:r.last_inspection_tire_code || null,
+      // Unidad marcada como de prueba en el esquema (`units.is_test`). Se excluye de
+      // las agregaciones, pero se DECLARA en pantalla: ADR-D8 rechazó esconder filas
+      // en silencio, y esconderlas es lo que dejó a QA-CN16 definiendo el KPI de la
+      // flota durante cinco días.
+      esPrueba: r.is_test === true,
       fuente: r,   // fila completa → panel de datos fuente
     };
   });
@@ -724,13 +758,29 @@ async function loadSupabaseData(){
    ========================================================================= */
 function computeTire(t){
   if(!t) return {valid:false};
+  const inconsistency = measurementInconsistency(t);
+  if(inconsistency){
+    return {
+      valid:false, inconsistente:true, inconsistency,
+      modelo:t.modelo, reencauche:t.reencauche,
+    };
+  }
+  // Rendimiento pertenece al ciclo/vida actual, no únicamente al montaje
+  // vigente. En producción `kmCicloAcumulado` incluye los tramos anteriores
+  // del mismo ciclo; el fallback mantiene compatibles fixtures/filas legacy
+  // que todavía no exponen ese campo.
+  const kmInstalacionActual = t.kmInstalacion != null && t.kmActual != null
+    ? (t.kmActual - t.kmInstalacion)
+    : null;
+  const kmCicloAcumulado = t.kmCicloAcumulado === undefined
+    ? kmInstalacionActual
+    : t.kmCicloAcumulado;
   const hasSource =
-    t.rtdInstalacion != null && t.rtdActual != null &&
-    t.kmInstalacion  != null && t.kmActual  != null &&
-    t.otd != null && t.otd > 0;
+    t.otd != null && t.rtdActual != null &&
+    kmCicloAcumulado != null;
 
-  const rtdGastado = hasSource ? (t.rtdInstalacion - t.rtdActual) : null;
-  const kmRecorrido = hasSource ? (t.kmActual - t.kmInstalacion) : null;
+  const rtdGastado = hasSource ? (t.otd - t.rtdActual) : null;
+  const kmRecorrido = hasSource ? Number(kmCicloAcumulado) : null;
 
   // Datos insuficientes para rendimiento si no hay desgaste o no hay recorrido.
   const valid = hasSource && rtdGastado > 0 && kmRecorrido > 0;
@@ -738,20 +788,68 @@ function computeTire(t){
     return {valid:false, modelo:t.modelo, reencauche:t.reencauche};
   }
 
-  const pctConsumo   = (rtdGastado / t.otd) * 100;
+  // D1: el OTD y el kilometraje acumulado pertenecen al ciclo. Rotar o
+  // trasladar el neumático no reinicia ninguno de los dos.
+  const utilMm       = t.rtdRetiro == null || t.otd == null
+    ? null
+    : (t.otd - t.rtdRetiro);
+  const tieneUtil    = utilMm != null && utilMm > 0;
+  const pctConsumo   = tieneUtil ? (rtdGastado / utilMm) * 100 : null;
   const kmMm         = kmRecorrido / rtdGastado;
-  const kmProyectado = kmMm * (t.otd - t.rtdRetiro);
+  const kmProyectado = tieneUtil ? kmMm * utilMm : null;
+  // VUR — Vida Útil Remanente en km (specs/reglas_negocio.md §8): cuántos km le
+  // quedan a ESTE neumático antes de tocar el umbral de retiro, al ritmo que
+  // viene desgastándose. Es kmProyectado menos lo ya recorrido, expresado de la
+  // forma que le sirve a quien opera: "le quedan X km", no "va por el 42 %".
+  //   VUR = km/mm × (RTD actual − RTD de retiro)
+  // Cuando el RTD ya está en el umbral o por debajo, el resultado es 0 y
+  // significa "cambio inmediato" — no es un dato faltante.
+  const vur = tieneUtil
+    ? Math.max(0, kmMm * (t.rtdActual - t.rtdRetiro))
+    : null;
   // Un costo ausente no equivale a S/ 0. Mantenerlo como null permite que
   // tanto el promedio como la distribución visual excluyan ese neumático sin
   // falsear el costo de la flota.
   const costoFuente  = t.costo == null || t.costo === "" ? null : Number(t.costo);
-  const costoKm      = Number.isFinite(costoFuente) ? costoFuente / kmRecorrido : null;
-  const kmAcumulado  = (t.kmPrevioAcumulado || 0) + kmRecorrido;
+  const costoKm      = Number.isFinite(costoFuente) && tieneUtil
+    ? costoFuente / kmRecorrido
+    : null;
+  const kmAcumulado  = kmRecorrido;
 
   return {
     valid:true,
     modelo:t.modelo, reencauche:t.reencauche,
-    rtdGastado, kmRecorrido, pctConsumo, kmMm, kmProyectado, costoKm, kmAcumulado,
+    // `utilMm` viaja en el resultado: el agregado calcula el consumo con
+    // Σ mm gastados / Σ profundidad útil, sin reconstruir el denominador desde
+    // un porcentaje ya redondeado.
+    utilMm,
+    rtdGastado, kmRecorrido, pctConsumo, kmMm, kmProyectado, costoKm, kmAcumulado, vur,
+  };
+}
+
+function normalizedTireCode(value){
+  const code = value == null ? "" : String(value).trim();
+  return /^(?:N\/V|NV|N-V)$/i.test(code) ? "" : code;
+}
+
+function measurementInconsistency(tire){
+  if(!tire || !Number.isFinite(tire.prevInspectionRtd) || !Number.isFinite(tire.rtdActual)
+      || tire.rtdActual <= tire.prevInspectionRtd){
+    return null;
+  }
+  const installedCode = normalizedTireCode(tire.casingCode);
+  const observedCode = normalizedTireCode(tire.lastInspectionTireCode);
+  let reason = "Medición a revisar";
+  if(!installedCode || !observedCode){
+    reason = "Sin código: no se puede distinguir";
+  }else if(installedCode !== observedCode){
+    reason = "Cambio de neumático sin registrar";
+  }
+  return {
+    reason,
+    previousRtd: tire.prevInspectionRtd,
+    currentRtd: tire.rtdActual,
+    previousOn: tire.prevInspectionOn || null,
   };
 }
 
@@ -765,6 +863,33 @@ function computeTire(t){
    pueda etiquetar el resultado (posición de eje, unidad, lo que corresponda).
    ========================================================================= */
 function mean(arr){ return arr.reduce((s,v)=>s+v,0)/arr.length; }
+
+/* Mediana. Para magnitudes con distribución sesgada (km acumulado, VUR)
+   representa mejor "un neumático típico" que el promedio: un solo casco muy
+   viejo o muy nuevo no corre la cifra. */
+function median(arr){
+  const sorted = [...arr].sort((a,b)=>a-b);
+  if(!sorted.length) return null;
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid-1] + sorted[mid]) / 2;
+}
+
+/* Razón de sumas (promedio ponderado) para métricas de TASA.
+   Promediar razones por neumático es un error clásico: `avg(km/mm)` sobrepondera
+   los neumáticos con denominador chico. Un casco con 1 000 km y 0.1 mm gastados
+   marca 10 000 km/mm y arrastra el promedio, aunque su aporte real a la flota sea
+   despreciable. La pregunta correcta es "por cada mm que gastó la flota, cuántos
+   km rodó", y eso es Σnumerador / Σdenominador — el mismo criterio con el que se
+   calcula el consumo de combustible de una flota (litros totales / km totales,
+   no el promedio de los rendimientos individuales). */
+function ratioOfSums(pairs){
+  let num = 0, den = 0;
+  for(const [n, d] of pairs){
+    if(!Number.isFinite(n) || !Number.isFinite(d)) continue;
+    num += n; den += d;
+  }
+  return den > 0 ? num / den : null;
+}
 
 function partitionByFreshness(rows, now = new Date(), maxAgeDays = RENDIMIENTO_FRESHNESS_DAYS){
   const source = Array.isArray(rows) ? rows : [];
@@ -795,26 +920,57 @@ function computeGroup(tires){
   const source = Array.isArray(tires) ? tires : [];
   const rows = source.map(tire => ({tire, m:computeTire(tire)}));
   const valids = rows.filter(r => r.m.valid);
+  const inconsistent = rows.filter(r => r.m.inconsistente);
 
   let avgKmMm = null, avgPct = null, avgKmProyectado = null, totalKmAcumulado = null, avgCostoKm = null;
+  let medianVur = null, vurCount = 0;
   let best = null, worst = null;
   if(valids.length >= 1){
-    avgKmMm          = mean(valids.map(r=>r.m.kmMm));
-    avgPct           = mean(valids.map(r=>r.m.pctConsumo));
-    avgKmProyectado  = mean(valids.map(r=>r.m.kmProyectado));
+    // TASAS → razón de sumas, no promedio de razones. Ver ratioOfSums().
+    avgKmMm = ratioOfSums(valids.map(r => [r.m.kmRecorrido, r.m.rtdGastado]));
+    const consumptionRatio = ratioOfSums(valids.map(r => [r.m.rtdGastado, r.m.utilMm]));
+    avgPct = consumptionRatio == null ? null : 100 * consumptionRatio;
+
+    // KM PROYECTADO → ponderado por mm gastados. Es la misma familia que km/mm:
+    //   Σ(km proyectado × mm gastados) / Σmm gastados  ==  Σ(km × span) / Σmm
+    // El peso es la EVIDENCIA. Un neumático que gastó 4 mm produce la proyección
+    // más grande y más ruidosa del conjunto justamente porque se divide por ese
+    // 4; darle el mismo peso que a uno que gastó 12 mm infla la cifra.
+    // Se eligió por sobre la mediana porque es la única que reconcilia con la
+    // tarjeta de al lado: cuando la profundidad útil es igual para todo
+    // el conjunto —el caso normal—, esto es exactamente `avgKmMm × span`, y quien
+    // haga la multiplicación a mano obtiene el número que está viendo.
+    // Contrapartida asumida: al ser razón de sumas ya no resiste outliers como la
+    // mediana, así que depende de que los odómetros sucios queden fuera
+    // (`units.is_test`, filtro de frescura).
+    avgKmProyectado = ratioOfSums(
+      valids
+        .filter(r => Number.isFinite(r.m.kmProyectado))
+        .map(r => [r.m.kmProyectado * r.m.rtdGastado, r.m.rtdGastado])
+    );
+    // MAGNITUD acumulada → total del conjunto (la UI muestra además la mediana).
     totalKmAcumulado = valids.reduce((s,r)=>s+r.m.kmAcumulado,0);
+
+    const vurs = valids.map(r => r.m.vur).filter(v => Number.isFinite(v));
+    vurCount = vurs.length;
+    medianVur = vurs.length ? median(vurs) : null;
+
     best  = valids.reduce((a,b)=> b.m.kmMm > a.m.kmMm ? b : a).tire;
     worst = valids.reduce((a,b)=> b.m.kmMm < a.m.kmMm ? b : a).tire;
-    // Un neumático sin costo fuente no vale 0 soles: se excluye del promedio,
-    // no se cuenta como costoKm:0 (F10).
+    // Un neumático sin costo fuente no vale 0 soles: se excluye del cálculo,
+    // no se cuenta como costoKm:0 (F10). El costo de la flota también es una
+    // tasa: soles totales / km totales, no el promedio de los costos unitarios.
     const withCost = valids.filter(r => Number.isFinite(r.m.costoKm));
-    avgCostoKm = withCost.length ? mean(withCost.map(r=>r.m.costoKm)) : null;
+    avgCostoKm = withCost.length
+      ? ratioOfSums(withCost.map(r => [r.m.costoKm * r.m.kmRecorrido, r.m.kmRecorrido]))
+      : null;
   }
 
   return {
     total: source.length, valid: valids.length, excluded: source.length - valids.length,
-    rows, valids,
+    inconsistent: inconsistent.length, rows, valids,
     avgKmMm, avgPct, avgKmProyectado, totalKmAcumulado, avgCostoKm,
+    medianVur, vurCount,
     best, worst,
   };
 }
@@ -868,6 +1024,7 @@ const fmtKmMm= v => nf.format(Math.round(v));
 const fmtPct = v => (Math.round(v*10)/10).toFixed(1);
 const fmtCost= v => "S/ " + v.toFixed(4);
 const fmtCompact = value => {
+  if(value == null) return "—";
   const number = Number(value);
   if(!Number.isFinite(number)) return "—";
   if(Math.abs(number) >= 1000000){
@@ -909,21 +1066,32 @@ let currentResultTires = []; // última lista filtrada renderizada, para abrir d
 
 function excludedNote(group, freshness){
   const total = freshness?.total ?? group.total;
-  const excluded = group.excluded;
+  const inconsistent = group.inconsistent ?? 0;
+  const excluded = Math.max(0, group.excluded - inconsistent);
   const stale = freshness?.stale?.length ?? 0;
   const future = freshness?.future?.length ?? 0;
   if(!total) return "";
-  const cls = excluded > 0 || stale > 0 ? "excluded-note has-excluded" : "excluded-note";
+  const cls = excluded > 0 || inconsistent > 0 || stale > 0
+    ? "excluded-note has-excluded"
+    : "excluded-note";
   const detail = excluded > 0
     ? ` · <b class="excl num">${excluded}</b> excluido${excluded===1?"":"s"} por datos insuficientes`
-    : " · todos con datos suficientes";
+    : " · ninguno excluido por datos insuficientes";
+  const inconsistentDetail = inconsistent > 0
+    ? ` · <b class="excl num">${inconsistent}</b> excluido${inconsistent===1?"":"s"} por medición inconsistente (el RTD creció respecto de la inspección anterior)`
+    : "";
   const staleDetail = stale > 0
     ? ` · <b class="excl num">${stale}</b> excluido${stale===1?"":"s"} por inspección de más de ${freshness.maxAgeDays} días o sin fecha`
     : ` · ninguno excluido por antigüedad`;
   const futureDetail = future > 0
     ? ` · <b class="excl num">${future}</b> con fecha futura para revisar`
     : "";
-  return `<div class="${cls}"><b class="num">${group.valid}</b> de <b class="num">${total}</b> neumáticos aportan al promedio${detail}${staleDetail}${futureDetail}.</div>`;
+  // Los datos de prueba se excluyen, pero se dicen. Esconderlos en silencio es lo
+  // que permitió que 5 neumáticos de QA definieran el KPI de la flota (ADR-D8).
+  const testDetail = (freshness?.testExcluded ?? 0) > 0
+    ? ` · <b class="excl num">${freshness.testExcluded}</b> excluido${freshness.testExcluded===1?"":"s"} por ser de unidades de prueba`
+    : "";
+  return `<div class="${cls}"><b class="num">${group.valid}</b> de <b class="num">${total}</b> neumáticos aportan al cálculo${detail}${inconsistentDetail}${staleDetail}${futureDetail}${testDetail}.</div>`;
 }
 
 // tire → {label, sub, value} para un mini-chart. El eje X lleva unidad +
@@ -1004,13 +1172,27 @@ function distributionBars(rows, opts = {}){
 
 function aggregateKpis(group){
   if(group.avgKmMm == null){
-    return `<div class="note">Sin datos suficientes en este conjunto para calcular promedios.</div>`;
+    return `<div class="note">${group.inconsistent === group.total && group.total > 0
+      ? "Todas las mediciones de este período son inconsistentes. Revisa el detalle de cada posición: el RTD creció respecto de su inspección anterior."
+      : "Sin datos suficientes en este conjunto para calcular indicadores."}</div>`;
   }
-  const countLabel = `Promedio de ${group.valid} neumático${group.valid===1?"":"s"}`;
+  // Las etiquetas dicen QUÉ estadística es. "Promedio" en una tasa que se calcula
+  // como razón de sumas sería inexacto, y en una mediana directamente falso.
+  const rateLabel   = `Sobre ${group.valid} neumático${group.valid===1?"":"s"}`;
+  const medianLabel = `Mediana de ${group.valid} neumático${group.valid===1?"":"s"}`;
+  // "Ponderado por mm gastado" y no "Promedio": el número no es el promedio de las
+  // proyecciones individuales, y decir promedio invitaría a reconstruirlo mal.
+  const weightedLabel = `Ponderado por mm gastado · ${group.valid} neumático${group.valid===1?"":"s"}`;
+  const urgentVur   = group.valids.filter(r => Number.isFinite(r.m.vur) && r.m.vur < VUR_URGENT_KM);
   const withCost = group.valids.filter(row => Number.isFinite(row.m.costoKm));
   const coverage = group.valid ? Math.round((withCost.length / group.valid) * 100) : 0;
-  const consumptionProgress = Math.min(100, Math.max(0, group.avgPct));
-  const accumulatedAverage = group.totalKmAcumulado / group.valid;
+  const consumptionProgress = Number.isFinite(group.avgPct)
+    ? Math.min(100, Math.max(0, group.avgPct))
+    : 0;
+  // Mediana, no `total / valid`: el km acumulado tiene cola larga (cascos
+  // reencauchados varias veces acumulan mucho más que uno nuevo) y la media
+  // describe un neumático que no existe en el conjunto.
+  const accumulatedTypical = median(group.valids.map(r => r.m.kmAcumulado));
   return `
     <section class="fleet-kpis" aria-label="Indicadores de rendimiento del conjunto filtrado">
       <article class="fleet-stat is-kmmm">
@@ -1021,23 +1203,25 @@ function aggregateKpis(group){
           </div>
         </div>
         <div class="a-label">Km/mm</div>
-        <div class="a-sub">${countLabel}</div>
+        <div class="a-sub">${rateLabel}</div>
       </article>
       <article class="fleet-stat is-projected">
-        <div class="metric-dial" aria-label="${fmtKm(group.avgKmProyectado)} kilómetros proyectados">
+        <div class="metric-dial" aria-label="${group.avgKmProyectado == null
+          ? "Sin proyección disponible"
+          : `${fmtKm(group.avgKmProyectado)} kilómetros proyectados`}">
           <div class="metric-dial-body">
             <div class="a-value num">${fmtCompact(group.avgKmProyectado)}</div>
             <span class="a-unit">km</span>
           </div>
         </div>
         <div class="a-label">Km Proyectado</div>
-        <div class="a-sub">${countLabel}</div>
+        <div class="a-sub">${weightedLabel}</div>
       </article>
       <article class="fleet-stat is-consumption">
         <div class="metric-dial is-progress" style="--dial-progress:${consumptionProgress}%"
-             aria-label="${fmtPct(group.avgPct)} por ciento de consumo">
+             aria-label="${group.avgPct == null ? "Sin porcentaje de consumo disponible" : `${fmtPct(group.avgPct)} por ciento de consumo`}">
           <div class="metric-dial-body">
-            <div class="a-value num">${fmtPct(group.avgPct)}%</div>
+            <div class="a-value num">${group.avgPct == null ? "—" : `${fmtPct(group.avgPct)}%`}</div>
             <span class="a-unit">consumo</span>
           </div>
         </div>
@@ -1045,18 +1229,32 @@ function aggregateKpis(group){
         <div class="a-sub">% de vida útil consumida · ${group.valid} neumático${group.valid===1?"":"s"}</div>
       </article>
       <article class="fleet-stat is-accumulated">
-        <div class="metric-dial" aria-label="${fmtKm(accumulatedAverage)} kilómetros acumulados promedio">
+        <div class="metric-dial" aria-label="${fmtKm(accumulatedTypical)} kilómetros acumulados, mediana del conjunto">
           <div class="metric-dial-body">
-            <div class="a-value num">${fmtCompact(accumulatedAverage)}</div>
+            <div class="a-value num">${fmtCompact(accumulatedTypical)}</div>
             <span class="a-unit">km</span>
           </div>
         </div>
         <div class="a-label">Km Acumulado</div>
-        <div class="a-sub">${countLabel}</div>
+        <div class="a-sub">${medianLabel}</div>
+      </article>
+      <article class="fleet-vur">
+        <div>
+          <div class="a-label">Vida útil remanente</div>
+          <div class="a-value">${group.medianVur != null ? `<span class="num">${fmtKm(group.medianVur)}</span>` : "Sin datos suficientes"}</div>
+          <div class="a-sub">${group.medianVur != null
+            ? `Mediana de km que le quedan a un neumático antes del retiro`
+            : "Falta el umbral de retiro o el ritmo de desgaste"}</div>
+        </div>
+        ${group.medianVur != null ? `
+        <div class="vur-urgent" aria-label="${urgentVur.length} de ${group.vurCount} neumáticos por debajo de ${VUR_URGENT_KM.toLocaleString("es-PE")} kilómetros restantes">
+          <div class="vur-urgent-value num ${urgentVur.length ? "is-urgent" : ""}">${urgentVur.length}</div>
+          <div class="vur-urgent-label">de <b class="num">${group.vurCount}</b> por debajo de <b class="num">${fmtKm(VUR_URGENT_KM)}</b> restantes</div>
+        </div>` : ""}
       </article>
       <article class="fleet-cost">
         <div>
-          <div class="a-label">Costo/Km promedio</div>
+          <div class="a-label">Costo/Km de la flota</div>
           <div class="a-value">${group.avgCostoKm != null ? `<span class="num">${fmtCost(group.avgCostoKm)}</span>` : "Sin costo fuente"}</div>
           <div class="a-sub">${group.avgCostoKm != null ? "Calculado solo con costos registrados" : "Ningún neumático del conjunto tiene costo cargado"}</div>
         </div>
@@ -1077,6 +1275,9 @@ function tireModelLabel(tire){
 }
 
 function resultStatus(tire, metric){
+  if(metric.inconsistente){
+    return {label:metric.inconsistency.reason, cls:"is-critical"};
+  }
   if(!metric.valid) return {label:"Datos insuficientes", cls:"is-no-data"};
   const source = tire.fuente || {};
   const rtdState = String(source.last_rtd_state || "").trim();
@@ -1246,6 +1447,9 @@ function sourcePanel(u, pos, raw){
       ${srcRow("Km inspección", f.last_inspection_odometer_km != null ? fmtKm(f.last_inspection_odometer_km) : null, "km")}
       ${srcRow("RTD A/B/C/D", (f.rtd_a_mm != null || f.rtd_b_mm != null) ? rtds : null, "mm")}
       ${srcRow("RTD MOVI (mín.)", f.last_rtd_movi_mm != null ? fmtMm(Number(f.last_rtd_movi_mm)) : null, "mm")}
+      ${srcRow("Inspección anterior", fdate(f.prev_inspection_on))}
+      ${srcRow("RTD MOVI anterior", f.prev_inspection_rtd_mm != null ? fmtMm(Number(f.prev_inspection_rtd_mm)) : null, "mm")}
+      ${srcRow("Código observado", f.last_inspection_tire_code)}
       ${srcRow("Estado RTD", f.last_rtd_state)}
       ${srcRow("Presión", f.pressure_psi != null ? Number(f.pressure_psi).toFixed(0) : null, "psi")}
       ${srcRow("Estado presión", f.pressure_state)}
@@ -1288,7 +1492,7 @@ function renderCard(){
   const left = m.valid ? `
     ${metricRow("Km Acumulado",  fmtKm(m.kmAcumulado), "km")}
     ${metricRow("Km Recorrido",  fmtKm(m.kmRecorrido), "km")}
-    ${metricRow("Km Proyectado", fmtKm(m.kmProyectado),"km")}
+    ${metricRow("Km Proyectado", m.kmProyectado == null ? null : fmtKm(m.kmProyectado),"km")}
     ${metricRow("RTD Gastado",   fmtMm(m.rtdGastado),  "mm")}
   ` : `
     ${metricRow("Km Acumulado",  null)}
@@ -1298,8 +1502,8 @@ function renderCard(){
   `;
   const right = m.valid ? `
     ${metricRow("Km/mm",       fmtKmMm(m.kmMm), "km/mm")}
-    ${metricRow("% de Consumo",fmtPct(m.pctConsumo), "%")}
-    ${metricRow("Costo/Km",    fmtCost(m.costoKm), "/km")}
+    ${metricRow("% de Consumo",m.pctConsumo == null ? null : fmtPct(m.pctConsumo), "%")}
+    ${metricRow("Costo/Km",    m.costoKm == null ? null : fmtCost(m.costoKm), "/km")}
   ` : `
     ${metricRow("Km/mm",       null)}
     ${metricRow("% de Consumo",null)}
@@ -1353,7 +1557,7 @@ function renderSummary(){
   let kpis;
   if(agg.avgKmMm != null){
     const kmMmValues = agg.valids.map(r=>r.m.kmMm);
-    const kmProyValues = agg.valids.map(r=>r.m.kmProyectado);
+    const kmProyValues = agg.valids.map(r=>r.m.kmProyectado).filter(Number.isFinite);
     kpis = `
     <div class="avg-kpis">
       <div class="avg-stat">
@@ -1362,26 +1566,30 @@ function renderSummary(){
         <div class="a-sub">Total del eje · ${n} posición${plural}</div>
       </div>
       <div class="avg-stat">
-        <div class="a-label">Km Proyectado promedio</div>
-        <div class="a-value"><span class="num" id="avKmProy">0</span><span class="a-unit">km</span></div>
-        <div class="a-sub">Promedio de ${n} posición${plural}</div>
-        <div class="a-fill-track" title="Posición del promedio entre la peor y la mejor proyección del eje">
+        <div class="a-label">Km Proyectado</div>
+        <div class="a-value">${agg.avgKmProyectado == null
+          ? `<span class="num">—</span>`
+          : `<span class="num" id="avKmProy">0</span><span class="a-unit">km</span>`}</div>
+        <div class="a-sub">Ponderado por mm gastado · ${n} posición${plural}</div>
+        <div class="a-fill-track" title="Dónde cae el valor ponderado entre la peor y la mejor proyección del eje">
           <span class="a-fill" id="avKmProyFill"></span>
         </div>
       </div>
       <div class="avg-stat">
-        <div class="a-label">Km/mm promedio</div>
+        <div class="a-label">Km/mm ponderado</div>
         <div class="a-value"><span class="num" id="avKmMm">0</span><span class="a-unit">km/mm</span></div>
-        <div class="a-sub">Promedio de ${n} posición${plural}</div>
-        <div class="a-fill-track" title="Posición del promedio entre la peor y la mejor posición del eje">
+        <div class="a-sub">Razón de sumas · ${n} posición${plural}</div>
+        <div class="a-fill-track" title="Posición del valor ponderado entre la peor y la mejor posición del eje">
           <span class="a-fill" id="avKmMmFill"></span>
         </div>
       </div>
       <div class="avg-stat">
-        <div class="a-label">% Consumo promedio</div>
-        <div class="a-value"><span class="num" id="avPct">0</span><span class="a-unit">%</span></div>
-        <div class="a-sub">Promedio de ${n} posición${plural}</div>
-        <div class="a-fill-track" title="% de la banda de rodamiento consumida en promedio">
+        <div class="a-label">% Consumo ponderado</div>
+        <div class="a-value">${agg.avgPct == null
+          ? `<span class="num">—</span>`
+          : `<span class="num" id="avPct">0</span><span class="a-unit">%</span>`}</div>
+        <div class="a-sub">Sobre profundidad útil · ${n} posición${plural}</div>
+        <div class="a-fill-track" title="% de profundidad útil consumida en el conjunto">
           <span class="a-fill" id="avPctFill"></span>
         </div>
       </div>
@@ -1483,14 +1691,18 @@ function renderSummary(){
   // Animaciones: números ascendentes + barras que crecen desde 0.
   if(agg.avgKmMm != null){
     const kmMmValues = agg.valids.map(r=>r.m.kmMm);
-    const kmProyValues = agg.valids.map(r=>r.m.kmProyectado);
+    const kmProyValues = agg.valids.map(r=>r.m.kmProyectado).filter(Number.isFinite);
     animateCount(document.getElementById("avKmAcum"), agg.totalKmAcumulado, {format:fmtKm});
-    animateCount(document.getElementById("avKmProy"), agg.avgKmProyectado, {format:fmtKm});
+    if(agg.avgKmProyectado != null){
+      animateCount(document.getElementById("avKmProy"), agg.avgKmProyectado, {format:fmtKm});
+      growFill(document.getElementById("avKmProyFill"), rangePct(agg.avgKmProyectado, kmProyValues));
+    }
     animateCount(document.getElementById("avKmMm"), agg.avgKmMm, {format:fmtKmMm});
-    animateCount(document.getElementById("avPct"), agg.avgPct, {format:fmtPct});
-    growFill(document.getElementById("avKmProyFill"), rangePct(agg.avgKmProyectado, kmProyValues));
     growFill(document.getElementById("avKmMmFill"), rangePct(agg.avgKmMm, kmMmValues));
-    growFill(document.getElementById("avPctFill"), Math.min(100, agg.avgPct));
+    if(agg.avgPct != null){
+      animateCount(document.getElementById("avPct"), agg.avgPct, {format:fmtPct});
+      growFill(document.getElementById("avPctFill"), Math.min(100, agg.avgPct));
+    }
   }
   if(bwWorstPct != null){
     growFill(document.getElementById("bwcBestFill"), 100);
@@ -1650,18 +1862,27 @@ function currentTires(){
 }
 
 function refreshResults(){
-  const faceted = applyFilters(currentTires(), rendimientoChips, RENDIMIENTO_FACETS);
+  const facetedAll = applyFilters(currentTires(), rendimientoChips, RENDIMIENTO_FACETS);
+  // Las unidades marcadas `is_test` no participan de ninguna agregación. Se
+  // cuentan aparte para declararlo en pantalla, nunca para esconderlo.
+  const faceted = facetedAll.filter(row => !row.esPrueba);
+  const testExcluded = facetedAll.length - faceted.length;
   const partition = window.RenovaRendimiento?.partitionByFreshness?.(faceted)
     ?? { fresh: faceted, stale: [], future: [], total: faceted.length, maxAgeDays: 30 };
   const visible = includeStale ? faceted : partition.fresh;
+  const staleCount = partition.stale.length;
+  // Sin datos antiguos el control no decide nada: incluirlos o no da el mismo resultado, y
+  // anunciar "Incluyendo 0 datos antiguos" ocupa un lugar destacado para no decir nada.
+  const freshnessControl = freshnessToggle.closest(".freshness-control");
+  if (freshnessControl) freshnessControl.hidden = staleCount === 0;
   freshnessToggle.setAttribute("aria-pressed", String(includeStale));
   freshnessToggle.textContent = includeStale
-    ? `Incluyendo ${partition.stale.length} dato${partition.stale.length===1?"":"s"} antiguo${partition.stale.length===1?"":"s"} ×`
-    : `Incluir ${partition.stale.length} dato${partition.stale.length===1?"":"s"} antiguo${partition.stale.length===1?"":"s"}`;
+    ? `Incluyendo ${staleCount} dato${staleCount===1?"":"s"} antiguo${staleCount===1?"":"s"} ×`
+    : `Incluir ${staleCount} dato${staleCount===1?"":"s"} antiguo${staleCount===1?"":"s"}`;
   freshnessHelp.textContent = includeStale
     ? `Se incluyen inspecciones antiguas; esto no calcula consumo por período.`
     : `Promedios basados en inspecciones de los últimos ${partition.maxAgeDays} días.`;
-  const renderedFreshness = includeStale ? { ...partition, stale: [] } : partition;
+  const renderedFreshness = { ...(includeStale ? { ...partition, stale: [] } : partition), testExcluded };
   window.RenovaRendimiento?.renderResults?.(visible, rendimientoChips, renderedFreshness);
 }
 

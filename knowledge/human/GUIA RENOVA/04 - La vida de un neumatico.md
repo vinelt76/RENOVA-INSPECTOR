@@ -1,8 +1,8 @@
 ---
 title: "La vida de un neumático"
-updated: 2026-07-12
+updated: 2026-07-26
 status: vigente
-sources: [docs/run2_tire_lifecycle_architecture.md, docs/ARCHITECTURE_DECISIONS.md]
+sources: [docs/run2_tire_lifecycle_architecture.md, docs/ARCHITECTURE_DECISIONS.md, supabase/migrations, decisions/0011]
 ---
 
 # La vida de un neumático
@@ -46,5 +46,27 @@ Permite responder preguntas distintas:
 
 Una sola tabla “neumático” terminaría pisando o mezclando esas respuestas.
 
-Seguir con [[05 - Tableros inventario y taller]].
+## Qué pasa cuando se mueve
 
+- **Rotación o traslado:** cierra un tramo y abre otro, pero sigue el mismo ciclo.
+- **Retiro:** cierra la instalación.
+- **Retén:** el ciclo queda disponible para volver a montar.
+- **Descarte:** termina definitivamente la vida del casco.
+- **Reencauche:** debería abrir R1/R2, pero ese paso todavía no forma parte del RPC actual.
+
+## La línea base
+
+La flota no fue convertida de golpe al modelo de taller. Si una posición está vacía en la historia
+canónica pero existe una inspección reciente, RENOVA la marca como `baseline_pending`: hay evidencia
+de un neumático, pero no una fecha de instalación demostrada.
+
+Una persona debe confirmar el primer montaje y declarar la fecha. El sistema guarda qué medición
+sirvió como evidencia, pero no inventa que esa fecha fue la fecha real del montaje.
+
+## Diferencias que todavía aparecen
+
+Una inspección puede encontrar un código o marca diferente de la instalación activa. Eso puede ser
+un cambio físico no registrado o un error de captura. Rendimiento lo señala si el RTD crece, pero no
+reescribe solo la historia. Resolverlo exige un movimiento confirmado o una reconciliación humana.
+
+Seguir con [[05 - Tableros inventario y taller]].

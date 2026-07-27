@@ -1,0 +1,40 @@
+=== TEST ===
+
+> renova-movimientos-operario@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.10 /home/facundo/Vídeos/RENOVA-INSPECTOR/app movimientos
+
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  20:00:54
+   Duration  321ms (transform 45ms, setup 0ms, import 60ms, tests 33ms, environment 0ms)
+
+=== BUILD ===
+dist/assets/jetbrains-mono-greek-700-normal-DEigVDxa.woff         5.69 kB
+dist/assets/jetbrains-mono-greek-500-normal-D7SFKleX.woff         5.72 kB
+dist/assets/jetbrains-mono-cyrillic-800-normal-B6A7wovd.woff      6.83 kB
+dist/assets/jetbrains-mono-cyrillic-700-normal-CEoEElIJ.woff      7.01 kB
+dist/assets/jetbrains-mono-cyrillic-500-normal-DJqRU3vO.woff      7.02 kB
+dist/assets/jetbrains-mono-latin-ext-800-normal-M9NLV9AA.woff2    7.28 kB
+dist/assets/jetbrains-mono-latin-ext-700-normal-CZipNAKV.woff2    7.47 kB
+dist/assets/bebas-neue-latin-ext-400-normal-HFKRJXnW.woff         7.52 kB
+dist/assets/jetbrains-mono-latin-ext-500-normal-Cut-4mMH.woff2    7.52 kB
+dist/assets/bebas-neue-latin-ext-400-normal-DWiEslNC.woff2        8.92 kB
+dist/assets/jetbrains-mono-latin-ext-800-normal-BTI8MNNQ.woff    10.06 kB
+dist/assets/jetbrains-mono-latin-ext-700-normal-CxPITLHs.woff    10.30 kB
+dist/assets/jetbrains-mono-latin-ext-500-normal-ckzbgY84.woff    10.33 kB
+dist/assets/bebas-neue-latin-400-normal-Bi-ndsyu.woff            11.18 kB
+dist/assets/bebas-neue-latin-400-normal-9mHNbWWO.woff2           13.76 kB
+dist/assets/jetbrains-mono-latin-800-normal-D2mQHRMK.woff2       21.23 kB
+dist/assets/jetbrains-mono-latin-500-normal-BWZEU5yA.woff2       21.83 kB
+dist/assets/jetbrains-mono-latin-700-normal-BYuf6tUa.woff2       21.90 kB
+dist/assets/jetbrains-mono-latin-800-normal-Dj9qwObk.woff        27.38 kB
+dist/assets/jetbrains-mono-latin-500-normal-CJOVTJB7.woff        28.20 kB
+dist/assets/jetbrains-mono-latin-700-normal-D3wTyLJW.woff        28.20 kB
+dist/assets/index-DfZhzWX5.css                                   47.15 kB │ gzip:  24.36 kB
+dist/assets/index-Cpv5s2V-.js                                   417.73 kB │ gzip: 119.23 kB
+
+✓ built in 223ms

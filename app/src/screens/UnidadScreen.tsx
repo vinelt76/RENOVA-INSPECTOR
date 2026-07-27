@@ -13,6 +13,15 @@ import type { Unidad, CatConfiguracion } from '../db/schema';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 
+/**
+ * Techo de plausibilidad del odómetro. No es una regla de negocio aprobada: es un filtro
+ * de disparate para que un error de tipeo no entre como kilometraje real. Un bus
+ * interprovincial peruano de muchos años puede acercarse a los 3 millones de km.
+ * El importador de `WEB/importar.html` usa el mismo valor (`ODOMETER_MAX_KM`) — si se
+ * cambia acá, cambiarlo allá. Ver auditoria_lunes/tasks/task_10_odometro.md.
+ */
+const ODOMETRO_MAX_KM = 3_500_000;
+
 
 function SearchIcon({ active }: { active: boolean }) {
   const color = active ? ORANGE : LABEL_BLUE;
@@ -78,8 +87,16 @@ export default function UnidadScreen() {
   const kmActual = parseInt(odometro || '0', 10);
   const kmBajo = match && odometro.length > 0 && kmActual < kmPrev;
 
-  const canContinue = !!match && odometro.length > 0 && !kmBajo;
-  const canCreate = !!noExiste && odometro.length > 0 && !!config;
+  // Un odómetro en 0 o disparatado no es un dato faltante: es una cifra que envenena
+  // km/mm, km proyectado, consumo y costo/km, que lo usan como denominador. La regla
+  // "nunca sustituir un valor faltante por 0" ya rige para los canales RTD
+  // (reglas_negocio.md §1) y acá faltaba. Ver auditoria_lunes/tasks/task_10_odometro.md.
+  const kmCero = odometro.length > 0 && kmActual <= 0;
+  const kmImposible = odometro.length > 0 && kmActual > ODOMETRO_MAX_KM;
+  const kmInvalido = kmBajo || kmCero || kmImposible;
+
+  const canContinue = !!match && odometro.length > 0 && !kmInvalido;
+  const canCreate = !!noExiste && odometro.length > 0 && !kmInvalido && !!config;
 
   const handleSearch = async (val: string) => {
     // Alfanumérico: CTA identifica sus buses por placa (p.ej. "AAV-803") — decisión Lote 3
@@ -459,6 +476,16 @@ export default function UnidadScreen() {
                   ⚠ Menor al anterior ({fmtKm(kmPrev)})
                 </div>
               )}
+              {kmCero && (
+                <div style={{ fontSize: 11, color: ORANGE, fontWeight: 700, marginTop: 7, paddingLeft: 4 }}>
+                  ⚠ Ingresa el kilometraje que marca la unidad
+                </div>
+              )}
+              {kmImposible && (
+                <div style={{ fontSize: 11, color: ORANGE, fontWeight: 700, marginTop: 7, paddingLeft: 4 }}>
+                  ⚠ Kilometraje demasiado alto (máx. {fmtKm(ODOMETRO_MAX_KM)})
+                </div>
+              )}
             </div>
 
             {fotoButton}
@@ -491,6 +518,16 @@ export default function UnidadScreen() {
                 />
                 <span style={{ color: LABEL_BLUE, fontSize: 13, fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>km</span>
               </div>
+              {kmCero && (
+                <div style={{ fontSize: 11, color: ORANGE, fontWeight: 700, marginTop: 7, paddingLeft: 4 }}>
+                  ⚠ Ingresa el kilometraje que marca la unidad
+                </div>
+              )}
+              {kmImposible && (
+                <div style={{ fontSize: 11, color: ORANGE, fontWeight: 700, marginTop: 7, paddingLeft: 4 }}>
+                  ⚠ Kilometraje demasiado alto (máx. {fmtKm(ODOMETRO_MAX_KM)})
+                </div>
+              )}
             </div>
 
             {fotoButton}

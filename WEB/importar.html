@@ -229,6 +229,13 @@
 <script type="module">
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
+/* Techo de plausibilidad del odómetro. No es una regla de negocio aprobada: es un
+   filtro de disparate para que un error de tipeo o una celda con formato raro no
+   entre como kilometraje real. Un bus interprovincial peruano de muchos años puede
+   acercarse a los 3 millones de km; por encima de eso conviene que una persona lo
+   confirme antes de guardarlo. Ver auditoria_lunes/tasks/task_10_odometro.md. */
+const ODOMETER_MAX_KM = 3_500_000;
+
 /* ─────────────────────────────────────────────────────────────────────────
    Columnas esperadas — clave interna → posibles encabezados en el Excel
    (normalizados a minúsculas sin acentos antes de comparar). El inspector
@@ -449,6 +456,23 @@ function parseWorkbook(ab) {
     const maxPos = g.items.reduce((m, it) => Math.max(m, Number(it.position)), 0);
     g.configuration = maxPos > 6 ? "2-4-2" : "2-4";
     g.vehicle_type = "BUS";
+
+    // Kilometraje: mismo criterio que los canales RTD unas líneas más arriba —
+    // "nunca sustituir un valor faltante por 0" (reglas_negocio.md §1). Antes esta
+    // validación no existía y el envío hacía `odometer_km: g.km ?? 0`, así que un
+    // Excel sin columna de kilometraje entraba como odómetro CERO, en silencio.
+    // El odómetro es el denominador de km/mm, km proyectado, consumo y costo/km:
+    // un 0 no es un dato faltante, es una cifra que envenena todas las métricas.
+    if (g.km == null) {
+      g.errors.push(`unidad ${g.placa || "?"} (${g.fecha ?? "?"}): falta el kilometraje`);
+    } else if (!Number.isFinite(g.km) || g.km <= 0) {
+      g.errors.push(`unidad ${g.placa || "?"} (${g.fecha ?? "?"}): kilometraje inválido (${g.km})`);
+    } else if (g.km > ODOMETER_MAX_KM) {
+      g.errors.push(
+        `unidad ${g.placa || "?"} (${g.fecha ?? "?"}): kilometraje de ${g.km.toLocaleString("es-PE")} km ` +
+        `supera el máximo plausible (${ODOMETER_MAX_KM.toLocaleString("es-PE")} km) — revisa el Excel`,
+      );
+    }
   }
 
   // Diagnóstico: encabezados del Excel que NO matchearon ningún alias
@@ -555,7 +579,7 @@ function renderSummary(groups) {
 
   const anyErrors = groups.some(g => g.errors.length > 0);
   sendBtn.disabled = anyErrors || groups.length === 0;
-  sendBtn.textContent = anyErrors ? "Corregí los errores antes de enviar" : "Enviar a Supabase";
+  sendBtn.textContent = anyErrors ? "Corrige los errores antes de enviar" : "Enviar a Supabase";
 }
 
 sendBtn.addEventListener("click", async () => {
@@ -582,7 +606,9 @@ sendBtn.addEventListener("click", async () => {
         company_name: g.empresa,
         plate_number: g.placa,
         inspection_date: g.fecha,
-        odometer_km: g.km ?? 0,
+        // Sin `?? 0`: un grupo sin kilometraje válido ya quedó marcado con error y el
+        // botón de envío está deshabilitado, así que acá `g.km` siempre es un número.
+        odometer_km: g.km,
         vehicle_type: g.vehicle_type,
         configuration: g.configuration,
         items: g.items,

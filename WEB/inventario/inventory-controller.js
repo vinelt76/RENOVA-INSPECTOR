@@ -1,4 +1,4 @@
-import { loadInventoryScreenData } from "./data.js";
+import { loadActiveCompanyName, loadInventoryScreenData } from "./data.js";
 import { INVENTORY_TABS, filterInventoryRows } from "./inventory-model.js";
 
 const TABS = Object.freeze({
@@ -321,7 +321,10 @@ async function init(client) {
     return;
   }
   const session = await client.requireAuth();
-  client.showBadge("supabase", session?.user?.email || "");
+  // La insignia muestra la EMPRESA activa, como las demás pantallas. Nunca el correo de la
+  // cuenta: no es información de empresa y queda proyectado durante una demo con cliente.
+  const companyName = await loadActiveCompanyName(session?.user?.id, client);
+  client.showBadge("supabase", companyName || "");
   await reload(client);
   unsubscribeRealtime?.();
   unsubscribeRealtime = client.onDataChange(REALTIME_TABLES, () => void reload(client));

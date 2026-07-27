@@ -85,6 +85,29 @@ export async function loadDiscardedInventory(dependency) {
   return rows.map((row) => normalizeNumericColumns(row, DISCARDED_NUMERIC_COLUMNS));
 }
 
+/**
+ * Nombre de la empresa activa para la insignia de sesión.
+ *
+ * `v_inventory_status` y `v_tire_inventory_available` exponen `company_id` pero no el nombre, así
+ * que se resuelve desde el perfil autenticado —igual que hace la app de movimientos—. Devuelve
+ * `null` si no se puede resolver: la insignia prefiere quedarse sin detalle antes que caer al
+ * correo de la cuenta, que no es información de empresa y se proyecta en pantalla.
+ */
+export async function loadActiveCompanyName(userId, dependency) {
+  if (!userId) return null;
+  try {
+    const rows = await getFetchView(dependency)("profiles", {
+      select: "company_id,companies(name)",
+      id: `eq.${userId}`,
+      limit: "1",
+    });
+    return rows[0]?.companies?.name ?? null;
+  } catch (error) {
+    console.warn("Inventario: no se pudo resolver la empresa activa.", error);
+    return null;
+  }
+}
+
 /** Carga ambas pestañas concurrentemente y conserva errores para la capa de UI. */
 export async function loadInventoryScreenData(dependency) {
   const [retention, discarded] = await Promise.all([

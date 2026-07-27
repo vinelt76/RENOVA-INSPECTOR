@@ -50,33 +50,46 @@ else:                          ESTADO = "Normal"               # 🟢
 
 ## 3. ESTADO PRESIÓN
 
+> [!IMPORTANT]
+> **Corregido el 2026-07-25** por el dueño de negocio. La versión anterior de esta sección
+> modelaba la presión como `presion_ref` ± porcentajes (`delta_alto_pct` / `delta_bajo_pct`).
+> **Ese modelo nunca fue el que usa el negocio** y sus valores de ejemplo eran incorrectos.
+> La regla real son **rangos absolutos mín–máx por medida y tipo de eje**.
+> Ver `decisions/0009-regla-de-presion-por-rangos.md`.
+
 **Evaluación secuencial:**
 
 ```
-if   presion IS NULL or sin_medir = TRUE:    ESTADO = "Sin Medir"    # ⚫
-elif presion > presion_ref * (1 + delta_alto_pct/100): ESTADO = "Alta Presión"  # 🔴
-elif presion < presion_ref * (1 - delta_bajo_pct/100): ESTADO = "Baja Presión"  # 🔴
-else:                                         ESTADO = "Normal"       # 🟢
+if   presion IS NULL or sin_medir = TRUE:  ESTADO = "Sin Medir"      # ⚫
+elif temperatura = CALIENTE:               ESTADO = NULL (sin regla)  # ⚪
+elif presion > psi_max:                    ESTADO = "Alta Presión"    # 🔴
+elif presion < psi_min:                    ESTADO = "Baja Presión"    # 🔴
+else:                                      ESTADO = "Normal"          # 🟢
 ```
 
-**Umbrales por defecto** (configurables por empresa, medida y tipo_eje en `umbral_presion`):
+Los extremos son **inclusivos**: `psi_min` y `psi_max` son Normal.
 
-| Campo | Default | Comentario |
+**Rangos vigentes** (medición en FRÍO, iguales para las cuatro empresas actuales):
+
+| Medida | Tipo de eje | Rango normal |
 |---|---|---|
-| `delta_alto_pct` | 5% | +5% sobre referencia → Alta |
-| `delta_bajo_pct` | 10% | −10% bajo referencia → Baja |
+| 295/80R22.5 | Direccional | 100 – 125 PSI |
+| 295/80R22.5 | Tracción / Libre | 100 – 125 PSI |
+| 315/80R22.5 | Tracción / Libre | 100 – 125 PSI |
+| **315/80R22.5** | **Direccional** | **105 – 125 PSI** |
 
-**`presion_ref` según temperatura:**
-- FRÍO: usar `presion_frio` de la tabla `umbral_presion`.
-- CALIENTE: **⚠️ PENDIENTE DE DEFINICIÓN** — el ajuste de referencia para temperatura CALIENTE
-  no está especificado en el Excel ni en la documentación actual. Antes de implementar el
-  cálculo para CALIENTE, obtener del equipo RENOVA el valor correcto y documentarlo aquí.
-  NO usar un valor inventado. Opciones típicas de la industria: +6% a +8% sobre presión fría,
-  pero deben confirmarse contra los datos reales del Excel.
+**NUNCA hardcodear estos valores.** Viven en `pressure_thresholds`, filtrados por `company_id` +
+`size_name` + `axle_type`; resuelve `fn_effective_pressure_thresholds()`, que aplica la fila más
+específica (medida+eje > medida > eje > genérica). `size_name` o `axle_type` en NULL son comodín.
 
-**Ejemplo real del Excel** (para verificar implementación):
-- 315/80R22.5 Dirección: ref = 110 PSI → Alta desde 116 PSI (110 × 1.05), Baja desde 99 PSI (110 × 0.90)
-- 315/80R22.5 Tracción/Libre: ref = 115 PSI → Alta desde 122 PSI, Baja desde 103 PSI
+**Temperatura:**
+- **FRÍO**: los rangos de arriba. Es el procedimiento de todas las empresas actuales, y
+  `inspection_measurements.temperature_mode` tiene default `'COLD'` para dejarlo registrado.
+- **CALIENTE**: **⚠️ PENDIENTE DE DEFINICIÓN, y es deuda genuina.** Las empresas que miden siempre
+  en caliente son agencias de las que todavía no hay data; no es una decisión postergada por
+  descuido, es información que no existe. **NO usar un valor inventado ni aplicarle la regla de
+  frío.** `fn_pressure_state()` devuelve `NULL` —no un veredicto— cuando la medición es `'HOT'`.
+  Reabrir cuando haya mediciones reales de una agencia contra las que calibrar.
 
 ---
 
@@ -157,6 +170,32 @@ VUR (km) = (RTD_MOVI - rtd_cambio) / Tasa_acumulada * 1000
 | `Tasa_acumulada == 0` o NULL | VUR = NULL — "Sin datos suficientes" |
 | `RTD_MOVI ≤ rtd_cambio` | VUR = 0 — "Cambio inmediato" |
 | `Tasa_acumulada < 0` | VUR = NULL — "Dato inválido" (RTD aumentó entre inspecciones — error de medición) |
+
+### Rendimiento por ciclo actual y por conjunto
+
+Contrato vigente del panel (ADR-0011):
+
+```text
+RTD gastado        = OTD del ciclo − RTD actual
+Profundidad útil   = OTD − RTD retiro                 [D1]
+Km ciclo           = Σ km de instalaciones de la vida actual
+% desgaste         = RTD gastado / Profundidad útil × 100
+Km/mm              = Km ciclo / RTD gastado
+Km proyectado      = Km/mm × Profundidad útil
+```
+
+Para cualquier conjunto, incluida una sola unidad:
+
+```text
+Km/mm              = Σ Km ciclo / Σ RTD gastado
+% desgaste         = Σ RTD gastado / Σ Profundidad útil × 100
+Km proyectado      = Σ(Km proyectado × RTD gastado) / Σ RTD gastado
+```
+
+No se promedian tasas según la cantidad de placas. Una última medición con RTD mayor que la
+inmediatamente anterior dentro de la instalación queda excluida de las métricas y declarada en
+pantalla. El OTD es una propiedad del ciclo y se conserva como base tras rotaciones o traslados.
+El kilometraje total de todas las vidas del casco se reserva para Historial de neumático.
 
 ---
 

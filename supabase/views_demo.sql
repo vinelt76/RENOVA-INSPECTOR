@@ -147,22 +147,23 @@ select
   k.end_odometer           as current_odometer_km,
   k.end_odometer_source,
   -- RTD Gastado (instalación) = RTD instalación − RTD actual
-  (k.rtd_at_install_mm - k.last_inspection_rtd_mm)                     as rtd_worn_mm,
+  (lc.otd_mm - k.last_inspection_rtd_mm)                               as rtd_worn_mm,
   -- Km Recorrido (instalación)
   k.km_run,
-  -- % de Consumo = RTD gastado desde el inicio del CICLO / OTD del ciclo
-  case when lc.otd_mm > 0 and k.last_inspection_rtd_mm is not null
-       then (lc.otd_mm - k.last_inspection_rtd_mm) / lc.otd_mm * 100 end as consumption_pct,
-  -- Km/mm = Km Recorrido / RTD Gastado (instalación)
-  case when (k.rtd_at_install_mm - k.last_inspection_rtd_mm) > 0 and k.km_run is not null
-       then k.km_run / (k.rtd_at_install_mm - k.last_inspection_rtd_mm) end as km_per_mm,
-  -- Km Proyectado = Km/mm × (OTD − RTD retiro recomendado de la empresa)
-  case when (k.rtd_at_install_mm - k.last_inspection_rtd_mm) > 0
-        and k.km_run is not null
-        and rt.rtd_removal_mm is not null
-        and lc.otd_mm is not null
-       then k.km_run / (k.rtd_at_install_mm - k.last_inspection_rtd_mm)
-            * (lc.otd_mm - rt.rtd_removal_mm) end                        as km_projected,
+  -- % de Consumo = RTD gastado / profundidad útil de ESTA instalación
+  case when (lc.otd_mm - rt.rtd_removal_mm) > 0
+          and k.last_inspection_rtd_mm is not null
+       then (lc.otd_mm - k.last_inspection_rtd_mm)
+            / (lc.otd_mm - rt.rtd_removal_mm) * 100 end as consumption_pct,
+  -- Km/mm = Km acumulado del ciclo / RTD gastado del ciclo
+  case when (lc.otd_mm - k.last_inspection_rtd_mm) > 0 and cyc.cycle_km is not null
+       then cyc.cycle_km / (lc.otd_mm - k.last_inspection_rtd_mm) end as km_per_mm,
+  -- Km Proyectado = Km/mm × (OTD − RTD retiro); D1: OTD es base del ciclo
+  case when (lc.otd_mm - k.last_inspection_rtd_mm) > 0
+        and cyc.cycle_km is not null
+        and (lc.otd_mm - rt.rtd_removal_mm) > 0
+       then cyc.cycle_km / (lc.otd_mm - k.last_inspection_rtd_mm)
+            * (lc.otd_mm - rt.rtd_removal_mm) end                       as km_projected,
   -- Km acumulado del CICLO = Σ km de todas las instalaciones del ciclo
   cyc.cycle_km             as cycle_km_accumulated,
   -- Km acumulado del CASCO = Σ km de todos los ciclos del casco
@@ -184,7 +185,9 @@ left join lateral (
   limit 1
 ) rt on true
 left join lateral (
-  select sum(k2.km_run) as cycle_km
+  select case
+    when bool_and(k2.km_run is not null) then sum(k2.km_run)
+  end as cycle_km
   from v_installation_km k2
   where k2.life_cycle_id = lc.id
 ) cyc on true

@@ -1,0 +1,14 @@
+{
+  "name": "renova-shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Piezas compartidas por los dashboards — barra de filtros, facetas, alcance y búsqueda.",
+  "scripts": {
+    "test": "../movimientos/node_modules/.bin/vitest run",
+    "test:watch": "../movimientos/node_modules/.bin/vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.9"
+  }
+}

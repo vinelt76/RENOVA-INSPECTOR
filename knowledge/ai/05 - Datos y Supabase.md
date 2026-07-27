@@ -13,7 +13,9 @@ sources: [app/src/db/sqlite.ts, app/src/db/schema.ts, supabase/migrations, docs/
 - `inspeccion_cabecera`: empresa, unidad, fecha, odómetro, sincronización.
 - `inspeccion_neumatico`: una fila por posición con captura, derivados y snapshots.
 - `cat_*`: marcas, modelos, medidas, reencauches, anomalías, válvulas, configuraciones y condiciones.
-- `umbral_rtd`, `umbral_presion`: RTD activo; presión creada pero todavía inerte.
+- `umbral_rtd`, `umbral_presion`: tablas LOCALES de SQLite; RTD activo, presión sigue inerte ahí.
+- `rtd_thresholds`, `pressure_thresholds`: umbrales remotos por empresa. Presión desde 2026-07-25
+  (ADR-0009): rangos mín–máx por medida y tipo de eje, resueltos por `fn_effective_pressure_thresholds`.
 - `sync_queue`: una fila durable por cabecera pendiente.
 
 ## Modelo consolidado
