@@ -103,4 +103,18 @@ describe("inspection scope", () => {
     expect(resolveInspectionScope(index, [{ facet: "fecha", value: "1 junio 2026" }], formatDate).values)
       .toEqual(["2026-06-01"]);
   });
+
+  it("acepta el catálogo de fechas del RPC tanto en objetos como en strings", () => {
+    const latestByUnit = [inspections[1], inspections[3]];
+    const rpcDates = [
+      { inspected_on: "2026-07-15" },
+      "2026-07-10",
+      { inspected_on: "2026-06-20" },
+      null,
+    ];
+    const index = createInspectionScopeIndex(latestByUnit, units, rpcDates);
+
+    expect(index.dates).toEqual(["2026-07-15", "2026-07-10", "2026-06-20"]);
+    expect(resolveInspectionScope(index, [], formatDate).values).toEqual(["2026-07-15"]);
+  });
 });

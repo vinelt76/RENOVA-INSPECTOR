@@ -30,7 +30,9 @@ export function createInspectionScopeIndex(inspections, units, availableDates) {
     .sort(compareInspectionDesc);
 
   const catalogDates = Array.isArray(availableDates)
-    ? availableDates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")))
+    ? availableDates
+      .map((date) => typeof date === "string" ? date : date?.inspected_on)
+      .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")))
     : rows.map((row) => row.inspectedOn);
   const dates = [...new Set(catalogDates)].sort().reverse();
   const plates = [...new Set(rows.map((row) => plateByUnitId.get(row.unitId)).filter(Boolean))]

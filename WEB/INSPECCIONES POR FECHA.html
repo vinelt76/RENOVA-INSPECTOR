@@ -929,7 +929,7 @@ async function reloadInspectionIndexAndRows(){
   inspectionScopeIndex = createInspectionScopeIndex(
     inspections,
     units,
-    availableDates.map((row) => row.inspected_on),
+    availableDates,
   );
   if(!inspectionScopeIndex.rows.length){
     window.RenovaInspecciones.renderNoData("Sin datos del Excel para tu empresa todavía.");
