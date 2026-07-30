@@ -8,6 +8,7 @@
     "docs:day": "node scripts/knowledge-day.mjs",
     "docs:status": "node scripts/sync-project-docs.mjs --status",
     "docs:sync": "node scripts/sync-project-docs.mjs",
+    "vendor:supabase": "node scripts/build-supabase-vendor.mjs",
     "verify": "node scripts/verify-all.mjs",
     "deploy:bundle": "cd app && npm run build && cd .. && node scripts/prepare-static-hosting.mjs"
   },
@@ -15,6 +16,8 @@
     "@fontsource/jetbrains-mono": "^5.2.8"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "2.110.3",
+    "esbuild": "0.28.1",
     "supabase": "^2.109.1"
   }
 }

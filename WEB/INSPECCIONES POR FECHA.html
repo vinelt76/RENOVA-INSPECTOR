@@ -613,6 +613,57 @@ let inspectionFacetSourceRows = [];
 let facetCatalogPromise = null;
 let loadedScopeSignature = "";
 let scopeRequestSequence = 0;
+const scopeRowsCache = new Map();
+const SCOPE_CACHE_MAX = 12;
+const SCOPE_CACHE_TTL_MS = 2 * 60 * 1000;
+const CATALOG_PAGE_SIZE = 500;
+
+function cachedRowsForScope(signature){
+  const entry = scopeRowsCache.get(signature);
+  if(!entry) return null;
+  if(Date.now() - entry.cachedAt > SCOPE_CACHE_TTL_MS){
+    scopeRowsCache.delete(signature);
+    return null;
+  }
+  // Map conserva orden de inserción: reinsertar convierte esta entrada en la
+  // más reciente para poder desalojar la menos usada.
+  scopeRowsCache.delete(signature);
+  scopeRowsCache.set(signature, entry);
+  return entry.rows;
+}
+
+function cacheRowsForScope(signature, rows){
+  scopeRowsCache.delete(signature);
+  scopeRowsCache.set(signature, { rows, cachedAt: Date.now() });
+  while(scopeRowsCache.size > SCOPE_CACHE_MAX){
+    scopeRowsCache.delete(scopeRowsCache.keys().next().value);
+  }
+}
+
+async function fetchAllView(name, params = {}){
+  const rows = [];
+  for(let offset=0; ; offset+=CATALOG_PAGE_SIZE){
+    const page = await RenovaSupabase.fetchView(name, {
+      ...params,
+      limit: String(CATALOG_PAGE_SIZE),
+      offset: String(offset),
+    });
+    rows.push(...page);
+    if(page.length < CATALOG_PAGE_SIZE) return rows;
+  }
+}
+
+async function fetchInspectionBootstrap(){
+  const { data, error } = await RenovaSupabase.supabase.rpc(
+    "get_inspection_dashboard_bootstrap",
+  );
+  if(error) throw new Error(`Supabase bootstrap de inspecciones: ${error.message}`);
+  return {
+    latestInspections: Array.isArray(data?.latest_inspections) ? data.latest_inspections : [],
+    availableDates: Array.isArray(data?.available_dates) ? data.available_dates : [],
+    rows: Array.isArray(data?.rows) ? data.rows : [],
+  };
+}
 
 function distinctTireCodes(rows){
   const codes = new Set([...distinctValues(rows, "tireCode"), ...distinctValues(rows, "casingCode")]);
@@ -771,13 +822,23 @@ async function attachCurrentInstallationState(rows){
   }
 }
 
-async function loadRowsForScope(scope, { force = false } = {}){
+async function loadRowsForScope(scope, { force = false, prefetchedRows = null } = {}){
   const signature = scopeSignature(scope);
+  // También invalida cualquier respuesta anterior cuando el nuevo ámbito sale
+  // de caché o coincide con el ya visible.
+  const requestId = ++scopeRequestSequence;
   if(!force && signature === loadedScopeSignature){
     refreshResults();
     return;
   }
-  const requestId = ++scopeRequestSequence;
+  if(!force){
+    const cachedRows = cachedRowsForScope(signature);
+    if(cachedRows){
+      loadedScopeSignature = signature;
+      window.RenovaInspecciones.setRows(cachedRows, scope);
+      return;
+    }
+  }
   const filter = postgrestFilterForScope(scope);
   if(!filter){
     loadedScopeSignature = signature;
@@ -785,7 +846,9 @@ async function loadRowsForScope(scope, { force = false } = {}){
     return;
   }
   let rows;
-  if(scope.kind === "fleet-latest" && inspectionFacetSourceRows.length){
+  if(Array.isArray(prefetchedRows)){
+    rows = prefetchedRows;
+  }else if(scope.kind === "fleet-latest" && inspectionFacetSourceRows.length){
     rows = inspectionFacetSourceRows;
   }else{
     const params = { order: "inspected_on.desc,plate.asc,position_number.asc" };
@@ -794,6 +857,7 @@ async function loadRowsForScope(scope, { force = false } = {}){
     rows = await attachCurrentInstallationState(rows);
   }
   if(requestId !== scopeRequestSequence) return; // respuesta vieja: no pisa un filtro más reciente
+  cacheRowsForScope(signature, rows);
   loadedScopeSignature = signature;
   window.RenovaInspecciones.setRows(rows, scope);
   const session = await RenovaSupabase.getSession();
@@ -803,7 +867,7 @@ async function loadRowsForScope(scope, { force = false } = {}){
 async function loadFacetCatalog(){
   if(inspectionFacetSourceRows.length) return;
   if(facetCatalogPromise) return facetCatalogPromise;
-  facetCatalogPromise = RenovaSupabase.fetchView("v_inspection_latest_facets", {
+  facetCatalogPromise = fetchAllView("v_inspection_latest_facets", {
     order: "plate.asc,position_number.asc",
   }).then(attachCurrentInstallationState).then((rows) => {
     inspectionFacetSourceRows = rows;
@@ -813,34 +877,60 @@ async function loadFacetCatalog(){
   return facetCatalogPromise;
 }
 
-async function applyTemporalScope({ force = false } = {}){
+async function applyTemporalScope({ force = false, prefetchedRows = null } = {}){
   const scope = resolveInspectionScope(
     inspectionScopeIndex,
     inspeccionesChips,
     (iso) => window.RenovaInspecciones.formatDate(iso),
     formatInspectionMonth,
   );
-  await loadRowsForScope(scope, { force });
+  await loadRowsForScope(scope, { force, prefetchedRows });
 }
 
 async function reloadInspectionIndexAndRows(){
   // Realtime vuelve a entrar aquí: el caché vive solo en memoria y se invalida
   // antes de resolver el nuevo último estado.
+  scopeRequestSequence++;
   inspectionFacetRows = [];
   inspectionFacetSourceRows = [];
   facetCatalogPromise = null;
-  const [inspections, units] = await Promise.all([
-    RenovaSupabase.fetchView("inspections", {
-      select: "id,unit_id,inspected_on,created_at",
-      order: "inspected_on.desc,created_at.desc",
-      limit: "1000",
-    }),
-    RenovaSupabase.fetchView("units", { select: "id,plate", order: "plate.asc" }),
-  ]);
-  if(inspections.length >= 1000){
-    throw new Error("El índice de inspecciones alcanzó 1000 filas; requiere paginación o una vista resumida antes de continuar.");
+  loadedScopeSignature = "";
+  scopeRowsCache.clear();
+  let bootstrap = null;
+  let latestInspections;
+  let availableDates;
+  try{
+    bootstrap = await fetchInspectionBootstrap();
+    latestInspections = bootstrap.latestInspections;
+    availableDates = bootstrap.availableDates;
+  }catch(error){
+    // Compatibilidad durante un despliegue escalonado: si el HTML llega antes
+    // que la migración, conserva el flujo anterior en vez de dejar la pantalla
+    // sin datos.
+    console.warn("Inspecciones: bootstrap no disponible; usando consultas separadas.", error);
+    [latestInspections, availableDates] = await Promise.all([
+      fetchAllView("v_inspection_unit_latest", {
+        select: "inspection_id,unit_id,plate,inspected_on,created_at",
+        order: "plate.asc",
+      }),
+      fetchAllView("v_inspection_dates", {
+        select: "inspected_on",
+        order: "inspected_on.desc",
+      }),
+    ]);
   }
-  inspectionScopeIndex = createInspectionScopeIndex(inspections, units);
+  const inspections = latestInspections.map((row) => ({
+    id: row.inspection_id,
+    unit_id: row.unit_id,
+    inspected_on: row.inspected_on,
+    created_at: row.created_at,
+  }));
+  const units = latestInspections.map((row) => ({ id: row.unit_id, plate: row.plate }));
+  inspectionScopeIndex = createInspectionScopeIndex(
+    inspections,
+    units,
+    availableDates.map((row) => row.inspected_on),
+  );
   if(!inspectionScopeIndex.rows.length){
     window.RenovaInspecciones.renderNoData("Sin datos del Excel para tu empresa todavía.");
     const session = await RenovaSupabase.getSession();
@@ -852,7 +942,12 @@ async function reloadInspectionIndexAndRows(){
     (iso) => window.RenovaInspecciones.formatDate(iso), formatInspectionMonth,
   );
   if(nextScope.kind === "fleet-latest") await loadFacetCatalog();
-  await applyTemporalScope({ force: true });
+  await applyTemporalScope({
+    force: true,
+    prefetchedRows: bootstrap && nextScope.kind === "global-latest"
+      ? bootstrap.rows
+      : null,
+  });
 }
 
 const filterBar = createFilterBar({

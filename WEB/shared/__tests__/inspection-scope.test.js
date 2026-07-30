@@ -87,4 +87,20 @@ describe("inspection scope", () => {
     expect(index.dates).toHaveLength(4);
     expect(index.plates).toEqual(["BUS-1", "BUS-2"]);
   });
+
+  it("combina últimas inspecciones compactas con el catálogo histórico de fechas", () => {
+    const latestByUnit = [inspections[1], inspections[3]];
+    const index = createInspectionScopeIndex(
+      latestByUnit,
+      units,
+      ["2026-07-15", "2026-07-10", "2026-06-20", "2026-06-01", "fecha-inválida"],
+    );
+
+    expect(index.rows.map((row) => row.id)).toEqual(["i2-new", "i1-new"]);
+    expect(index.dates).toEqual(["2026-07-15", "2026-07-10", "2026-06-20", "2026-06-01"]);
+    expect(resolveInspectionScope(index, [{ facet: "unidad", value: "BUS-1" }], formatDate).values)
+      .toEqual(["i1-new"]);
+    expect(resolveInspectionScope(index, [{ facet: "fecha", value: "1 junio 2026" }], formatDate).values)
+      .toEqual(["2026-06-01"]);
+  });
 });

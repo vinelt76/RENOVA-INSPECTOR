@@ -8,7 +8,7 @@ function compareInspectionDesc(left, right) {
  * Índice liviano para decidir qué filas pedir a v_inspection_dashboard_rows.
  * Las mediciones pesadas no forman parte de este índice.
  */
-export function createInspectionScopeIndex(inspections, units) {
+export function createInspectionScopeIndex(inspections, units, availableDates) {
   const plateByUnitId = new Map();
   const unitIdByPlate = new Map();
   for (const unit of Array.isArray(units) ? units : []) {
@@ -29,7 +29,10 @@ export function createInspectionScopeIndex(inspections, units) {
     }))
     .sort(compareInspectionDesc);
 
-  const dates = [...new Set(rows.map((row) => row.inspectedOn))].sort().reverse();
+  const catalogDates = Array.isArray(availableDates)
+    ? availableDates.filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")))
+    : rows.map((row) => row.inspectedOn);
+  const dates = [...new Set(catalogDates)].sort().reverse();
   const plates = [...new Set(rows.map((row) => plateByUnitId.get(row.unitId)).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, "es", { numeric: true, sensitivity: "base" }));
 
