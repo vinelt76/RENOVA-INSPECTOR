@@ -14,7 +14,7 @@ Verificación de humo por superficie tras cada cambio discreto en el repo. No re
 | `WEB/<modulo>/` JS | `cd WEB/<modulo> && npx vitest run` |
 | `app/src/` TS | `cd app && npm test && npm run build` |
 | `app movimientos/src/` TS | `cd "app movimientos" && npm run build` |
-| `reference/calculations.py` | `cd .agents/skills/verify-data-flow && node scripts/compare_golden.mjs` |
+| `reference/calculations.py` | Usar la skill `calc-parity-check` (spec + decisions + comparador golden compartido) |
 | `supabase/migrations/` | `npm run verify` (solo gate final, no smoke por tarea) |
 
 ## Ejemplo
