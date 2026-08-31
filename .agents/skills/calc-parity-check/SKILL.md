@@ -10,7 +10,7 @@ description: Verifica la paridad Python/TypeScript del motor de cálculo. Usar s
    implementaciones contra el MISMO fixture y falla si divergen:
 
 ```bash
-node .Codex/skills/verify-data-flow/scripts/compare_golden.mjs
+node .agents/skills/verify-data-flow/scripts/compare_golden.mjs
 ```
 
    Añadir `--strict-spec` si además se quiere que el build falle ante cualquier desviación de
@@ -18,9 +18,7 @@ node .Codex/skills/verify-data-flow/scripts/compare_golden.mjs
    `cd app && npm test -- calculations.test.ts` sigue existiendo y puede correrse aparte, pero ya
    no prueba paridad — valida TS contra sus propios casos. (`reference/test_calculations_golden.py`
    se eliminó en 2026-08-31: duplicaba los casos del golden compartido sin cubrir `calcular_isa_peso`).
-3. Si se modifica o agrega una función: añadir el caso a
-   `.Codex/skills/verify-data-flow/fixtures/golden.json` (un solo fixture, no dos) en vez de
-   duplicarlo en ambas suites. Casos donde la spec no resuelve el resultado se marcan
+3. Si se modifica o agrega una función: añadir el caso a   `.agents/skills/verify-data-flow/fixtures/golden.json` (un solo fixture, no dos) en vez de   duplicarlo en ambas suites. Casos donde la spec no resuelve el resultado se marcan
    `"spec_ambigua": true` — no cuentan como fallo salvo con `--strict-spec`.
 4. No implementar presión CALIENTE: continúa sin especificación aprobada.
 

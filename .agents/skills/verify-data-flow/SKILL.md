@@ -14,7 +14,7 @@ que la próxima verificación no empiece de cero.
 ### 1. Fórmulas — sin red, rápido
 
 ```bash
-node .Codex/skills/verify-data-flow/scripts/compare_golden.mjs
+node .agents/skills/verify-data-flow/scripts/compare_golden.mjs
 ```
 
 Corre `fixtures/golden.json` contra `reference/calculations.py` Y `app/src/core/calculations.ts`
