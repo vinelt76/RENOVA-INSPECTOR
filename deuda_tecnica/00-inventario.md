@@ -31,6 +31,7 @@ cuando corresponda.
 | Cuentas reales `tire_supervisor` | Crear/provisionar por empresa y verificar emisión/seguimiento | Definición de administración y acceso |
 | Criterio de producto listo para taller/rutas | Acordar criterios operativos y evidencia de cierre | Decisión humana de aceptación |
 | Presión CALIENTE | Definir la regla de negocio canónica | No implementar ni inferir valores antes |
+| T5: 3 funciones de cálculo sin llamadores en producción (`calcularEstadoPresion`, `calcularVur`, `calcularTasaDesgaste`) | Parity lock Python/TS/golden.json — no se pueden cortar unilateralmente. Diferir hasta decisión de presión CALIENTE | ADR 0009 confirma: nunca tuvieron llamador. Corte requeriría 4 archivos a la vez |
 | `% DESGASTE` | Definir fórmula canónica y actualizar implementaciones/documentación | Decisión de negocio |
 | Umbral de frescura de Rendimiento fijo en 30 días | Llevarlo a configuración por empresa | No repartir constantes por componentes |
 
@@ -66,6 +67,16 @@ La sección Servicios (`tasks_servicios/`) está totalmente planificada pero aú
 `v_tire_services`, pruebas SQL, aplicación remota, pantalla y smoke. Se mantiene fuera de las
 deudas para no confundir una capacidad futura con un defecto del sistema actual. Cuando la fase se
 implemente, sus limitaciones reales se incorporarán arriba si permanecen abiertas.
+
+## Notas de cierre — audit ponytail 2026-08-31
+
+| Ítem | Decisión | Razón |
+|---|---|---|
+| T1: reference/catalogo_patron.json + seed_unidades_demo.json | **Conservar** | Fuente documentada del seed, superficie restaurada del tag `inspecciones-completas` |
+| T11b: formatDate 5× variantes | **No tocar** | Contratos UI distintos (fallback, timezone, formato), no es dedup |
+| T14: mode-toggle.js | **Cerrado** | Tyre-watch hardcodeó MOVEMENTS; RENOVA conserva dos modos. No-op |
+| T15: buscador/data.js storage wrapper | **Cerrado** | Offline-first feature legítima, no yagni |
+| Repos: tyre-watch + RENOVA | **Replicado** | Mismos cortes en ambos, gate 413/413 verde. Skills paths .Codex corregidos |
 
 ## Fuentes de consolidación
 
