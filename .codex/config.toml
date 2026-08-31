@@ -1,0 +1,29 @@
+[mcp_servers.cloudflare-builds]
+url = "https://builds.mcp.cloudflare.com/mcp"
+
+[mcp_servers.cloudflare-observability]
+url = "https://observability.mcp.cloudflare.com/mcp"
+
+[mcp_servers.postgres]
+command = "npx"
+args = [
+    "-y",
+    "@modelcontextprotocol/server-postgres",
+    "postgresql://postgres:postgres@localhost:54322/postgres",
+]
+
+[mcp_servers.sqlite]
+command = "npx"
+args = [
+    "-y",
+    "@modelcontextprotocol/server-sqlite",
+    "--db-path",
+    "/home/facundo/Vídeos/RENOVA-INSPECTOR/.tokensave/tokensave.db",
+]
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp"
+
+[mcp_servers.tokensave]
+command = "/home/facundo/.local/bin/tokensave"
+args = ["serve"]

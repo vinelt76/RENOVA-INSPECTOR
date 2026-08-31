@@ -1,0 +1,1439 @@
+<!doctype html>
+<html lang="es-PE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RENOVA INSPECTOR · Propuesta de implementación</title>
+    <style>
+      __ESTILO__
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="head-inner">
+        <div>
+          <div class="logo">RENOVA <b>INSPECTOR</b></div>
+          <div class="screen-name">
+            PROPUESTA DE IMPLEMENTACIÓN · MÓDULO DE INSPECCIONES
+          </div>
+        </div>
+        <div class="head-meta">
+          Presentado por <span>ANTIG</span><br />
+          Dirigido a <span>RENOVA</span><br />
+          Modalidad <span>Licencia en servidor propio</span><br />
+          Fecha <span>04 · 08 · 2026</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="summary">
+        <div class="stat">
+          <span class="k">Piloto</span
+          ><span class="v accent"
+            >S/ 4,500<br /><span style="font-size: 12px"
+              >+ IGV / mes · 2 meses</span
+            ></span
+          >
+        </div>
+        <div class="stat">
+          <span class="k">Total del piloto</span
+          ><span class="v">S/ 10,620</span>
+        </div>
+        <div class="stat">
+          <span class="k">Instalación</span
+          ><span class="v small">Servidor propio<br />de RENOVA</span>
+        </div>
+        <div class="stat">
+          <span class="k">Sus datos</span
+          ><span class="v small">Propiedad de<br />RENOVA</span>
+        </div>
+        <div class="stat">
+          <span class="k">Operación</span
+          ><span class="v small">A cargo<br />de Antig</span>
+        </div>
+      </div>
+
+      <section>
+        <h2><span class="num">ÍNDICE</span> Contenido</h2>
+        <ul class="toc">
+          <li>
+            <a href="#s1"><b>01</b> Qué resuelve el sistema</a>
+          </li>
+          <li>
+            <a href="#s2"><b>02</b> Qué recibe RENOVA</a>
+          </li>
+          <li>
+            <a href="#s3"><b>03</b> Seguridad y control</a>
+          </li>
+          <li>
+            <a href="#s4"><b>04</b> Alcance</a>
+          </li>
+          <li>
+            <a href="#s5"><b>05</b> Plan de implementación</a>
+          </li>
+          <li>
+            <a href="#s6"><b>06</b> Lo que necesitamos de RENOVA</a>
+          </li>
+          <li>
+            <a href="#s7"><b>07</b> Inversión</a>
+          </li>
+          <li>
+            <a href="#s8"><b>08</b> Mantenimiento</a>
+          </li>
+          <li>
+            <a href="#s9"><b>09</b> Propiedad intelectual y licencia</a>
+          </li>
+          <li>
+            <a href="#s10"><b>10</b> Continuidad</a>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ============ 1 ============ -->
+      <section id="s1">
+        <h2><span class="num">01</span> Qué resuelve el sistema</h2>
+
+        <p>
+          Hoy la información de neumáticos de las flotas que atiende RENOVA vive
+          repartida entre planillas, hojas de inspección y la memoria de los
+          inspectores. RENOVA INSPECTOR aligera esa carga: los datos se capturan
+          una sola vez, en campo, y quedan registrados en una base de datos
+          propia de RENOVA. Al terminar la jornada, el Excel con los datos de las
+          inspecciones del día se descarga desde el dashboard, filtrado por
+          empresa y fecha, y queda listo para enviar al supervisor de neumáticos
+          correspondiente. Se elimina el trabajo de transcribir y armar esa
+          planilla a mano, lo que se traduce en menos horas de gabinete, ahorro
+          de recursos y tiempos de entrega más cortos.
+        </p>
+
+        <p>
+          RENOVA INSPECTOR es la herramienta de campo y de oficina para cerrar
+          ese ciclo:
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quién</th>
+                <th>Qué hace</th>
+                <th>Con qué</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Inspector</strong></td>
+                <td>
+                  Captura unidad, posición, identidad del neumático, remanente,
+                  presión y anomalías, en cualquiera de las empresas que atiende
+                </td>
+                <td>
+                  App Android que funciona <strong>sin señal</strong>; los datos
+                  se guardan en el dispositivo y se envían solos cuando hay
+                  conexión
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Supervisor y jefatura</strong></td>
+                <td>
+                  Consulta el estado de cada flota, el historial de cada
+                  neumático y el rendimiento comparado
+                </td>
+                <td>Dashboard web desde la red interna de RENOVA</td>
+              </tr>
+              <tr>
+                <td><strong>Taller</strong></td>
+                <td>
+                  Consulta la información consolidada para operar sobre ella
+                </td>
+                <td>Mismo dashboard, según su perfil</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Una operación, varias empresas</h3>
+        <p>
+          Las flotas no son de RENOVA: son de sus clientes —Jaksa, Ittsabus y
+          las demás empresas de transporte que atiende—. El sistema está
+          construido para esa realidad:
+        </p>
+        <ul>
+          <li>
+            <strong
+              >El personal de RENOVA trabaja sobre todas las empresas.</strong
+            >
+            Un inspector cubre las unidades que le toquen ese día, sin importar
+            de qué cliente sean; supervisión y jefatura ven el conjunto.
+          </li>
+          <li>
+            <strong>La información se organiza por empresa.</strong> Cada
+            unidad, neumático e inspección queda asociada a su empresa, de modo
+            que el historial y el rendimiento se consultan por cliente, por
+            flota o de forma consolidada.
+          </li>
+          <li>
+            <strong>Incorporar un cliente nuevo no requiere desarrollo:</strong>
+            se da de alta la empresa con su flota, sus catálogos y sus umbrales,
+            y queda disponible para inspección. Es una tarea de incorporación,
+            no un proyecto (sección 7.1).
+          </li>
+        </ul>
+
+        <div class="callout">
+          <p>
+            El punto central:
+            <strong
+              >el inspector nunca queda bloqueado por falta de señal.</strong
+            >
+            La captura ocurre siempre; la sincronización se resuelve sola. Un
+            sistema que exige conexión en carretera no se usa, y un sistema que
+            no se usa no genera datos.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 2 ============ -->
+      <section id="s2">
+        <h2><span class="num">02</span> Qué recibe RENOVA</h2>
+
+        <p>
+          El sistema se entrega como un <strong>appliance</strong>: un paquete
+          cerrado y autocontenido que se instala en un servidor de RENOVA y trae
+          dentro todo lo necesario para funcionar — base de datos, dashboard y
+          servicios. No depende de plataformas externas ni de servicios de
+          terceros.
+        </p>
+
+        <div class="diagram">
+          <div class="zone box">
+            <div class="zone-name">◼ Instalado en el servidor de RENOVA</div>
+            <div class="svc-grid">
+              <div class="svc">
+                <b>Base de datos</b
+                ><span
+                  >Toda la información de inspecciones, flotas y neumáticos de
+                  las empresas atendidas. Propiedad de RENOVA.</span
+                >
+              </div>
+              <div class="svc">
+                <b>Dashboard web</b
+                ><span
+                  >Inspecciones, historial de neumático, rendimiento y
+                  flota.</span
+                >
+              </div>
+              <div class="svc">
+                <b>Servicio de acceso</b
+                ><span>Usuarios y perfiles del personal de RENOVA.</span>
+              </div>
+              <div class="svc">
+                <b>Respaldos</b
+                ><span
+                  >Copias automáticas programadas, con verificación
+                  periódica.</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="flow">
+            ▼ &nbsp; R E D &nbsp; I N T E R N A &nbsp; ▼ &nbsp;&nbsp;&nbsp; ▼
+            &nbsp; C A N A L &nbsp; C I F R A D O &nbsp; ▼
+          </div>
+
+          <div class="zone">
+            <div class="zone-name">◻ Quiénes lo usan</div>
+            <div class="svc-grid">
+              <div class="svc">
+                <b>Personal de oficina</b
+                ><span
+                  >Entra al dashboard desde la red de RENOVA, con su
+                  usuario.</span
+                >
+              </div>
+              <div class="svc">
+                <b>Inspectores en campo</b
+                ><span
+                  >App Android que captura sin señal y sincroniza al recuperar
+                  conexión.</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Entregables</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Entregable</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Appliance instalado</strong></td>
+                <td>
+                  Instalado, configurado y verificado en el servidor de RENOVA
+                </td>
+              </tr>
+              <tr>
+                <td><strong>App de inspección</strong></td>
+                <td>
+                  Instalada en los dispositivos Android de los inspectores
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Carga inicial</strong></td>
+                <td>
+                  Empresas atendidas, usuarios, catálogos, umbrales y flotas del
+                  piloto
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Capacitación</strong></td>
+                <td>
+                  Inspectores en campo, y supervisores y jefatura en dashboard
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Manual de inspector</strong></td>
+                <td>Uso de la app, paso a paso</td>
+              </tr>
+              <tr>
+                <td><strong>Manual de supervisor</strong></td>
+                <td>Dashboards e interpretación de la información</td>
+              </tr>
+              <tr>
+                <td><strong>Operación del sistema</strong></td>
+                <td>
+                  A cargo de Antig: instalación, actualizaciones, respaldos y
+                  salud del servicio quedan bajo el acuerdo de mantenimiento.
+                  RENOVA no administra el sistema.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Acta de entrega</strong></td>
+                <td>
+                  Inventario de lo instalado, versiones y verificaciones
+                  realizadas
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 3 ============ -->
+      <section id="s3">
+        <h2><span class="num">03</span> Seguridad y control</h2>
+
+        <p>
+          La arquitectura se diseñó a pedido de RENOVA para reducir al mínimo la
+          exposición. El principio es simple:
+          <strong>solo se publica lo estrictamente necesario, y nada más</strong
+          >.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Componente</th>
+                <th>Quién accede</th>
+                <th>Desde dónde</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Dashboard web</strong></td>
+                <td>Personal autorizado de RENOVA</td>
+                <td class="yes">
+                  Se entrega configurado para responder únicamente dentro de la
+                  red interna de RENOVA, sin publicación hacia internet
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Sincronización de la app</strong></td>
+                <td>App de inspección, autenticada</td>
+                <td class="part">
+                  Canal cifrado publicado, limitado a las operaciones de envío y
+                  consulta de datos de inspección
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Base de datos</strong></td>
+                <td>Solo los servicios internos del appliance</td>
+                <td class="yes">Sin acceso directo desde fuera del servidor</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert ok">
+          <span class="tag">● Qué implica en la práctica</span>
+          <ul>
+            <li>
+              <strong>Los datos no salen de RENOVA.</strong> No se alojan en
+              servicios de terceros ni en infraestructura de Antig.
+            </li>
+            <li>
+              <strong>RENOVA controla el perímetro.</strong> El servidor es
+              suyo: puede aislarlo, auditar el tráfico o apagarlo cuando lo
+              decida.
+            </li>
+            <li>
+              <strong>Acceso por perfil.</strong> El personal de RENOVA accede a
+              la información de todas las empresas atendidas, según el perfil
+              que se le asigne: inspección, supervisión o consulta.
+            </li>
+            <li>
+              <strong>Respaldos verificados.</strong> No basta con generarlos:
+              durante la implementación se prueba una restauración completa y
+              queda a cargo de Antig su supervisión permanente.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- ============ 4 ============ -->
+      <section id="s4">
+        <h2><span class="num">04</span> Alcance</h2>
+
+        <div class="table-wrap">
+          <table class="scope">
+            <thead>
+              <tr>
+                <th class="in">Incluido en este contrato</th>
+                <th class="out">No incluido</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="in">
+                  App Android de inspección, con captura sin señal
+                </td>
+                <td class="out">
+                  Integraciones automáticas con otros sistemas de RENOVA o de
+                  sus clientes (ERP, GPS, mantenimiento)
+                </td>
+              </tr>
+              <tr>
+                <td class="in">
+                  Dashboard de inspecciones por fecha y por unidad
+                </td>
+                <td class="out">App para iPhone</td>
+              </tr>
+              <tr>
+                <td class="in">
+                  <strong>Descarga a Excel de las inspecciones</strong>, filtrada
+                  por empresa y por fecha
+                </td>
+                <td class="out">
+                  Envío automático de ese Excel por correo o mensajería — la
+                  descarga es un clic; el envío lo hace la persona
+                </td>
+              </tr>
+              <tr>
+                <td class="in">Historial de cada neumático</td>
+                <td class="out">
+                  Fotografías de inspección almacenadas en el servidor
+                  <em>— ampliación prevista</em>
+                </td>
+              </tr>
+              <tr>
+                <td class="in">
+                  Dashboard de rendimiento y comparación de desempeño
+                </td>
+                <td class="out">
+                  Configuraciones de vehículo distintas de las indicadas abajo
+                </td>
+              </tr>
+              <tr>
+                <td class="in">
+                  Vista de flota y estado por unidad, en todas las empresas
+                  atendidas
+                </td>
+                <td class="out">
+                  Reportes o tableros que no formen parte de los entregados al
+                  cierre del piloto
+                </td>
+              </tr>
+              <tr>
+                <td class="in">
+                  Administración de empresas, usuarios, catálogos y umbrales
+                </td>
+                <td class="out">
+                  Migración masiva de información histórica anterior al piloto
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert warn">
+          <span class="tag">▲ Configuraciones de vehículo cubiertas</span>
+          <p>
+            Esta etapa cubre buses con configuración de ejes
+            <strong>2-4</strong> y <strong>2-4-2</strong>. Si las flotas
+            atendidas incluyen otras configuraciones, se identifican en la
+            primera semana y se cotizan como ampliación. Es preferible
+            detectarlo al inicio que a mitad del piloto.
+          </p>
+        </div>
+
+        <div class="alert warn">
+          <span class="tag">▲ Volumen del piloto</span>
+          <p>
+            El piloto cubre la incorporación de
+            <strong>hasta 3 empresas</strong> con sus flotas, en el ritmo de una
+            por semana descrito en la sección 05. Es el volumen que permite
+            acompañar cada incorporación con dedicación real y llegar al cierre
+            con datos confiables.
+          </p>
+          <p>
+            Si RENOVA necesita incorporar más empresas durante los dos meses, se
+            hace con el cargo de incorporación de la sección 7.1. Después del
+            piloto no hay límite de empresas: el mantenimiento se ajusta por
+            tramo de volumen, no por cantidad de clientes.
+          </p>
+        </div>
+
+        <h3>4.1 · Datos de rendimiento</h3>
+        <p>
+          El rendimiento —cuánto rinde realmente un neumático— no se puede
+          calcular solo con lo que ve el inspector: necesita información de
+          operación que RENOVA recoge de sus clientes, como el recorrido
+          acumulado de cada unidad. Esa información entra al sistema por una vía
+          distinta de la inspección.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Etapa</th>
+                <th>Cómo funciona</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Durante el piloto</strong></td>
+                <td>
+                  Carga manual desde el dashboard. Permite empezar a generar
+                  rendimientos desde el primer mes y, sobre todo, entender con
+                  datos reales cómo llega la información de cada cliente.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Al cierre del piloto</strong></td>
+                <td>
+                  Con esa experiencia se define la vía definitiva. Si los
+                  clientes entregan la información en planillas con un formato
+                  razonablemente estable, se evalúa una
+                  <strong>carga desde archivo Excel</strong> que evite el tipeo
+                  manual.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert ok">
+          <span class="tag">● Por qué se hace en dos tiempos</span>
+          <p>
+            Construir el importador antes de ver los archivos reales de cada
+            cliente es la forma más rápida de construir el importador
+            equivocado. Cada empresa entrega su información distinta. Se
+            prefiere arrancar manual durante el piloto, recolectar los formatos
+            reales y recién entonces automatizar sobre algo conocido. La carga
+            manual queda incluida en este contrato; el importador se define y
+            cotiza al cierre, ya con criterio.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 5 ============ -->
+      <section id="s5">
+        <h2><span class="num">05</span> Plan de implementación</h2>
+        <p>
+          El sistema entra en operación real desde la segunda semana. En lugar
+          de instalar todo y capacitar al final, se incorpora
+          <strong>una empresa por semana</strong>: así cada flota entra al
+          sistema con acompañamiento dedicado, y lo aprendido con la primera
+          mejora la incorporación de la siguiente.
+        </p>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semana 1</span
+            ><span class="ttl">ETAPA 1 · PREPARACIÓN E INSTALACIÓN</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                Confirmación del alcance y de los criterios con los que se
+                evaluará el piloto.
+              </li>
+              <li>
+                Instalación del sistema en el servidor de RENOVA y configuración
+                de accesos y perfiles.
+              </li>
+              <li>
+                Carga de catálogos: marcas, medidas y umbrales de remanente y
+                presión.
+              </li>
+              <li>
+                Respaldos automáticos configurados y restauración verificada.
+              </li>
+              <li>
+                Definición del orden de incorporación de las empresas y de la
+                flota de cada una.
+              </li>
+              <li>
+                <strong>Medición de referencia del proceso actual:</strong>
+                cuánto toma hoy inspeccionar una unidad y dejar su planilla
+                lista. Es contra ese número que se evalúa el piloto en la Etapa
+                5; sin medirlo al inicio, la comparación final no significa nada.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Sistema instalado y operativo; personal de
+              RENOVA entra al dashboard desde la red interna.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semana 2</span
+            ><span class="ttl">ETAPA 2 · PRIMERA EMPRESA · CAPACITACIÓN</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                <strong>Capacitación de inspectores</strong>, con práctica sobre
+                unidades reales.
+              </li>
+              <li>Capacitación de supervisión y jefatura en los dashboards.</li>
+              <li>
+                Instalación de la app en los dispositivos de los inspectores.
+              </li>
+              <li>Alta de la primera empresa y carga de su flota.</li>
+              <li>
+                <strong>Confirmación de la línea base de neumáticos.</strong> El
+                sistema no inventa cuándo se montó un neumático: una persona de
+                RENOVA confirma el primer montaje de cada posición y declara la
+                fecha. Es el punto de partida de todo cálculo posterior de vida
+                útil y rendimiento.
+              </li>
+              <li>Primeras inspecciones reales, acompañadas.</li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Primera flota inspeccionándose en el
+              sistema, con inspectores capacitados.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semanas 3 – 4</span
+            ><span class="ttl"
+              >ETAPA 3 · INCORPORACIÓN DE LAS DEMÁS EMPRESAS</span
+            >
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                Una empresa por semana: alta, carga de flota, línea base e
+                inicio de inspecciones.
+              </li>
+              <li>
+                Refuerzo de capacitación a los inspectores que se van sumando.
+              </li>
+              <li>
+                Ajustes sobre la marcha con lo aprendido en la empresa anterior.
+              </li>
+              <li>
+                Primera carga de datos de rendimiento (sección 4.1) para
+                verificar el circuito completo.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Todas las empresas del piloto incorporadas
+              y con inspecciones registrándose.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semanas 5 – 6</span
+            ><span class="ttl">ETAPA 4 · OPERACIÓN Y AJUSTES</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                Operación sostenida en todas las empresas, con soporte cercano.
+              </li>
+              <li>
+                Al menos una ronda sin señal, para comprobar el comportamiento
+                en las condiciones más exigentes.
+              </li>
+              <li>
+                <strong>Ajustes menores solicitados por RENOVA.</strong> Durante
+                estas semanas se recogen y aplican los pedidos de ajuste que
+                surjan del uso real —rótulos, ordenamientos, campos visibles,
+                detalles de pantalla—. Ver 5.1.
+              </li>
+              <li>
+                <strong>Validación cruzada de números.</strong> Se toman varios
+                neumáticos y se verifica a mano que los cálculos del sistema
+                coinciden con los de RENOVA. Es lo que garantiza que la
+                información en pantalla se puede usar para decidir.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Cálculos validados por la jefatura y
+              ajustes menores aplicados.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semanas 7 – 8</span
+            ><span class="ttl">ETAPA 5 · VALIDACIÓN Y CIERRE</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>Operación autónoma de RENOVA, sin acompañamiento.</li>
+              <li>
+                Medición contra los criterios acordados en la Etapa 1:
+                <ul>
+                  <li>
+                    90 % o más de las inspecciones planificadas se completan en
+                    la app
+                  </li>
+                  <li>
+                    Ninguna inspección capturada se pierde por causa atribuible
+                    al sistema
+                  </li>
+                  <li>
+                    El tiempo por inspección no supera la medición de referencia
+                    tomada en la Etapa 1
+                  </li>
+                  <li>
+                    La jefatura confirma que la información es confiable para
+                    decidir
+                  </li>
+                </ul>
+              </li>
+              <li>Entrega de manuales de inspector y de supervisor.</li>
+              <li>
+                Definición de la vía definitiva de carga de datos de rendimiento
+                (sección 4.1).
+              </li>
+              <li>
+                Reunión de cierre: resultados, mejoras identificadas y propuesta
+                de mantenimiento.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Acta de cierre firmada y plan de
+              mantenimiento acordado.
+            </div>
+          </div>
+        </div>
+
+        <h3>5.1 · Ajustes menores durante el piloto</h3>
+        <div class="alert ok">
+          <span class="tag">● Incluido</span>
+          <p>
+            Es normal que del uso real surjan pedidos de ajuste que no son
+            funcionalidad nueva: un rótulo que confunde, un orden de columnas
+            poco práctico, un campo que conviene mostrar u ocultar.
+            <strong>Ese tipo de ajustes está incluido en el piloto</strong> y se
+            resuelve en el momento, sin cotización de por medio.
+          </p>
+          <p>
+            La distinción es de tamaño y naturaleza: si el pedido cambia lo que
+            el sistema <em>hace</em> —una pantalla nueva, un cálculo distinto,
+            un reporte que no existía— entra como desarrollo adicional y se
+            cotiza (sección 08). Los pedidos que se reciban se registran y se
+            clasifican de forma transparente con RENOVA a medida que aparecen.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 6 ============ -->
+      <section id="s6">
+        <h2><span class="num">06</span> Lo que necesitamos de RENOVA</h2>
+
+        <p>
+          El plazo de dos meses depende de que estos puntos estén disponibles
+          cuando corresponde. Se listan con transparencia para que no haya
+          sorpresas a mitad del piloto.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Requisito</th>
+                <th>Cuándo</th>
+                <th>Por qué</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Servidor disponible</strong>, con las características
+                  que se acuerden
+                </td>
+                <td>Semana 1</td>
+                <td>Es donde vive el sistema</td>
+              </tr>
+              <tr>
+                <td><strong>Vía de acceso para soporte remoto</strong></td>
+                <td>Semana 1</td>
+                <td>Permite atender incidencias en horas en lugar de días</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Responsable del proyecto</strong> con autoridad para
+                  decidir
+                </td>
+                <td>Todo el piloto</td>
+                <td>Evita que las definiciones queden en suspenso</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Dispositivos Android</strong> para los inspectores
+                </td>
+                <td>Semana 2</td>
+                <td>
+                  La capacitación arranca en la semana 2 sobre el equipo real
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Disponibilidad de inspectores</strong> para
+                  capacitación y rondas acompañadas
+                </td>
+                <td>Semanas 2 – 4</td>
+                <td>La adopción se juega en campo, no en la oficina</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Datos de flota</strong> de cada empresa, en el formato
+                  que se acuerde
+                </td>
+                <td>La semana previa a incorporar cada empresa</td>
+                <td>Es la materia prima de cada alta</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Responsable de la línea base</strong> de neumáticos,
+                  con tiempo asignado
+                </td>
+                <td>Semanas 2 – 4</td>
+                <td>
+                  Nadie fuera de RENOVA puede confirmar cuándo se montó un
+                  neumático
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Datos de rendimiento</strong> recogidos de los
+                  clientes
+                </td>
+                <td>Desde la semana 3</td>
+                <td>
+                  Sin recorrido acumulado no hay cálculo de rendimiento (sección
+                  4.1)
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Ventana de mantenimiento</strong> acordada</td>
+                <td>Todo el contrato</td>
+                <td>
+                  Para aplicar actualizaciones sin interrumpir la operación
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 7 ============ -->
+      <section id="s7">
+        <h2><span class="num">07</span> Inversión</h2>
+
+        <div class="price-grid">
+          <div class="price lead">
+            <div class="concept">Implementación y piloto · mensual</div>
+            <div class="amount">
+              S/ 4,500 <span style="font-size: 13px">+ IGV / mes</span>
+            </div>
+            <div class="terms">
+              Durante los 2 meses del piloto. Cubre instalación, configuración,
+              incorporación de hasta 3 empresas con sus flotas, capacitación,
+              acompañamiento en campo, ajustes menores y documentación.
+            </div>
+          </div>
+          <div class="price">
+            <div class="concept">Total del piloto · 2 meses</div>
+            <div class="amount">S/ 10,620</div>
+            <div class="terms">
+              S/ 9,000 + IGV (S/ 1,620). Facturado en dos cuotas mensuales de S/
+              5,310 IGV incluido.
+            </div>
+          </div>
+          <div class="price">
+            <div class="concept">Mantenimiento posterior</div>
+            <div class="amount">Por tramo</div>
+            <div class="terms">
+              Tarifa mensual según el volumen de flota atendida. La estructura se
+              detalla abajo; los montos se fijan al cierre del piloto con datos
+              reales de uso.
+            </div>
+          </div>
+          <div class="price">
+            <div class="concept">Desarrollo adicional</div>
+            <div class="amount">Por cotización</div>
+            <div class="terms">
+              Cada funcionalidad nueva se cotiza por separado y se aprueba antes
+              de ejecutarse. Sin cargos no autorizados.
+            </div>
+          </div>
+        </div>
+
+        <h3>7.1 · Cómo escala el mantenimiento</h3>
+        <p>
+          El esfuerzo de mantener el sistema no es el mismo con una flota de 80
+          unidades que con una de 600: cambian el volumen de inspecciones, el
+          espacio en disco, el tiempo de respaldo y la cantidad de consultas de
+          soporte. Por eso la tarifa mensual se organiza en
+          <strong>tramos por volumen</strong>, y no como un monto plano.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Cómo se calcula</th>
+                <th>Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Tarifa mensual</strong></td>
+                <td>
+                  Según el tramo de <strong>unidades activas</strong> registradas
+                  en el sistema, sumando todas las empresas atendidas:<br />
+                  Tramo 1 — hasta 100 unidades<br />
+                  Tramo 2 — de 101 a 250<br />
+                  Tramo 3 — de 251 a 500<br />
+                  Más de 500 — se acuerda por separado
+                </td>
+                <td>Se fija al cierre del piloto</td>
+              </tr>
+              <tr>
+                <td><strong>Incorporación de una empresa nueva</strong></td>
+                <td>
+                  Cargo único por empresa. Cubre su alta, catálogos y umbrales
+                  propios, confirmación de la línea base de su flota y
+                  capacitación del equipo asignado.
+                </td>
+                <td>Se fija al cierre del piloto</td>
+              </tr>
+              <tr>
+                <td><strong>Crecimiento dentro de un tramo</strong></td>
+                <td>
+                  Agregar unidades o neumáticos a una empresa ya incorporada, sin
+                  cambiar de tramo
+                </td>
+                <td class="yes">Sin costo adicional</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert ok">
+          <span class="tag">● Cómo se aplica, sin sorpresas</span>
+          <ul>
+            <li>
+              <strong>El tramo se revisa una vez al año</strong>, o antes si
+              RENOVA incorpora una empresa que cambie el tramo. Nunca se ajusta
+              de forma retroactiva ni automática: se conversa y se acuerda.
+            </li>
+            <li>
+              <strong>Si el volumen baja, la tarifa baja.</strong> El tramo se
+              aplica en ambos sentidos.
+            </li>
+            <li>
+              Los tramos se definen al cierre del piloto, cuando existan datos
+              reales de cuánto cuesta operar el sistema con la flota real.
+            </li>
+          </ul>
+        </div>
+
+        <div class="alert ok">
+          <span class="tag">● Qué no se cobra aparte</span>
+          <ul>
+            <li>
+              Licencias de plataformas externas o servicios en la nube: el
+              sistema no las usa.
+            </li>
+            <li>
+              Costo por usuario: el personal de RENOVA que necesite acceso lo
+              tiene, sin cargo por butaca.
+            </li>
+            <li>
+              Instalación de las actualizaciones incluidas en el mantenimiento.
+            </li>
+          </ul>
+          <p>
+            RENOVA asume el costo de su propia infraestructura: servidor, red y
+            dispositivos.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 8 ============ -->
+      <section id="s8">
+        <h2><span class="num">08</span> Mantenimiento</h2>
+
+        <p>
+          Tras el piloto, Antig se hace cargo de que el sistema siga
+          funcionando. RENOVA no administra la base de datos ni aplica
+          actualizaciones: <strong>eso corre por nuestra cuenta</strong>.
+        </p>
+
+        <h3>8.1 · Qué incluye la mensualidad</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Actividades</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Correctivo</strong></td>
+                <td>
+                  Corrección de fallas del sistema; resolución de problemas de
+                  sincronización; restablecimiento del servicio ante caídas
+                  atribuibles al software
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Preventivo</strong></td>
+                <td>
+                  Actualizaciones de seguridad; revisión del estado del sistema
+                  y del crecimiento de datos; supervisión de respaldos y
+                  verificación periódica de restauración
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Operativo</strong></td>
+                <td>
+                  Alta y baja de usuarios; carga de nuevas marcas, medidas y
+                  unidades en empresas ya incorporadas; ajuste de umbrales y
+                  parámetros configurables
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Soporte</strong></td>
+                <td>
+                  Atención de consultas e incidencias por el canal acordado, con
+                  los tiempos de la tabla siguiente
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>8.2 · Tiempos de atención</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Severidad</th>
+                <th>Situación</th>
+                <th>Respuesta</th>
+                <th>Resolución objetivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="no">Crítica</td>
+                <td>Sistema no disponible para toda la operación</td>
+                <td>4 horas hábiles</td>
+                <td>Servicio restablecido en 24 horas hábiles</td>
+              </tr>
+              <tr>
+                <td class="no">Crítica</td>
+                <td>Pérdida de datos de inspección ya sincronizados</td>
+                <td>4 horas hábiles</td>
+                <td>
+                  Restauración desde el último respaldo disponible, en 24 horas
+                  hábiles
+                </td>
+              </tr>
+              <tr>
+                <td class="part">Alta</td>
+                <td>Función central inutilizable, sin alternativa</td>
+                <td>1 día hábil</td>
+                <td>3 días hábiles</td>
+              </tr>
+              <tr>
+                <td>Media</td>
+                <td>Falla con forma alternativa de operar</td>
+                <td>3 días hábiles</td>
+                <td>10 días hábiles</td>
+              </tr>
+              <tr>
+                <td>Baja</td>
+                <td>Detalle visual o mejora menor</td>
+                <td>5 días hábiles</td>
+                <td>Siguiente ciclo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Horario de atención: <strong>lunes a sábado de 9:00 a 18:00</strong>,
+          acompañando los días en que RENOVA opera. Se excluyen domingos y
+          feriados. La atención fuera de este horario se cotiza por separado. Los
+          tiempos suponen disponibilidad de la vía de acceso remoto acordada.
+        </p>
+
+        <div class="alert warn">
+          <span class="tag">▲ Alcance de la garantía de datos</span>
+          <p>
+            La recuperación de datos se hace desde el último respaldo disponible:
+            <strong
+              >se restaura hasta ese punto, no más allá</strong
+            >. La frecuencia de respaldo se acuerda al instalar y define cuánto
+            se puede perder en el peor caso.
+          </p>
+          <p>
+            Los tiempos anteriores aplican a fallas del software entregado. Las
+            causadas por la infraestructura de RENOVA —caída del servidor,
+            cambios en la red, falta de espacio en disco, intervención directa
+            sobre el sistema— se atienden con la misma prioridad, pero su
+            resolución depende de que RENOVA restablezca la parte que le
+            corresponde.
+          </p>
+        </div>
+
+        <h3>8.3 · Qué se considera desarrollo adicional</h3>
+        <p>
+          Para evitar ambigüedades, la regla es una sola:
+          <strong
+            >el mantenimiento conserva funcionando lo entregado al cierre del
+            piloto; todo lo que agregue o cambie ese comportamiento es
+            desarrollo adicional</strong
+          >
+          y se cotiza por separado. Ejemplos:
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Solicitud</th>
+                <th>Categoría</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Agregar una marca o medida de neumático al catálogo</td>
+                <td class="yes">Mantenimiento</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong
+                    >Agregar unidades o neumáticos a una empresa ya
+                    incorporada</strong
+                  >
+                </td>
+                <td class="yes">Mantenimiento</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Incorporar una empresa nueva</strong>
+                </td>
+                <td class="part">Cargo de incorporación (7.1)</td>
+              </tr>
+              <tr>
+                <td>Ajustar un umbral configurable</td>
+                <td class="yes">Mantenimiento</td>
+              </tr>
+              <tr>
+                <td>
+                  Corregir un cálculo que no coincide con la regla acordada
+                </td>
+                <td class="yes">Mantenimiento</td>
+              </tr>
+              <tr>
+                <td>Agregar usuarios o cambiar permisos</td>
+                <td class="yes">Mantenimiento</td>
+              </tr>
+              <tr>
+                <td>Un dashboard, reporte o métrica que no existía</td>
+                <td class="no">Desarrollo adicional</td>
+              </tr>
+              <tr>
+                <td>Soportar una configuración de eje no cubierta</td>
+                <td class="no">Desarrollo adicional</td>
+              </tr>
+              <tr>
+                <td>Cambiar una regla de negocio o una fórmula acordada</td>
+                <td class="no">Desarrollo adicional</td>
+              </tr>
+              <tr>
+                <td>Carga de datos de rendimiento desde archivo Excel</td>
+                <td class="no">Desarrollo adicional</td>
+              </tr>
+              <tr>
+                <td>Almacenar fotografías de inspección en el servidor</td>
+                <td class="no">Desarrollo adicional</td>
+              </tr>
+              <tr>
+                <td>Integrar con otro sistema de RENOVA o de sus clientes</td>
+                <td class="no">Desarrollo adicional</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Todo desarrollo adicional se cotiza y se aprueba antes de ejecutarse.
+          Si con el tiempo el sistema incorpora funcionalidades nuevas de forma
+          permanente, la mensualidad se ajusta en la proporción que se acuerde
+          al momento de cotizar cada una — nunca de forma retroactiva ni
+          unilateral.
+        </p>
+      </section>
+
+      <!-- ============ 9 ============ -->
+      <section id="s9">
+        <h2><span class="num">09</span> Propiedad intelectual y licencia</h2>
+
+        <div class="callout">
+          <p>
+            <strong
+              >RENOVA es propietaria de sus datos. Antig es propietaria del
+              software.</strong
+            >
+            RENOVA recibe una licencia de uso del sistema, instalado en sus
+            propios servidores, por el tiempo que dure la relación comercial.
+          </p>
+        </div>
+
+        <h3>9.1 · Qué corresponde a cada parte</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>&nbsp;</th>
+                <th>Propiedad de RENOVA</th>
+                <th>Propiedad de Antig</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Datos</strong></td>
+                <td class="yes">
+                  Toda la información de inspecciones, flotas, neumáticos y
+                  usuarios, incluida la de las empresas que atiende. Frente a
+                  Antig, RENOVA es la titular; la relación con cada empresa
+                  atendida la gobierna RENOVA.
+                </td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td><strong>Infraestructura</strong></td>
+                <td class="yes">Servidor, red y dispositivos.</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td><strong>Software</strong></td>
+                <td>Licencia de uso mientras esté vigente el acuerdo.</td>
+                <td class="yes">
+                  Código fuente, arquitectura, motor de cálculo y diseño del
+                  sistema.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>Documentación de uso</strong></td>
+                <td class="yes">Copia completa, de uso interno.</td>
+                <td>Autoría.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>9.2 · Términos de la licencia</h3>
+        <div class="card">
+          <ul>
+            <li>
+              <strong>Alcance:</strong> licencia de uso para RENOVA, no
+              exclusiva e intransferible, para su operación de inspección de
+              neumáticos. El volumen de flota cubierto es el del tramo vigente
+              (sección 7.1).
+            </li>
+            <li>
+              <strong>Vigencia:</strong> mientras se mantenga vigente el acuerdo
+              de mantenimiento. El sistema instalado
+              <strong>no deja de funcionar</strong> si el acuerdo termina — ver
+              sección 10.
+            </li>
+            <li>
+              <strong>Instalación:</strong> una instalación, en el servidor
+              acordado. Cualquier instalación adicional requiere un acuerdo
+              separado.
+            </li>
+            <li>
+              <strong>Uso interno:</strong> la licencia habilita a RENOVA y a su
+              personal. No incluye ceder el uso del sistema a terceros ni
+              prestarlo como servicio propio a otras organizaciones.
+            </li>
+            <li>
+              <strong>Modificaciones:</strong> el sistema no se modifica por
+              fuera de Antig. Intervenirlo directamente deja sin efecto el
+              soporte, porque deja de ser la versión probada y verificada.
+            </li>
+            <li>
+              <strong>Reserva de derechos:</strong> no se transfiere propiedad
+              del software, ni se autoriza su descompilación, extracción,
+              replicación ni la creación de obras derivadas.
+            </li>
+            <li>
+              <strong>Confidencialidad recíproca:</strong> Antig protege la
+              información de RENOVA; RENOVA protege la información técnica del
+              sistema a la que tenga acceso.
+            </li>
+          </ul>
+        </div>
+
+        <div class="alert ok">
+          <span class="tag">● Sobre los datos, sin letra chica</span>
+          <p>
+            Los datos de inspección son de RENOVA en todo momento. RENOVA puede
+            exportarlos completos, en formato abierto y estándar, cuando lo
+            solicite — durante el acuerdo y al terminarlo. Antig no reclama
+            derechos sobre ellos, no los comercializa y no los comparte con
+            terceros.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 10 ============ -->
+      <section id="s10">
+        <h2><span class="num">10</span> Continuidad</h2>
+
+        <p>
+          Una preocupación razonable al contratar software a medida es qué
+          ocurre si el proveedor deja de estar disponible. Se responde por
+          adelantado:
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Situación</th>
+                <th>Qué ocurre</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong
+                    >RENOVA decide no continuar con el mantenimiento</strong
+                  >
+                </td>
+                <td class="yes">
+                  El sistema instalado sigue funcionando. Se interrumpen las
+                  actualizaciones, el soporte y el desarrollo, pero no se
+                  bloquea el acceso ni la operación. No existe ningún mecanismo
+                  de apagado.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong
+                    >Antig cesa operaciones o incumple de forma
+                    sostenida</strong
+                  >
+                </td>
+                <td class="yes">
+                  A solicitud de RENOVA puede constituirse un depósito del
+                  código fuente ante un tercero (escrow), liberable a su favor en
+                  ese supuesto. Su costo y condiciones se acuerdan por separado.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Cualquiera de las partes termina el acuerdo</strong>
+                </td>
+                <td>
+                  Preaviso de 60 días. Antig entrega la última versión
+                  instalada, la documentación actualizada y una exportación
+                  completa de los datos.
+                </td>
+              </tr>
+              <tr>
+                <td><strong>RENOVA cambia de servidor</strong></td>
+                <td>
+                  La reinstalación está incluida en el mantenimiento una vez al
+                  año.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Próximos pasos</h3>
+        <div class="card">
+          <ol>
+            <li>Revisión de esta propuesta y resolución de consultas.</li>
+            <li>
+              Confirmación de las características del servidor y de la vía de
+              acceso para soporte.
+            </li>
+            <li>
+              Inventario de la flota, para verificar las configuraciones de
+              vehículo cubiertas.
+            </li>
+            <li>Firma del acuerdo de implementación y licencia.</li>
+            <li>Inicio del piloto el lunes siguiente a la firma.</li>
+          </ol>
+        </div>
+
+        <div class="signatures">
+          <div class="sign">Por RENOVA<br />Nombre<br />Cargo<br />Fecha</div>
+          <div class="sign">
+            Por ANTIG<br />Facundo Morales<br />Dirección<br />Fecha
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot-inner">
+        ANTIG · PROPUESTA DE IMPLEMENTACIÓN — MÓDULO DE INSPECCIONES · Válida
+        por 30 días desde su emisión. Los montos no incluyen IGV salvo
+        indicación expresa.
+      </div>
+    </footer>
+  </body>
+</html>

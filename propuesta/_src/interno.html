@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="es-PE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interno · Appliance RENOVA — arquitectura y ejecución</title>
+<style>__ESTILO__</style>
+</head>
+<body>
+
+<div class="confidential">◼ Documento interno de Antig · No compartir con RENOVA ◼</div>
+
+<header>
+  <div class="head-inner">
+    <div>
+      <div class="logo">RENOVA <b>INSPECTOR</b></div>
+      <div class="screen-name">INTERNO · ARQUITECTURA Y EJECUCIÓN DEL APPLIANCE</div>
+    </div>
+    <div class="head-meta">
+      Uso <span>Solo Antig</span><br>
+      Complementa <span>Propuesta al cliente</span><br>
+      Actualizado <span>04 · 08 · 2026</span><br>
+      Estado <span>Decisiones pendientes</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="summary">
+    <div class="stat"><span class="k">Esfuerzo extra</span><span class="v accent">2 – 3 sem</span></div>
+    <div class="stat"><span class="k">No presupuestado</span><span class="v small">Empaquetado<br>del appliance</span></div>
+    <div class="stat"><span class="k">Migraciones</span><span class="v">53</span></div>
+    <div class="stat"><span class="k">RPCs expuestos</span><span class="v">3</span></div>
+    <div class="stat"><span class="k">Decisiones abiertas</span><span class="v">4</span></div>
+  </div>
+
+  <section>
+    <h2><span class="num">ÍNDICE</span> Contenido</h2>
+    <ul class="toc">
+      <li><a href="#s0"><b>00</b> Decisiones pendientes</a></li>
+      <li><a href="#s1"><b>01</b> Arquitectura del appliance</a></li>
+      <li><a href="#s2"><b>02</b> Qué protege realmente la caja negra</a></li>
+      <li><a href="#s3"><b>03</b> Empaquetado y actualizaciones</a></li>
+      <li><a href="#s4"><b>04</b> Ejecución del piloto</a></li>
+      <li><a href="#s5"><b>05</b> Riesgos</a></li>
+    </ul>
+  </section>
+
+  <!-- ============ 0 ============ -->
+  <section id="s0">
+    <h2><span class="num">00</span> Decisiones pendientes</h2>
+
+    <div class="alert crit">
+      <span class="tag">■ Resolver antes de firmar</span>
+      <p>Cuatro puntos abiertos. Ninguno se resuelve «sobre la marcha»: todos cambian el costo, el plazo o
+      la exposición contractual.</p>
+    </div>
+
+    <h3>0.1 · El presupuesto no cubre el empaquetado</h3>
+    <p>Frente a seguir en nube gestionada, el appliance agrega: empaquetado de la pila self-hosted,
+    herramientas de instalación y actualización, respaldos propios, procedimiento de reversión y la
+    externalización de configuración de la app. Estimación honesta: <strong>2 a 3 semanas</strong> que hoy
+    no están presupuestadas. El piloto factura <strong>S/ 4,500 + IGV mensuales por 2 meses</strong>
+    —S/ 9,000 + IGV, S/ 10,620 en total—, y ese monto cubre la implementación, no el empaquetado previo.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Salida</th><th>Implicancia</th><th>Cuándo conviene</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ajustar el monto</strong></td><td>Se cobra el empaquetado como parte de la implementación</td><td>Si RENOVA acepta el modelo como requisito propio — que lo es</td></tr>
+          <tr><td><strong>Extender el plazo</strong> a 10-11 semanas</td><td>Se mantiene el monto, se estira el calendario</td><td>Si el monto ya está comprometido verbalmente</td></tr>
+          <tr><td class="yes"><strong>Absorberlo</strong> como inversión</td><td>Se come el costo esta vez</td><td class="yes">Recomendada: el appliance es un activo reutilizable con el próximo cliente. Se paga una vez y se vende muchas.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><em>La propuesta al cliente está redactada asumiendo esta última opción: mantiene S/ 4,500 + IGV
+    mensuales y 8 semanas. Si se elige otra, hay que cambiar el monto o el calendario en la sección 07 de
+    ese documento.</em></p>
+
+    <h3>0.2 · El brief comercial describe otro sistema</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Dice el brief</th><th>Es en realidad</th></tr></thead>
+        <tbody>
+          <tr><td>Flutter</td><td>React 19 + Vite + TypeScript + Capacitor 8 (Android). No existe <code>pubspec.yaml</code>.</td></tr>
+          <tr><td>FastAPI</td><td>No existe backend Python. Sin <code>requirements.txt</code> ni <code>main.py</code>.</td></tr>
+          <tr><td>Aislamiento por schema por empresa</td><td>Aislamiento por columna <code>empresa_id</code> + RLS. Correcto, pero es otra cosa.</td></tr>
+          <tr><td>PostgreSQL + Supabase</td><td class="yes">Correcto.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Corregirlo antes de firmar. Si RENOVA aprueba creyendo el brief, la discrepancia aparece en su
+    primera auditoría técnica y erosiona la confianza justo cuando más se necesita. El stack real no es
+    peor — es más simple y más barato de mantener.</p>
+
+    <h3>0.3 · El modelo de tenencia cambió: RENOVA ve todas las empresas</h3>
+    <div class="alert crit">
+      <span class="tag">■ Revisar antes de instalar</span>
+      <p>Definición del cliente: <strong>las flotas no son de RENOVA, son de sus clientes</strong> —Jaksa,
+      Ittsabus y demás—, y el personal de RENOVA (inspectores incluidos) trabaja sobre todas. El tenant
+      real es RENOVA; <code>empresa_id</code> pasa a ser una <strong>dimensión de organización y reporte</strong>,
+      no una frontera de acceso entre usuarios.</p>
+      <p>Qué hay que verificar en el código antes de instalar:</p>
+      <ul>
+        <li>Si los policies de RLS hoy filtran por la empresa del perfil del usuario, ese filtro
+        <strong>bloquearía a los inspectores</strong> en cuanto vayan a una segunda empresa. Hay que
+        revisar cómo se resuelve la empresa del usuario y ajustar el modelo de acceso.</li>
+        <li>Revisar los selectores de empresa en app y dashboard: el flujo tiene que permitir elegir
+        empresa por inspección, no derivarla del perfil.</li>
+        <li>El aislamiento sigue existiendo, pero <strong>a nivel de instalación</strong>: un appliance por
+        cliente-operador. Dentro del appliance, RENOVA ve todo lo suyo.</li>
+      </ul>
+      <p>La auditoría de RLS sigue siendo obligatoria, pero cambia de objetivo: ya no es «que nadie vea
+      otra empresa», es <strong>que nadie sin sesión válida vea nada</strong> y que las vistas y RPCs no
+      queden expuestos con permisos de más. Verificar <code>security_invoker</code> donde corresponde,
+      <code>revoke_dml_on_dashboard_views</code> cubriendo todas las vistas, y advisors sin hallazgos.</p>
+    </div>
+    <p><em>Este cambio puede ser trabajo real —no está estimado dentro de las 2-3 semanas de 0.1—.
+    Dimensionarlo es parte del prototipo del paso 4 de próximos pasos.</em></p>
+
+    <h3>0.4 · El mantenimiento no puede ser plano con empresas ilimitadas</h3>
+    <div class="alert crit">
+      <span class="tag">■ Corregido en la propuesta — falta calibrar los números</span>
+      <p>Una mensualidad fija mientras RENOVA suma clientes de transporte es un regalo que se agranda
+      solo. El esfuerzo real sí escala: más inspecciones, más disco, más tiempo de respaldo, más consultas
+      de soporte, más superficie donde algo puede fallar. Con una multinacional que puede incorporar
+      empresas a ritmo propio, la mensualidad de 3 empresas quedaría vieja en un año.</p>
+      <p><strong>Modelo adoptado:</strong> tramos por <em>unidades activas</em>, no por cantidad de
+      empresas, más un cargo único de incorporación por empresa nueva.</p>
+      <ul>
+        <li><strong>Por qué unidades y no empresas:</strong> el driver de carga es el tamaño de flota. Tres
+        empresas de 15 buses pesan menos que una de 200. Cobrar por empresa castiga al cliente chico,
+        premia al grande y es fácil de discutir; cobrar por unidad correlaciona con el costo real y no se
+        puede maquillar fusionando o dividiendo razones sociales.</li>
+        <li><strong>Por qué además un cargo de incorporación:</strong> dar de alta una empresa tiene
+        trabajo propio que no depende del tamaño — catálogos, umbrales, línea base, capacitación del
+        equipo. Sin ese cargo, cada cliente nuevo de RENOVA es trabajo gratis.</li>
+        <li><strong>Por qué el tramo baja si el volumen baja:</strong> cuesta poco ofrecerlo, quita la
+        objeción de «me estás encadenando» y hace que el mecanismo se lea como justo en lugar de como
+        aumento encubierto.</li>
+      </ul>
+      <p><strong>Pendiente:</strong> los cortes de tramo (100 / 250 / 500 unidades) son una propuesta de
+      partida. Hay que contrastarlos con el tamaño real de las flotas de Jaksa, Ittsabus y las demás
+      durante la semana 1 — si la primera empresa ya trae 300 unidades, los cortes están mal puestos. Los
+      montos se fijan al cierre del piloto, cuando exista el dato de cuánto cuesta operar de verdad; en la
+      propuesta se comprometió la <em>estructura</em>, no las cifras, que es lo correcto a esta altura.</p>
+    </div>
+
+    <h3>0.5 · Alcance nuevo comprometido: exportación a Excel</h3>
+    <div class="alert crit">
+      <span class="tag">■ No existe todavía — hay que construirlo</span>
+      <p>La propuesta compromete <strong>descarga a Excel de las inspecciones, filtrada por empresa y
+      fecha</strong>. Verificado en el repo: <em>no existe generación ni exportación de reportes</em>.
+      <code>WEB/importar.html</code> es un importador de inspecciones desde xlsx —usa <code>save_inspection</code>—,
+      no lo contrario. Lo único que hay es el patrón de manejo de xlsx en el navegador, que sirve de
+      referencia.</p>
+      <p>Es el reemplazo del entregable diario que hoy hacen a mano, así que es lo primero que van a
+      probar y lo primero que van a reclamar si falta. Debe estar operativo <strong>antes de la semana 2</strong>,
+      cuando arranca la capacitación: un inspector capacitado que al final del día no puede sacar su Excel
+      es una mala primera impresión difícil de revertir.</p>
+      <p>La propuesta excluye explícitamente el <em>envío</em> automático del archivo. Sostener esa línea:
+      correo o mensajería abre integración, credenciales y responsabilidad de entrega. La descarga es un
+      clic; el envío lo hace la persona.</p>
+    </div>
+
+    <h3>0.6 · Soporte los sábados — confirmar antes de firmar</h3>
+    <div class="alert warn">
+      <span class="tag">▲ Compromiso personal, no técnico</span>
+      <p>El horario quedó en <strong>lunes a sábado de 9:00 a 18:00</strong>, excluyendo domingos y
+      feriados, para acompañar los días en que RENOVA opera. Es lo correcto comercialmente —un problema el
+      sábado con inspectores en ruta no puede esperar al lunes— pero es <strong>un sábado de disponibilidad
+      cada semana, indefinidamente</strong>.</p>
+      <p>Conviene decidirlo con la cabeza fría: o se sostiene y se cobra en la mensualidad, o se reduce a
+      lunes-viernes con guardia de sábado cotizada aparte. Prometerlo y no cumplirlo cuesta más que no
+      prometerlo.</p>
+    </div>
+
+    <h3>0.7 · Acceso remoto para soporte</h3>
+    <p>Los SLA prometidos al cliente —4 horas hábiles para severidad crítica— <strong>no se sostienen si
+    cada intervención exige presencia física</strong>. Hay que cerrar el mecanismo (VPN de RENOVA o sesión
+    habilitada a pedido) en la semana 2, o bajar los tiempos comprometidos antes de firmar. Ya está listado
+    como requisito en la propuesta al cliente; falta que RENOVA lo confirme.</p>
+  </section>
+
+  <!-- ============ 1 ============ -->
+  <section id="s1">
+    <h2><span class="num">01</span> Arquitectura del appliance</h2>
+
+    <p>La app y el dashboard hablan hoy con Supabase gestionado. Para vivir en el servidor de RENOVA, la
+    imagen incorpora los mismos componentes self-hosted. <strong>El código de app y dashboard no cambia</strong>:
+    siguen usando <code>supabase-js</code>, RLS y los mismos RPCs — solo apuntan a otra dirección.</p>
+
+    <div class="diagram">
+      <div class="zone box">
+        <div class="zone-name">◼ Appliance Docker · servidor de RENOVA</div>
+        <div class="svc-grid">
+          <div class="svc"><b>PostgreSQL</b><span>Datos, RLS por empresa, vistas y RPCs. 53 migraciones aplicadas en orden.</span></div>
+          <div class="svc"><b>PostgREST</b><span>Expone tablas, vistas y RPCs sobre HTTP respetando RLS.</span></div>
+          <div class="svc"><b>GoTrue</b><span>Autenticación y emisión de JWT por usuario y empresa.</span></div>
+          <div class="svc"><b>Gateway</b><span>Enrutado, TLS, rate limiting y separación de las dos superficies.</span></div>
+          <div class="svc"><b>Nginx estático</b><span>Sirve el dashboard compilado del módulo de inspecciones.</span></div>
+          <div class="svc"><b>Respaldos</b><span>Volcado programado a volumen propio, con retención y verificación.</span></div>
+          <div class="svc off"><b>Storage — futuro</b><span>Fotos de inspección. No se construye ahora; se reserva volumen y ruta de migración.</span></div>
+          <div class="svc off"><b>Realtime — no incluido</b><span>El módulo no usa suscripciones en vivo.</span></div>
+        </div>
+      </div>
+
+      <div class="flow">▼ &nbsp; L A N &nbsp; ▼ &nbsp;&nbsp;&nbsp; ▼ &nbsp; T L S &nbsp; ▼</div>
+
+      <div class="zone">
+        <div class="zone-name">◻ Consumidores</div>
+        <div class="svc-grid">
+          <div class="svc"><b>Dashboard web</b><span>Navegador en la red interna. Sin salida a internet.</span></div>
+          <div class="svc"><b>App Android</b><span>Captura offline en SQLite; sincroniza contra la API publicada.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <h3>1.1 · Las dos superficies</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Superficie</th><th>Exposición</th><th>Qué alcanza</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Dashboard</strong></td><td class="yes">Solo LAN</td><td>Todo el módulo: historial, rendimiento, flota</td></tr>
+          <tr><td><strong>API de sync</strong></td><td class="part">Publicada con TLS</td><td class="part">Login + <code>save_inspection</code>, <code>get_unidad_preload</code>, <code>get_umbrales_rtd</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Es lo que hace defendible el diseño: lo expuesto no es «el sistema», son tres llamadas y un login.
+    Todo lo demás es inalcanzable desde fuera de la red de RENOVA.</p>
+
+    <h3>1.2 · Simplificaciones confirmadas en el código</h3>
+    <div class="alert ok">
+      <span class="tag">● Menos piezas de las esperadas</span>
+      <ul>
+        <li><strong>Sin Storage por ahora:</strong> las fotos se capturan como DataURL y no se suben
+        (<code>UnidadScreen.tsx:240</code>). Ampliación prevista: al activarla cambia el dimensionado de
+        disco y el plan de respaldos.</li>
+        <li><strong>Sin Realtime.</strong></li>
+        <li><strong>Superficie de API mínima:</strong> la app solo necesita 3 RPCs.</li>
+      </ul>
+    </div>
+
+    <h3>1.3 · Puntos que muerden en la implementación</h3>
+    <div class="alert warn">
+      <span class="tag">▲ Resolver en Fase 1</span>
+      <ul>
+        <li><strong>La URL del servidor va compilada en el APK.</strong>
+        <code>app/src/sync/supabaseClient.ts</code> la toma de <code>VITE_SUPABASE_URL</code> en tiempo de
+        build. Externalizarla a configuración en tiempo de ejecución; si no, cada instalación tiene su
+        propio APK y un cambio de dominio obliga a reconstruir y reinstalar en todos los dispositivos.</li>
+        <li><strong>Endpoint de sync con nombre estable y certificado.</strong> Un certificado vencido deja
+        a los inspectores sin sincronizar. Renovación automática y alerta anticipada.</li>
+        <li><strong>Claves JWT propias por instalación.</strong> Generadas al instalar, nunca reutilizadas
+        entre clientes. Rotación documentada.</li>
+        <li><strong>Reloj del servidor sincronizado.</strong> JWT y fechado de inspecciones dependen de la
+        hora; un servidor desfasado produce fallos de login difíciles de diagnosticar.</li>
+        <li><strong>Dimensionado del host:</strong> CPU, RAM, disco y política de crecimiento. Un appliance
+        sin disco cae completo.</li>
+        <li><strong>Verificar <code>supabase/migrations/down</code>:</strong> confirmar que cubre las
+        migraciones sensibles y completarlo donde falte. Es el plan de reversión.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section id="s2">
+    <h2><span class="num">02</span> Qué protege realmente la caja negra</h2>
+
+    <div class="alert crit">
+      <span class="tag">■ El punto incómodo</span>
+      <p>RENOVA tendrá <strong>root en el anfitrión</strong>. Con root se entra al contenedor, se vuelca
+      Postgres y se lee el SQL de vistas y RPCs, y se extrae el JavaScript del dashboard. <strong>La caja
+      negra es opaca por fricción, no por criptografía.</strong> No existe forma de entregar software que
+      corra en hardware ajeno y sea técnicamente inaccesible para el dueño de ese hardware.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Activo</th><th>¿Protegido?</th><th>Realidad</th></tr></thead>
+        <tbody>
+          <tr><td>Esquema SQL: vistas, RPCs, reglas</td><td class="no">No</td><td>Legible con acceso admin a Postgres. El activo más valioso y el menos protegible.</td></tr>
+          <tr><td>Dashboard JS</td><td class="no">No</td><td>El navegador lo lee, luego el usuario también.</td></tr>
+          <tr><td>Bundle de la app Android</td><td class="part">Parcial</td><td>Extraíble del APK; minificado y sin sourcemaps es tedioso de reconstruir.</td></tr>
+          <tr><td>Capacidad de <em>evolucionar</em> el sistema</td><td class="yes">Sí</td><td>Requiere repositorio, historial, fixtures golden y conocimiento del dominio. Nada de eso está en el contenedor.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <p>La última fila es la que importa. Copiar una foto del sistema es factible; <strong>mantenerlo y
+      hacerlo evolucionar sin el repositorio, los fixtures de cálculo y el conocimiento del negocio no lo
+      es</strong>. El resguardo real es licencia escrita + dependencia práctica de las actualizaciones,
+      no la ofuscación.</p>
+    </div>
+
+    <h3>2.1 · Endurecimiento que vale la pena</h3>
+    <div class="card">
+      <ul class="check">
+        <li>Minificación y sin sourcemaps en dashboard y app — barato y eleva la fricción</li>
+        <li>Migraciones y herramientas de desarrollo <strong>fuera</strong> de la imagen: se entrega el esquema aplicado, no el historial de cómo se construyó</li>
+        <li>Sin comentarios de diseño ni notas de decisión en el SQL que llega al contenedor</li>
+        <li>Usuario de base de datos de la aplicación sin privilegios de superusuario</li>
+        <li>Sin credenciales, claves ni <code>service_role</code> embebidos en artefactos entregados</li>
+        <li>Imagen construida desde tag inmutable, con checksum en el acta</li>
+      </ul>
+      <p style="margin-top:14px"><strong>Lo que no vale la pena:</strong> ofuscadores comerciales, cifrado
+      del contenedor, binarios anti-manipulación. Retorno decreciente rápido, mantenimiento eterno, y no
+      cambian el escenario de alguien con root.</p>
+    </div>
+
+    <h3>2.2 · La cláusula que hace el trabajo</h3>
+    <p>De todas las cláusulas de licencia, la más útil en la práctica es <strong>«modificar el contenedor
+    anula el soporte»</strong>: no depende de detectar nada, y alinea el incentivo — tocar la caja les
+    cuesta a ellos. Está redactada en la sección 09 de la propuesta al cliente junto con la reserva de
+    derechos, la prohibición de descompilar y el límite de instalación a la sede acordada.</p>
+
+    <h3>2.3 · Por qué no hay bloqueo por impago</h3>
+    <div class="alert ok">
+      <span class="tag">● Decisión tomada</span>
+      <p>El appliance sigue funcionando indefinidamente. Se detienen actualizaciones, parches, soporte y
+      desarrollo — nada más. Tres razones: bloquear acceso a datos que son legalmente de RENOVA es
+      litigable en Perú; un cliente que se siente rehén no renueva; y <strong>la dependencia ya existe sin
+      coerción</strong> — un sistema sin parches se degrada solo, y retomarlo exige el repositorio y el
+      conocimiento del dominio que RENOVA no tiene. El incentivo a continuar es económico, no técnico, y
+      eso es más sólido y más defendible.</p>
+    </div>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section id="s3">
+    <h2><span class="num">03</span> Empaquetado y actualizaciones</h2>
+
+    <p>Este procedimiento se repetirá durante toda la vida del contrato. Conviene dejarlo aburrido y
+    mecánico: la mayoría de los desastres de mantenimiento vienen de actualizaciones improvisadas un
+    domingo por la tarde.</p>
+
+    <h3>3.1 · Construcción, en casa</h3>
+    <div class="card">
+      <ul class="check">
+        <li>Todo se construye desde un tag de git inmutable — nunca desde el árbol de trabajo</li>
+        <li>Build reproducible: <code>package-lock.json</code> commiteado y versión de Node fijada</li>
+        <li>Dashboard minificado, sin sourcemaps, con Servicios / Movimientos / Inventario excluidos</li>
+        <li>Dependencias vendorizadas: cero llamadas a CDN — requisito para operar sin internet</li>
+        <li>Imagen etiquetada con versión semántica y fecha; nunca <code>latest</code> en producción</li>
+        <li>Migraciones aplicadas y verificadas en orden sobre base limpia</li>
+        <li>Auditoría de secretos en la imagen final antes de exportar</li>
+        <li>Checksum SHA-256 de imagen y APK, registrados</li>
+      </ul>
+      <p style="margin-top:14px"><em>Ventaja del modelo: la exclusión de alcance es real y verificable, no
+      una promesa. Lo que no se compila, no llega al cliente.</em></p>
+    </div>
+
+    <h3>3.2 · Ensayo antes de tocar producción</h3>
+    <div class="alert crit">
+      <span class="tag">■ Regla que no se rompe</span>
+      <p>Toda actualización se prueba primero en local contra <strong>una restauración del respaldo real de
+      RENOVA</strong>, no datos sintéticos. La mayoría de los fallos de migración solo aparecen contra
+      datos reales: valores heredados, nulos inesperados, registros que la app ya no genera pero que
+      existen. Nunca instalar una versión que no se haya aplicado antes sobre una copia de la base del
+      cliente.</p>
+    </div>
+
+    <h3>3.3 · Instalación</h3>
+    <div class="card">
+      <ul class="check">
+        <li>Entrega del artefacto por el medio acordado — la imagen exportada viaja en archivo, sin registro externo</li>
+        <li>Verificar checksum antes de instalar</li>
+        <li><strong>Respaldo completo previo</strong>, con restauración probada, no solo generada</li>
+        <li>Ventana de mantenimiento avisada, cuando no hay inspectores en campo</li>
+        <li>Levantar la nueva versión; las migraciones corren en el arranque</li>
+        <li>Verificación posterior: login, un dashboard de cada tipo, un sync de prueba desde dispositivo real</li>
+        <li>Registrar versión, fecha y resultado en la bitácora de instalaciones</li>
+      </ul>
+    </div>
+
+    <h3>3.4 · Reversión</h3>
+    <div class="alert warn">
+      <span class="tag">▲ El punto que suele faltar</span>
+      <p>Revertir la imagen es trivial: se vuelve a la etiqueta anterior. <strong>Revertir la base de datos
+      no lo es.</strong> Una migración que altera datos no siempre se deshace sola.</p>
+      <ul>
+        <li>Cada migración con impacto en datos necesita procedimiento de reversión escrito, o declararse
+        explícitamente irreversible antes de aplicarse.</li>
+        <li>El respaldo previo es el plan de reversión real. Si hay que usarlo se pierden las inspecciones
+        capturadas durante la ventana — de ahí que la ventana vaya sin inspectores en campo.</li>
+      </ul>
+    </div>
+
+    <h3>3.5 · Cadencia</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tipo</th><th>Cuándo</th><th>Aviso previo</th></tr></thead>
+        <tbody>
+          <tr><td>Parche de seguridad crítico</td><td>Cuanto antes</td><td>Inmediato</td></tr>
+          <tr><td>Corrección de defecto</td><td>Según severidad comprometida</td><td>1 día</td></tr>
+          <tr><td>Actualización de mantenimiento</td><td>Mensual o trimestral, en ventana</td><td>1 semana</td></tr>
+          <tr><td>Funcionalidad nueva</td><td>Al terminar el desarrollo cotizado</td><td>1 semana</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section id="s4">
+    <h2><span class="num">04</span> Ejecución del piloto</h2>
+
+    <p>El calendario visible para el cliente está en la sección 05 de su propuesta. Aquí van los criterios
+    de salida técnicos y lo que hay que vigilar en cada etapa.</p>
+
+    <p>El calendario cambió: <strong>la capacitación arranca en la semana 2</strong> y se incorpora una
+    empresa por semana hasta la 4. Eso obliga a tener el appliance instalado y estable en la semana 1 —
+    todo el trabajo de empaquetado tiene que estar hecho <em>antes</em> de arrancar el piloto, no durante.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Semana</th><th>Foco técnico</th><th>Criterio de salida verificable</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>1</strong></td>
+            <td>Instalación · auditoría de acceso · siembra de catálogos · respaldos · host y certificado</td>
+            <td>Login desde LAN; dashboard <em>no</em> responde desde fuera; restauración de respaldo verificada con evidencia; configuraciones de eje confirmadas dentro de 2-4 / 2-4-2</td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td>Primera empresa · APK en dispositivos reales · línea base · primeras inspecciones</td>
+            <td>Un inspector completa y sincroniza una inspección real; línea base confirmada por persona de RENOVA</td>
+          </tr>
+          <tr>
+            <td><strong>3 – 4</strong></td>
+            <td>Alta de las demás empresas · primera carga de rendimiento · verificar que un inspector opera en varias empresas</td>
+            <td>Todas las empresas del piloto con inspecciones registrándose; un mismo inspector captura en dos empresas distintas sin fricción</td>
+          </tr>
+          <tr>
+            <td><strong>5 – 6</strong></td>
+            <td>Ronda deliberada sin señal · validación cruzada · paridad del motor · ajustes menores · primer ciclo de actualización</td>
+            <td>Inspecciones sin pérdida ni duplicados; 3-5 neumáticos cuadrados a mano contra planilla, firmado por jefatura; una actualización aplicada y revertida con éxito en ensayo</td>
+          </tr>
+          <tr>
+            <td><strong>7 – 8</strong></td>
+            <td>Operación autónoma · medición · documentación · definición del importador de rendimiento · firma de licencia</td>
+            <td>Acta de cierre + contrato de licencia y mantenimiento firmados</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alert crit">
+      <span class="tag">■ Consecuencia del nuevo calendario</span>
+      <p>Con capacitación en la semana 2 <strong>desaparece el colchón</strong> que daba instalar en las
+      semanas 2-3. El empaquetado del appliance, la externalización de config de la app y el ajuste del
+      modelo de acceso (0.3) tienen que estar terminados y probados <em>antes</em> del día uno. Refuerza
+      la conclusión de 0.1: el trabajo de empaquetado no se puede solapar con el piloto.</p>
+    </div>
+
+    <h3>4.0 · Ajustes menores y datos de rendimiento</h3>
+    <div class="alert warn">
+      <span class="tag">▲ Dos frentes que hay que acotar</span>
+      <ul>
+        <li><strong>Los pedidos «de una tarde».</strong> RENOVA anticipó requerimientos chicos. Están
+        incluidos en el piloto y es correcto ofrecerlos —generan buena voluntad barata—, pero conviene
+        <strong>registrarlos por escrito a medida que llegan</strong> y clasificarlos en el momento. Tres
+        tardes son una semana; sin registro, al cierre no hay forma de mostrar cuánto se dio de más ni de
+        justificar la mensualidad de mantenimiento.</li>
+        <li><strong>Rendimiento.</strong> El dato de recorrido viene de los clientes de RENOVA, en el
+        formato de cada uno. Durante el piloto: carga manual. La tentación de construir el importador de
+        Excel antes de ver los archivos reales es fuerte y es un error — se construye el importador
+        equivocado. Recolectar los formatos reales durante el piloto y cotizar el importador al cierre,
+        que además es un desarrollo adicional legítimo y vendible.</li>
+      </ul>
+    </div>
+
+    <div class="alert warn">
+      <span class="tag">▲ Los dos puntos donde se caen los pilotos</span>
+      <ul>
+        <li><strong>La línea base.</strong> La flota no está sembrada: una posición vacía con medición
+        reciente es <code>baseline_pending</code> — evidencia de un neumático, no una instalación
+        confirmada. Una persona de RENOVA confirma el primer montaje y declara la fecha; nunca se infiere
+        desde la inspección. Si esa persona no tiene tiempo asignado, el piloto se detiene y no es
+        recuperable con esfuerzo técnico.</li>
+        <li><strong>Datos plausibles pero incorrectos.</strong> Las suites verdes no detectan
+        implausibilidad. La validación cruzada manual de la semana 4-5 es la única defensa, y tiene que
+        firmarla RENOVA — no basta con que la hagamos nosotros.</li>
+      </ul>
+    </div>
+
+    <h3>4.1 · Frontera de alcance a vigilar</h3>
+    <p><code>WEB/</code> contiene hoy <code>servicios.html</code>, <code>movimientos/</code> e
+    <code>inventario/</code>, y el esquema incluye migraciones de movimientos y línea base. El contrato es
+    solo Inspecciones: se excluyen del build. <strong>Ojo con el esquema compartido</strong> — si RENOVA
+    contrata Servicios después con otro proveedor sobre la misma base, hay que acordar desde ahora quién
+    gobierna las migraciones.</p>
+
+    <h3>4.2 · Qué NO decir sobre instalaciones adicionales</h3>
+    <div class="alert warn">
+      <span class="tag">▲ Cuidado con lo que se insinúa</span>
+      <p>La cláusula de licencia quedó redactada en neutro: <em>«una instalación, en el servidor acordado;
+      cualquier instalación adicional requiere un acuerdo separado»</em>. Deliberadamente <strong>no</strong>
+      menciona instalar el sistema para las empresas atendidas ni para talleres.</p>
+      <p>Motivo: nombrar ese escenario en la propuesta le sugiere a RENOVA que existe la intención de
+      llegar a sus clientes, y eso —con la jefatura actual— es una conversación que no conviene abrir. La
+      cláusula igual protege el caso: cualquier instancia extra necesita acuerdo. La estrategia comercial
+      de vender la plataforma a otros operadores y talleres se maneja por fuera de este contrato y no se
+      insinúa en ningún documento que RENOVA vaya a leer.</p>
+      <p>Se agregó además una cláusula de <strong>uso interno</strong>: la licencia no habilita a RENOVA a
+      prestar el sistema como servicio propio a terceros. Cierra la puerta en la dirección contraria —que
+      RENOVA revenda acceso a sus clientes— sin anunciar planes propios.</p>
+    </div>
+
+    <h3>4.3 · Límite de esfuerzo del mantenimiento</h3>
+    <p>Además del tramo por volumen (0.4), la mensualidad debe incluir un tope de <strong>N horas</strong>
+    —a fijar tras el piloto—, con excedente facturado por hora. Son dos controles distintos y hacen falta
+    los dos: <strong>el tramo cubre el crecimiento de la flota; el tope de horas cubre el crecimiento de
+    los pedidos</strong>. Sin el tope, el desarrollo nuevo entra por goteo disfrazado de soporte aunque el
+    volumen no se mueva.</p>
+    <p>Y cuando el desarrollo adicional se vuelve permanente, la base sube: <strong>cada funcionalidad
+    nueva incrementa la mensualidad en un porcentaje acordado al cotizarla</strong> —sugerido 5 a 10 % del
+    costo de desarrollo, mensualizado—, pactado al cotizar y no después.</p>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section id="s5">
+    <h2><span class="num">05</span> Riesgos</h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Riesgo</th><th>Prob.</th><th>Impacto</th><th>Mitigación</th></tr></thead>
+        <tbody>
+          <tr><td>El empaquetado no está listo para la semana 1 y la capacitación arranca en la 2</td><td class="no">Alta</td><td class="no">Alto</td><td>Terminar el empaquetado antes del día uno; elegir una salida de 0.1</td></tr>
+          <tr><td>El modelo de acceso por empresa bloquea al inspector en la segunda empresa</td><td class="part">Media</td><td class="no">Alto</td><td>Revisar policies y selectores antes de instalar (0.3)</td></tr>
+          <tr><td>Nadie confirma la línea base de montajes</td><td class="no">Alta</td><td class="no">Alto</td><td>Responsable con nombre y tiempo asignado en el contrato</td></tr>
+          <tr><td>Los pedidos «de una tarde» se acumulan sin registro</td><td class="no">Alta</td><td class="part">Medio</td><td>Registrarlos y clasificarlos al llegar (4.0)</td></tr>
+          <tr><td>Los cortes de tramo quedan mal calibrados y el mantenimiento se come el margen</td><td class="part">Media</td><td class="no">Alto</td><td>Contrastar contra el tamaño real de flotas en la semana 1 (0.4)</td></tr>
+          <tr><td>La exportación a Excel no está lista para la semana 2</td><td class="part">Media</td><td class="no">Alto</td><td>Construirla antes del arranque; es el entregable diario que reemplaza (0.5)</td></tr>
+          <tr><td>El soporte de sábado se vuelve insostenible</td><td class="part">Media</td><td class="part">Medio</td><td>Decidirlo antes de firmar, no después (0.6)</td></tr>
+          <tr><td>La flota real excede 2-4 / 2-4-2</td><td class="part">Media</td><td class="no">Alto</td><td>Inventario en semana 1; recotizar si aparece</td></tr>
+          <tr><td>Sin acceso remoto, los SLA son incumplibles</td><td class="part">Media</td><td class="no">Alto</td><td>Cerrar mecanismo en semana 2 o bajar los tiempos antes de firmar</td></tr>
+          <tr><td>Datos plausibles pero incorrectos</td><td class="part">Media</td><td class="no">Alto</td><td>Validación cruzada firmada por RENOVA</td></tr>
+          <tr><td>Migración falla en producción sin reversión escrita</td><td class="part">Media</td><td class="no">Alto</td><td>Ensayo contra respaldo real + <code>down</code> verificado</td></tr>
+          <tr><td>El servidor se queda sin disco</td><td class="part">Media</td><td class="no">Alto</td><td>Dimensionado en semana 1 y monitoreo mensual; crece al activar fotos</td></tr>
+          <tr><td>Certificado vence y los inspectores no sincronizan</td><td class="part">Media</td><td class="part">Medio</td><td>Renovación automática y alerta anticipada</td></tr>
+          <tr><td>Deriva de alcance hacia Servicios</td><td class="no">Alta</td><td class="part">Medio</td><td>Frontera escrita; excluido del build</td></tr>
+          <tr><td>RENOVA modifica el contenedor por su cuenta</td><td class="yes">Baja</td><td class="part">Medio</td><td>Cláusula «modificar anula el soporte»</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Próximos pasos</h3>
+    <div class="card">
+      <ol>
+        <li><strong>Decidir el presupuesto del empaquetado</strong> (0.1). Bloquea todo lo demás.</li>
+        <li>Corregir el brief comercial antes de mandar la propuesta (0.2).</li>
+        <li>Ejecutar la auditoría de RLS — no requiere firma, se puede empezar hoy.</li>
+        <li><strong>Prototipar el appliance en local y cronometrar una instalación completa.</strong>
+        Convierte la estimación de 2-3 semanas en un dato en lugar de una intuición, y es lo único que
+        despeja el riesgo principal.</li>
+        <li>Verificar <code>supabase/migrations/down</code> contra las migraciones sensibles.</li>
+        <li>Redactar el contrato de licencia sobre la sección 09 de la propuesta al cliente.</li>
+      </ol>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="foot-inner">
+    ANTIG · DOCUMENTO INTERNO · No compartir con RENOVA. Las estimaciones de esfuerzo son propias y deben
+    confirmarse con el prototipo del paso 4.
+  </div>
+</footer>
+
+</body>
+</html>

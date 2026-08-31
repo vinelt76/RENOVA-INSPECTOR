@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "descripcion": "Fixture golden ÚNICO del motor de cálculo. Lo consumen run_golden_py.py y run_golden_ts.ts; compare_golden.mjs diffea las dos salidas contra sí mismas (paridad) y contra 'expect' (conformidad con specs/reglas_negocio.md).",
+  "fuente": "specs/reglas_negocio.md §1-§8",
+  "convencion": {
+    "expect": "Valor derivado de la spec. Si es null se compara contra null; si es {\"error\": true} se espera excepción.",
+    "expect_nota": "Cuando 'expect' lleva 'spec_ambigua': true, la spec no resuelve el caso y la desviación no cuenta como fallo de conformidad."
+  },
+  "casos": [
+    { "id": "rtdmovi-3-canales", "fn": "rtdMovi", "args": [12.5, 11.8, 13.0, null], "expect": 11.8, "ref": "§1" },
+    { "id": "rtdmovi-4-canales", "fn": "rtdMovi", "args": [10.0, 9.0, 7.0, 4.0], "expect": 4.0, "ref": "§1 bus 8260 pos 7" },
+    { "id": "rtdmovi-d-en-direccion", "fn": "rtdMovi", "args": [15.0, 14.0, 16.0, 13.5], "expect": 13.5, "ref": "§1 D es opcional en CUALQUIER eje" },
+    { "id": "rtdmovi-todos-iguales", "fn": "rtdMovi", "args": [8.0, 8.0, 8.0, null], "expect": 8.0, "ref": "§1" },
+    { "id": "rtdmovi-cero-valido", "fn": "rtdMovi", "args": [0.0, 5.0, 6.0, null], "expect": 0.0, "ref": "§1 cada RTD debe ser >= 0" },
+    { "id": "rtdmovi-negativo-a", "fn": "rtdMovi", "args": [-1.0, 5.0, 6.0, null], "expect": { "error": true }, "ref": "§1 si es negativo, rechazar" },
+    { "id": "rtdmovi-negativo-d", "fn": "rtdMovi", "args": [5.0, 5.0, 6.0, -0.5], "expect": { "error": true }, "ref": "§1" },
+    { "id": "rtdmovi-sobre-22mm", "fn": "rtdMovi", "args": [25.0, 24.0, 23.0, null], "expect": 23.0, "ref": "§1 >22mm genera advertencia, NO rechazo" },
+
+    { "id": "idi-bus8260-pos7", "fn": "idi", "args": [10.0, 9.0, 7.0, 4.0], "expect": 6.0, "ref": "§4 evidencia Excel" },
+    { "id": "idi-parejo-cero", "fn": "idi", "args": [8.0, 8.0, 8.0, null], "expect": 0.0, "ref": "§4 rango 0-1 normal" },
+    { "id": "idi-leve-2", "fn": "idi", "args": [10.0, 9.0, 8.0, null], "expect": 2.0, "ref": "§4 rango 2-3 monitorear" },
+    { "id": "idi-alerta-4", "fn": "idi", "args": [12.0, 10.0, 8.0, null], "expect": 4.0, "ref": "§4 >=4 alerta" },
+    { "id": "idi-3-canales-ignora-d", "fn": "idi", "args": [10.0, 9.0, 7.0, null], "expect": 3.0, "ref": "§4 mismos canales que RTD MOVI" },
+    { "id": "idi-negativo-mismo-criterio-que-rtdmovi", "fn": "idi", "args": [-1.0, 5.0, 6.0, null], "expect": { "error": true, "spec_ambigua": true }, "ref": "§1 la validación de negativos se enuncia para los canales; la spec no dice explícitamente que IDI la repita" },
+
+    { "id": "estadortd-para-reencauche-bajo", "fn": "estadoRtd", "args": [3.0, 4.0, 7.0], "expect": "Para Reencauche", "ref": "§2" },
+    { "id": "estadortd-para-reencauche-limite", "fn": "estadoRtd", "args": [4.0, 4.0, 7.0], "expect": "Para Reencauche", "ref": "§2 <= rtd_cambio" },
+    { "id": "estadortd-proximo-limite", "fn": "estadoRtd", "args": [7.0, 4.0, 7.0], "expect": "Próximo a Reencauche", "ref": "§2 <= rtd_proximo" },
+    { "id": "estadortd-proximo-medio", "fn": "estadoRtd", "args": [5.5, 4.0, 7.0], "expect": "Próximo a Reencauche", "ref": "§2" },
+    { "id": "estadortd-normal-limite", "fn": "estadoRtd", "args": [7.1, 4.0, 7.0], "expect": "Normal", "ref": "§2 >7 = Normal" },
+    { "id": "estadortd-normal-alto", "fn": "estadoRtd", "args": [15.0, 4.0, 7.0], "expect": "Normal", "ref": "§2" },
+    { "id": "estadortd-umbrales-personalizados", "fn": "estadoRtd", "args": [6.0, 5.0, 9.0], "expect": "Próximo a Reencauche", "ref": "§2 umbrales configurables por empresa+medida" },
+    { "id": "estadortd-cero", "fn": "estadoRtd", "args": [0.0, 4.0, 7.0], "expect": "Para Reencauche", "ref": "§2" },
+
+    { "id": "presion-sin-medir-null", "fn": "estadoPresion", "args": [null, 110.0, 5.0, 10.0, false], "expect": "Sin Medir", "ref": "§3" },
+    { "id": "presion-sin-medir-flag", "fn": "estadoPresion", "args": [105.0, 110.0, 5.0, 10.0, true], "expect": "Sin Medir", "ref": "§3 el flag gana sobre el valor" },
+    { "id": "presion-dir-normal-ref", "fn": "estadoPresion", "args": [110.0, 110.0, 5.0, 10.0, false], "expect": "Normal", "ref": "§3 315/80R22.5 Dirección ref 110" },
+    { "id": "presion-dir-alta-116", "fn": "estadoPresion", "args": [116.0, 110.0, 5.0, 10.0, false], "expect": "Alta Presión", "ref": "§3 Excel: Alta desde 116" },
+    { "id": "presion-dir-limite-alto-1155", "fn": "estadoPresion", "args": [115.5, 110.0, 5.0, 10.0, false], "expect": "Normal", "ref": "§3 fórmula usa > estricto sobre 110*1.05=115.5" },
+    { "id": "presion-dir-99-exacto", "fn": "estadoPresion", "args": [99.0, 110.0, 5.0, 10.0, false], "expect": { "spec_ambigua": true, "valor": "Normal" }, "ref": "§3 el Excel dice 'Baja desde 99'; la fórmula usa < estricto sobre 110*0.90=99.0" },
+    { "id": "presion-dir-baja-98", "fn": "estadoPresion", "args": [98.0, 110.0, 5.0, 10.0, false], "expect": "Baja Presión", "ref": "§3" },
+    { "id": "presion-trac-normal-115", "fn": "estadoPresion", "args": [115.0, 115.0, 5.0, 10.0, false], "expect": "Normal", "ref": "§3 Tracción/Libre ref 115" },
+    { "id": "presion-trac-121-excel-dice-normal", "fn": "estadoPresion", "args": [121.0, 115.0, 5.0, 10.0, false], "expect": { "spec_ambigua": true, "valor": "Alta Presión" }, "ref": "§3 el Excel dice 'Alta desde 122' pero 115*1.05=120.75 → la fórmula marca Alta desde 120.76" },
+    { "id": "presion-trac-alta-122", "fn": "estadoPresion", "args": [122.0, 115.0, 5.0, 10.0, false], "expect": "Alta Presión", "ref": "§3 Excel: Alta desde 122" },
+    { "id": "presion-trac-baja-103", "fn": "estadoPresion", "args": [103.0, 115.0, 5.0, 10.0, false], "expect": "Baja Presión", "ref": "§3 Excel: Baja desde 103; 115*0.90=103.5" },
+    { "id": "presion-cero", "fn": "estadoPresion", "args": [0.0, 110.0, 5.0, 10.0, false], "expect": "Baja Presión", "ref": "§3 cero es una medición, no ausencia de medición" },
+
+    { "id": "vur-normal", "fn": "vur", "args": [12.0, 4.0, 0.5], "expect": 16000.0, "ref": "§8 (12-4)/0.5*1000" },
+    { "id": "vur-tasa-null", "fn": "vur", "args": [12.0, 4.0, null], "expect": null, "ref": "§8 sin datos suficientes" },
+    { "id": "vur-tasa-cero", "fn": "vur", "args": [12.0, 4.0, 0.0], "expect": null, "ref": "§8 sin datos suficientes" },
+    { "id": "vur-tasa-negativa", "fn": "vur", "args": [12.0, 4.0, -0.3], "expect": null, "ref": "§8 dato inválido" },
+    { "id": "vur-cambio-inmediato", "fn": "vur", "args": [4.0, 4.0, 0.5], "expect": 0, "ref": "§8 RTD_MOVI <= rtd_cambio" },
+    { "id": "vur-cambio-inmediato-bajo", "fn": "vur", "args": [2.0, 4.0, 0.5], "expect": 0, "ref": "§8" },
+    { "id": "vur-cambio-inmediato-sin-tasa", "fn": "vur", "args": [2.0, 4.0, null], "expect": { "spec_ambigua": true, "valor": null }, "ref": "§8 la tabla no resuelve la combinación tasa NULL + RTD bajo umbral; la implementación evalúa la tasa primero" },
+
+    { "id": "tasa-normal", "fn": "tasaDesgaste", "args": [12.0, 10.0, 100000, 150000], "expect": 0.04, "ref": "§7 (12-10)/50000*1000" },
+    { "id": "tasa-km-iguales", "fn": "tasaDesgaste", "args": [12.0, 10.0, 100000, 100000], "expect": null, "ref": "§7 km_actual == km_anterior → NULL" },
+    { "id": "tasa-km-retrocede", "fn": "tasaDesgaste", "args": [12.0, 10.0, 150000, 100000], "expect": { "spec_ambigua": true, "valor": null }, "ref": "§7 exige km_actual > km_anterior; no define el retroceso explícitamente" },
+    { "id": "tasa-rtd-aumenta", "fn": "tasaDesgaste", "args": [10.0, 12.0, 100000, 150000], "expect": -0.04, "ref": "§8 tasa negativa es posible (error de medición) y se propaga a VUR como dato inválido" },
+    { "id": "tasa-sin-desgaste", "fn": "tasaDesgaste", "args": [10.0, 10.0, 100000, 150000], "expect": 0.0, "ref": "§7" },
+
+    { "id": "isa-desecho", "fn": "isaPeso", "args": [true], "expect": 5, "ref": "§6 anomalía con desecho=TRUE" },
+    { "id": "isa-anomalia-sin-desecho", "fn": "isaPeso", "args": [false], "expect": 1, "ref": "§6 anomalía con desecho=FALSE" }
+  ],
+  "casos_no_cubiertos": [
+    "Presión CALIENTE: prohibido por specs/reglas_negocio.md §3 (pendiente de definición). No agregar casos.",
+    "ISA 'Sin anomalía (Normal) → peso 0': la firma calcularIsaPeso(desecho: boolean) no puede expresar el tercer nivel de §6. No hay caso posible hasta que cambie la firma."
+  ]
+}

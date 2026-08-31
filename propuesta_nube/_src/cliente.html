@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="es-PE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RENOVA INSPECTOR · Propuesta de piloto</title>
+    <style>
+      __ESTILO__
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="head-inner">
+        <div>
+          <div class="logo">RENOVA <b>INSPECTOR</b></div>
+          <div class="screen-name">PROPUESTA DE PILOTO · MÓDULO DE INSPECCIONES</div>
+        </div>
+        <div class="head-meta">
+          Presentado por <span>ANTIG</span><br />
+          Dirigido a <span>RENOVA</span><br />
+          Modalidad <span>Nube (Supabase)</span><br />
+          Fecha <span>10 · 08 · 2026</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="summary">
+        <div class="stat">
+          <span class="k">Piloto</span
+          ><span class="v accent"
+            >S/ 4,500<br /><span style="font-size: 12px"
+              >+ IGV / mes · 2 meses</span
+            ></span
+          >
+        </div>
+        <div class="stat">
+          <span class="k">Total del piloto</span
+          ><span class="v">S/ 10,620</span>
+        </div>
+        <div class="stat">
+          <span class="k">Instalación</span
+          ><span class="v small">Ninguna<br />ya está operativo</span>
+        </div>
+        <div class="stat">
+          <span class="k">Sus datos</span
+          ><span class="v small">Propiedad de<br />RENOVA</span>
+        </div>
+        <div class="stat">
+          <span class="k">Código fuente</span
+          ><span class="v small">Propiedad de<br />ANTIG</span>
+        </div>
+      </div>
+
+      <section>
+        <h2><span class="num">ÍNDICE</span> Contenido</h2>
+        <ul class="toc">
+          <li><a href="#s1"><b>01</b> Qué es</a></li>
+          <li><a href="#s2"><b>02</b> Alcance del piloto</a></li>
+          <li><a href="#s3"><b>03</b> Cronograma · 8 semanas</a></li>
+          <li><a href="#s4"><b>04</b> Inversión</a></li>
+          <li><a href="#s5"><b>05</b> Propiedad y continuidad</a></li>
+          <li><a href="#s6"><b>06</b> Condiciones</a></li>
+        </ul>
+      </section>
+
+      <!-- ============ 1 ============ -->
+      <section id="s1">
+        <h2><span class="num">01</span> Qué es</h2>
+        <p>
+          RENOVA INSPECTOR es la app Android que usan los inspectores para
+          capturar unidad, posición, identidad del neumático, remanente,
+          presión y anomalías en campo, <strong>sin depender de señal</strong>
+          — la captura ocurre siempre, la sincronización se resuelve sola. El
+          dashboard web muestra esas inspecciones por empresa y por fecha.
+        </p>
+        <p>
+          El sistema corre en la nube (Supabase + Cloudflare Pages), ya
+          operativo hoy: no hay servidor que instalar ni infraestructura que
+          montar antes de empezar.
+        </p>
+      </section>
+
+      <!-- ============ 2 ============ -->
+      <section id="s2">
+        <h2><span class="num">02</span> Alcance del piloto</h2>
+
+        <div class="table-wrap">
+          <table class="scope">
+            <thead>
+              <tr>
+                <th class="in">Incluido</th>
+                <th class="out">No incluido</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="in">
+                  App Android de inspección, con captura sin señal
+                </td>
+                <td class="out">Rendimiento de neumáticos</td>
+              </tr>
+              <tr>
+                <td class="in">
+                  Dashboard de inspecciones por empresa y por fecha
+                </td>
+                <td class="out">Servicios y movimientos de taller</td>
+              </tr>
+              <tr>
+                <td class="in">
+                  <strong>Exportar a Excel desde la app</strong>, al cerrar la
+                  inspección del día — lo que capturó ese inspector, ese día
+                </td>
+                <td class="out">Inventario</td>
+              </tr>
+              <tr>
+                <td class="in">
+                  Acceso de <strong>solo lectura</strong> a los datos vía
+                  conexión SQL, para que el encargado de cada empresa los
+                  descargue cuando quiera sin entrar al sistema
+                </td>
+                <td class="out">Importar masivo de datos</td>
+              </tr>
+              <tr>
+                <td class="in">Hasta 3 empresas</td>
+                <td class="out">Integraciones con otros sistemas</td>
+              </tr>
+              <tr>
+                <td class="in">—</td>
+                <td class="out">App para iPhone</td>
+              </tr>
+              <tr>
+                <td class="in">—</td>
+                <td class="out">Fotografías almacenadas en servidor</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="alert warn">
+          <span class="tag">▲ Configuraciones de vehículo cubiertas</span>
+          <p>
+            Esta etapa cubre buses con configuración de ejes
+            <strong>2-4</strong> y <strong>2-4-2</strong>. Otras
+            configuraciones se identifican en la primera semana y se cotizan
+            aparte.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 3 ============ -->
+      <section id="s3">
+        <h2><span class="num">03</span> Cronograma · 8 semanas</h2>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semana 1</span
+            ><span class="ttl">VERIFICACIÓN DE DATOS</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                Verificación de los flujos de datos en Supabase, con datos de
+                prueba de las empresas del piloto.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Flujos confirmados, listos para la
+              primera empresa real.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semana 2</span
+            ><span class="ttl">PRIMERA EMPRESA</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>Incorporación de la primera empresa en la app.</li>
+              <li>
+                Verificación de datos durante la semana y recolección de
+                feedback de inspectores.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Primera empresa operando, con feedback
+              recogido.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semanas 2 – 3</span
+            ><span class="ttl">RESTO DE EMPRESAS</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                Incorporación de las empresas restantes del piloto, con el
+                mismo proceso de verificación y feedback.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Las 3 empresas del piloto incorporadas y
+              operando.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semanas 4 – 5</span
+            ><span class="ttl">BACKUPS, SEGURIDAD Y DASHBOARDS</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>Pruebas de pérdida de datos, respaldos y seguridad.</li>
+              <li>
+                Dashboard de rendimiento de inspectores — cuántas inspecciones
+                hace cada uno, por día o por mes.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Continuidad verificada y dashboard de
+              inspectores en funcionamiento.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semanas 6 – 7</span
+            ><span class="ttl">AJUSTES FINALES</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>
+                Corrección de lo que no cuadre en la data y mejoras a la app o
+                a los dashboards según lo detectado.
+              </li>
+            </ul>
+            <div class="exit">
+              <b>Cierre de etapa</b> Sistema y datos verificados.
+            </div>
+          </div>
+        </div>
+
+        <div class="phase">
+          <div class="phase-head">
+            <span class="wk">Semana 8</span
+            ><span class="ttl">REVISIÓN FINAL</span>
+          </div>
+          <div class="phase-body">
+            <ul>
+              <li>Cierre del piloto y evaluación conjunta con RENOVA.</li>
+            </ul>
+            <div class="exit"><b>Cierre de etapa</b> Piloto cerrado.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 4 ============ -->
+      <section id="s4">
+        <h2><span class="num">04</span> Inversión</h2>
+
+        <div class="price-grid">
+          <div class="price lead">
+            <div class="concept">Piloto · mensual</div>
+            <div class="amount">
+              S/ 4,500 <span style="font-size: 13px">+ IGV / mes</span>
+            </div>
+            <div class="terms">
+              Durante los 2 meses del piloto. Cubre verificación,
+              incorporación de hasta 3 empresas y ajustes.
+            </div>
+          </div>
+          <div class="price">
+            <div class="concept">Total del piloto · 2 meses</div>
+            <div class="amount">S/ 10,620</div>
+            <div class="terms">
+              S/ 9,000 + IGV (S/ 1,620). Facturado en dos cuotas mensuales de
+              S/ 5,310 IGV incluido.
+            </div>
+          </div>
+          <div class="price">
+            <div class="concept">Mantenimiento posterior</div>
+            <div class="amount">S/ 800 – 1,000 <span style="font-size: 13px">/ mes por empresa</span></div>
+            <div class="terms">
+              Referencia para una empresa activa de tamaño típico (~120
+              buses). Se ajusta con datos reales al cierre del piloto.
+            </div>
+          </div>
+        </div>
+
+        <div class="alert warn">
+          <span class="tag">▲ Por qué este precio</span>
+          <p>
+            El costo real de infraestructura en la nube es bajo (Supabase Pro
+            ~US$ 25/mes, Cloudflare Pages sin costo en este volumen): el
+            precio del piloto no está inflado por infraestructura — es tiempo
+            de verificación, incorporación y soporte.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 5 ============ -->
+      <section id="s5">
+        <h2><span class="num">05</span> Propiedad y continuidad</h2>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>De quién es</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Datos de inspecciones, flotas y neumáticos</td>
+                <td>
+                  <strong>RENOVA</strong>, siempre. Se ven y se exportan
+                  cuando RENOVA quiera.
+                </td>
+              </tr>
+              <tr>
+                <td>Proyecto de Supabase y cuenta de Cloudflare Pages</td>
+                <td>
+                  <strong>RENOVA</strong>, a nombre de RENOVA desde el día 1.
+                  Antig entra como administrador para operarlos.
+                </td>
+              </tr>
+              <tr>
+                <td>Software y código fuente</td>
+                <td>
+                  <strong>100% de ANTIG.</strong> RENOVA recibe licencia de
+                  uso no exclusiva e intransferible mientras dure el acuerdo
+                  — no recibe el repositorio ni puede cederlo a un tercero
+                  para replicarlo.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <p>
+            Continuidad, en una frase: como la infraestructura ya es de
+            RENOVA desde el día 1 y el acceso de solo lectura a los datos
+            está activo desde el inicio, RENOVA nunca depende de Antig para
+            ver u operar lo que ya tiene funcionando — solo para seguir
+            evolucionando el software.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 6 ============ -->
+      <section id="s6">
+        <h2><span class="num">06</span> Condiciones</h2>
+        <p>
+          Esta propuesta es válida por <strong>30 días</strong> desde su
+          emisión. Al firmar, el piloto inicia el lunes siguiente. Los
+          términos de mantenimiento, licencia y continuidad se detallan en un
+          contrato aparte una vez aprobado el piloto.
+        </p>
+
+        <div class="signatures">
+          <div class="sign">Por RENOVA<br />Nombre<br />Cargo<br />Fecha</div>
+          <div class="sign">
+            Por ANTIG<br />Facundo Morales<br />Fecha
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot-inner">
+        ANTIG · PROPUESTA DE PILOTO — MÓDULO DE INSPECCIONES · Válida por 30
+        días desde su emisión. Los montos no incluyen IGV salvo indicación
+        expresa.
+      </div>
+    </footer>
+  </body>
+</html>
