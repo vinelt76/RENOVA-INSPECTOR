@@ -1,10 +1,8 @@
 ---
 name: smoke-test
-description: Use when ejecutando cambios en el repo tyre-watch-main que requieren verificación por-smoke tras cada tarea, o cuando se necesita validar que una modificación no rompió el surface afectado. Proyecto-específica, no solapa skills globales.
+description: Use when ejecutando cambios en el repo RENOVA-INSPECTOR que requieren verificación por-smoke tras cada tarea, o cuando se necesita validar que una modificación no rompió el surface afectado. Proyecto-específica, no solapa skills globales.
 ---
-
-# Smoke test — Tyre Watch
-
+# Smoke test — RENOVA INSPECTOR
 Verificación de humo por superficie tras cada cambio discreto en el repo. No reemplaza `npm run verify` (gate final), sino que da feedback rápido por tarea.
 
 ## Superficies y comandos
