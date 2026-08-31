@@ -3,7 +3,6 @@ import {
   draftFromOrder,
   groupExecutionServices,
   loginIdentifierCandidates,
-  loginIdentifierToEmail,
   serviceCountFromOrder,
   validateDraft,
 } from './model';
@@ -37,8 +36,7 @@ function order(): MovementOrder {
 describe('modelo de captura de movimientos', () => {
   it('convierte un usuario corto al correo interno sin alterar un correo real', () => {
     expect(loginIdentifierCandidates('  JROJAS ')).toEqual(['jrojas@operarios.renova.local']);
-    expect(loginIdentifierToEmail('  JROJAS ')).toBe('jrojas@operarios.renova.local');
-    expect(loginIdentifierToEmail('j@empresa.pe')).toBe('j@empresa.pe');
+    expect(loginIdentifierCandidates('j@empresa.pe')).toEqual(['j@empresa.pe']);
   });
 
   it('precarga salida e ingreso desde la orden del supervisor', () => {

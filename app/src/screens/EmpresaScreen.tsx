@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { empresaRepo } from '../db/repos/empresaRepo';
-import { useApp } from '../state/useApp';
+import { useApp } from '../state/context';
 import { BEBAS, MONO, NAVY, ORANGE, YELLOW, SCREEN_DARK, FIELD_DARK, LABEL_BLUE, BORDER_DARK, VALUE_COLOR } from '../theme';
 import type { Empresa } from '../db/schema';
 

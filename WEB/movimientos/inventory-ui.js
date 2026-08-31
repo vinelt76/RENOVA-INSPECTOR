@@ -1,4 +1,5 @@
 import { createFocusTrap } from "./a11y.js";
+import { createElement } from "../shared/dom.js";
 import { filterRowsBySearchTokens } from "../shared/search.js";
 
 const SEARCH_FIELDS = [
@@ -35,14 +36,6 @@ export function inventoryOptions(inventory, draft, query = "") {
       : null,
   }));
 }
-
-function createElement(documentObject, tagName, className, text) {
-  const element = documentObject.createElement(tagName);
-  if (className) element.className = className;
-  if (text != null) element.textContent = text;
-  return element;
-}
-
 function itemIdentity(item) {
   return item?.casing_code || "CÓDIGO NO VISIBLE";
 }

@@ -1,21 +1,9 @@
 import { DISCARD_CAUSES } from "./batch-model.js";
+import { createElement } from "../shared/dom.js";
 import { focusFirst } from "./a11y.js";
+import { localToday } from "../shared/inspection-date-facets.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-function createElement(documentObject, tagName, className, text) {
-  const element = documentObject.createElement(tagName);
-  if (className) element.className = className;
-  if (text != null) element.textContent = text;
-  return element;
-}
-
-function localToday(now = new Date()) {
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 export function defaultSummaryHeader(now = new Date()) {
   return { performedAt: localToday(now), odometer: "", notes: "" };

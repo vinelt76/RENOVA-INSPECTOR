@@ -1,3 +1,6 @@
+import { deepFreeze } from "../shared/deep-freeze.js";
+import { localToday } from "../shared/inspection-date-facets.js";
+
 const CONDITIONS = new Set(["N", "R1", "R2", "R3", "R4"]);
 
 const MOUNT_FIELDS = Object.freeze([
@@ -16,13 +19,6 @@ const MOUNT_FIELDS = Object.freeze([
   "rtd_mm",
   "notes",
 ]);
-
-function localToday(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function nullableText(value) {
   const normalized = String(value ?? "").trim();
@@ -57,14 +53,6 @@ function prefilledMount(position, evidence, seq) {
     notes: null,
   });
 }
-
-function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
-  Object.freeze(value);
-  for (const child of Object.values(value)) deepFreeze(child);
-  return value;
-}
-
 function violation(code, message, position = null) {
   return { code, message, ...(position == null ? {} : { position }) };
 }
@@ -312,5 +300,3 @@ export function createBaselineModel({
     },
   };
 }
-
-export { localToday };

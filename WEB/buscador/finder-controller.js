@@ -1,4 +1,5 @@
 import { createFocusTrap } from "../movimientos/a11y.js";
+import { createElement } from "../shared/dom.js";
 import {
   SEARCH_INDEX_STATES,
   createSearchIndexLoadingState,
@@ -33,14 +34,6 @@ const SCOPE_LABELS = Object.freeze({
   casing: "NEUMÁTICOS",
   inspection: "MEDICIONES SIN CASCO",
 });
-
-function createElement(documentObject, tagName, className, text) {
-  const element = documentObject.createElement(tagName);
-  if (className) element.className = className;
-  if (text != null) element.textContent = text;
-  return element;
-}
-
 function statusLabel(status) {
   return String(status ?? "sin estado").replaceAll("_", " ").toUpperCase();
 }

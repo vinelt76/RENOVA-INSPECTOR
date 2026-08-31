@@ -5,7 +5,7 @@ import ExecutionScreen from './screens/ExecutionScreen';
 import LoginScreen from './screens/LoginScreen';
 import OrdersScreen from './screens/OrdersScreen';
 import { AuthProvider } from './state/AuthContext';
-import { useAuth } from './state/useAuth';
+import { useAuth } from './state/AuthContext';
 
 function LoadingScreen() {
   return (

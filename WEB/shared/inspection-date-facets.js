@@ -3,6 +3,14 @@ const MONTH_NAMES = [
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
 
+/** Fecha local YYYY-MM-DD (la misma en dashboards y tests). */
+export function localToday(now = new Date()) {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function parseDateOnly(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
   if (!match) return null;

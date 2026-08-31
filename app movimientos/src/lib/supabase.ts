@@ -13,10 +13,14 @@ export const supabase = url && publishableKey
     })
   : null;
 
-export async function loadOperatorProfile(userId: string): Promise<OperatorProfile> {
+function requireClient() {
   if (!supabase) throw new Error('La app no tiene configurada la conexión a RENOVA.');
+  return supabase;
+}
 
-  const { data, error } = await supabase
+export async function loadOperatorProfile(userId: string): Promise<OperatorProfile> {
+  const client = requireClient();
+  const { data, error } = await client
     .from('profiles')
     .select('id,company_id,full_name,role,active,companies!inner(name)')
     .eq('id', userId)
@@ -35,8 +39,7 @@ export async function loadOperatorProfile(userId: string): Promise<OperatorProfi
 }
 
 export async function loadMovementOrders(): Promise<MovementOrder[]> {
-  if (!supabase) throw new Error('La app no tiene configurada la conexión a RENOVA.');
-  const { data, error } = await supabase
+  const { data, error } = await requireClient()
     .from('v_operator_movement_orders')
     .select('*')
     .in('status', ['issued', 'in_progress', 'completed'])
@@ -49,14 +52,12 @@ export async function loadMovementOrders(): Promise<MovementOrder[]> {
 }
 
 export async function claimMovementOrder(orderId: string): Promise<void> {
-  if (!supabase) throw new Error('La app no tiene configurada la conexión a RENOVA.');
-  const { error } = await supabase.rpc('claim_tire_movement_order', { p_order_id: orderId });
+  const { error } = await requireClient().rpc('claim_tire_movement_order', { p_order_id: orderId });
   if (error) throw error;
 }
 
 export async function completeMovementOrder(draft: MovementDraft): Promise<void> {
-  if (!supabase) throw new Error('La app no tiene configurada la conexión a RENOVA.');
-  const { error } = await supabase.rpc('complete_tire_movement_order', {
+  const { error } = await requireClient().rpc('complete_tire_movement_order', {
     p_order_id: draft.orderId,
     p_odometer_km: Number(draft.odometer),
     p_items: draft.items,

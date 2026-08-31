@@ -1,3 +1,5 @@
+import { getFetchView, normalizeNumericColumns } from "../shared/fetch-view.js";
+
 export const SERVICES_FETCH_LIMIT = 2000;
 
 export const SERVICE_COLUMNS = Object.freeze([
@@ -51,25 +53,6 @@ const NUMERIC_COLUMNS = Object.freeze([
   "pair_rtd_min_mm",
   "entry_origin_position",
 ]);
-
-function getFetchView(dependency) {
-  if (typeof dependency === "function") return dependency;
-
-  const client = dependency ?? globalThis.RenovaSupabase;
-  if (typeof client?.fetchView !== "function") {
-    throw new TypeError("RenovaSupabase.fetchView no está disponible");
-  }
-  return client.fetchView.bind(client);
-}
-
-function normalizeServiceRow(row) {
-  const normalized = { ...row };
-  for (const column of NUMERIC_COLUMNS) {
-    if (normalized[column] != null) normalized[column] = Number(normalized[column]);
-  }
-  return normalized;
-}
-
 export async function loadServices({ limit = SERVICES_FETCH_LIMIT } = {}, dependency) {
   const safeLimit = Number.isInteger(Number(limit)) && Number(limit) > 0
     ? Number(limit)
@@ -79,7 +62,7 @@ export async function loadServices({ limit = SERVICES_FETCH_LIMIT } = {}, depend
     order: "captured_at.desc,sequence.asc",
     limit: String(safeLimit),
   });
-  const rows = (Array.isArray(sourceRows) ? sourceRows : []).map(normalizeServiceRow);
+  const rows = (Array.isArray(sourceRows) ? sourceRows : []).map((row) => normalizeNumericColumns(row, NUMERIC_COLUMNS));
   return { rows, limit: safeLimit, truncated: rows.length === safeLimit };
 }
 

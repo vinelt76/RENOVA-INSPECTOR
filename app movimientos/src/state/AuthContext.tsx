@@ -1,8 +1,9 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { AuthError, Session } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { loadOperatorProfile, supabase } from '../lib/supabase';
 import { loginIdentifierCandidates } from '../lib/model';
 import type { OperatorProfile } from '../lib/types';
+import { useContext } from 'react';
 
 interface AuthValue {
   ready: boolean;
@@ -16,11 +17,13 @@ interface AuthValue {
 
 export const AuthContext = createContext<AuthValue | null>(null);
 
-const PROFILE_CACHE = 'renova:movements:profile:v1';
-
-function isInvalidCredentials(error: AuthError | null): boolean {
-  return error?.code === 'invalid_credentials';
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth debe usarse dentro de AuthProvider.');
+  return context;
 }
+
+const PROFILE_CACHE = 'renova:movements:profile:v1';
 
 function cachedProfile(userId: string): OperatorProfile | null {
   try {
@@ -85,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     for (const email of candidates) {
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) {
-        if (isInvalidCredentials(authError)) {
+        if (authError?.code === 'invalid_credentials') {
           lastInvalidCredentials = true;
           continue;
         }

@@ -1,3 +1,4 @@
+
 import type {
   EntryOrigin,
   ExecutionService,
@@ -6,6 +7,7 @@ import type {
   MovementOrder,
   MovementReason,
   RequestedMovement,
+  TireCondition,
 } from './types';
 
 export const REASON_LABELS: Readonly<Record<MovementReason, string>> = {
@@ -35,12 +37,7 @@ export function loginIdentifierCandidates(identifier: string): string[] {
   if (normalized.includes('@')) return [normalized];
   return configuredLoginDomains().map((domain) => `${normalized}@${domain}`);
 }
-
-export function loginIdentifierToEmail(identifier: string): string {
-  return loginIdentifierCandidates(identifier)[0] ?? '';
-}
-
-const TIRE_CONDITIONS = new Set(['N', 'R1', 'R2', 'R3', 'R4']);
+export const TIRE_CONDITIONS: readonly TireCondition[] = ['N', 'R1', 'R2', 'R3', 'R4'];
 const ROTATION_ORIGIN_PATTERN = /(?:ROTAR|DESDE)\s+P(\d+)/i;
 
 function entryOrigin(request: RequestedMovement): {
@@ -62,7 +59,7 @@ function entryOrigin(request: RequestedMovement): {
 
 export function newExecutionItem(request: RequestedMovement): ExecutionItem {
   const origin = entryOrigin(request);
-  const condition = TIRE_CONDITIONS.has(request.condition ?? '')
+  const condition = request.condition != null && TIRE_CONDITIONS.includes(request.condition)
     ? request.condition as ExecutionItem['condition']
     : 'N';
   return {

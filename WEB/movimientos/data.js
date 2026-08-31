@@ -1,3 +1,5 @@
+import { getFetchView, normalizeNumericColumns } from "../shared/fetch-view.js";
+
 const UNIT_POSITION_STATE_COLUMNS = [
   "company_id",
   "unit_id",
@@ -64,28 +66,6 @@ const POSITION_NUMERIC_COLUMNS = [
 ];
 
 const INVENTORY_NUMERIC_COLUMNS = ["otd_mm", "last_rtd_mm"];
-
-function getFetchView(dependency) {
-  if (typeof dependency === "function") return dependency;
-
-  const client = dependency ?? globalThis.RenovaSupabase;
-  if (typeof client?.fetchView !== "function") {
-    throw new TypeError("RenovaSupabase.fetchView no está disponible");
-  }
-
-  return client.fetchView.bind(client);
-}
-
-function normalizeNumericColumns(row, columns) {
-  const normalized = { ...row };
-  for (const column of columns) {
-    if (normalized[column] != null) {
-      normalized[column] = Number(normalized[column]);
-    }
-  }
-  return normalized;
-}
-
 /**
  * Resuelve la unidad visible para la sesión actual. La placa de navegación
  * tiene prioridad para evitar una lectura adicional de la inspección.

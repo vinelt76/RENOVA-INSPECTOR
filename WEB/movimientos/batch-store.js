@@ -1,3 +1,5 @@
+import { deepFreeze } from "../shared/deep-freeze.js";
+
 const STORE_PREFIX = "renova:movimientos";
 const LEGACY_STORE_PREFIX = "renova:tire-change";
 const STORE_VERSION = 1;
@@ -194,14 +196,6 @@ function assertObject(value, label) {
     throw new TypeError(`${label} debe ser un objeto`);
   }
 }
-
-function deepFreeze(value) {
-  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
-  Object.freeze(value);
-  for (const nested of Object.values(value)) deepFreeze(nested);
-  return value;
-}
-
 /** Guarda un snapshot editable. El payload sellado se persiste por separado. */
 export function saveDraft(scope, draft, storage) {
   const normalizedScope = normalizeScope(scope);

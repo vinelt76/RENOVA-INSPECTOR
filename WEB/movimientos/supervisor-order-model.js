@@ -1,3 +1,5 @@
+import { localToday } from "../shared/inspection-date-facets.js";
+
 export const MOVEMENT_REASONS = Object.freeze({
   repair: "PARA REPARACIÓN",
   retention: "PARA RETÉN",
@@ -112,13 +114,6 @@ function completenessErrors(draft) {
     );
   }
   return errors;
-}
-
-export function localToday(now = new Date()) {
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 export function createOrderId(cryptoApi = globalThis.crypto) {

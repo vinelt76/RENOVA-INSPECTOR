@@ -1,4 +1,5 @@
 import { normalizeSearchText } from "./search.js";
+import { createElement } from "./dom.js";
 
 /**
  * Un solo componente de filtro (F1), parametrizado por pantalla con `facets`
@@ -11,13 +12,6 @@ import { normalizeSearchText } from "./search.js";
  */
 
 let instanceCounter = 0;
-
-function createElement(documentObject, tagName, className, text) {
-  const element = documentObject.createElement(tagName);
-  if (className) element.className = className;
-  if (text != null) element.textContent = text;
-  return element;
-}
 
 function sanitizeChips(chips, facetByKey) {
   return (Array.isArray(chips) ? chips : []).filter((chip) => chip && facetByKey.has(chip.facet));

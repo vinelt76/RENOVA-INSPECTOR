@@ -1,4 +1,5 @@
 import { createFilterBar } from "../shared/filter-bar.js";
+import { createElement } from "../shared/dom.js";
 import { loadServices, loadServicesProfile } from "./data.js";
 import { createServicesRefreshFallback } from "./refresh-fallback.js";
 import {
@@ -45,14 +46,6 @@ const elements = {
 let activeClient = null;
 let unsubscribeRealtime = null;
 let stopRefreshFallback = null;
-
-function createElement(tagName, className, value) {
-  const element = document.createElement(tagName);
-  if (className) element.className = className;
-  if (value != null) element.textContent = value;
-  return element;
-}
-
 function clean(value, fallback = "—") {
   const result = String(value ?? "").trim();
   return result || fallback;

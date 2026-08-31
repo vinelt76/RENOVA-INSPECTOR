@@ -1,4 +1,5 @@
 import { loadActiveCompanyName, loadInventoryScreenData } from "./data.js";
+import { createElement } from "../shared/dom.js";
 import { INVENTORY_TABS, filterInventoryRows } from "./inventory-model.js";
 
 const TABS = Object.freeze({
@@ -97,14 +98,6 @@ function historyHref(row) {
     ? `historial-neumatico.html?serie=${encodeURIComponent(code)}&from=inventario`
     : null;
 }
-
-function createElement(tagName, className, text) {
-  const element = document.createElement(tagName);
-  if (className) element.className = className;
-  if (text != null) element.textContent = text;
-  return element;
-}
-
 function appendFact(list, label, factValue, { wide = false, condition = false } = {}) {
   const wrapper = createElement("div", `inventory-fact${wide ? " is-wide" : ""}`);
   const term = createElement("dt", null, label);

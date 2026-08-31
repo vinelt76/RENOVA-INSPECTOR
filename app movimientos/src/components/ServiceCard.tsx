@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { REASON_LABELS } from '../lib/model';
+import { REASON_LABELS, TIRE_CONDITIONS } from '../lib/model';
 import type {
   ExecutionItem,
   ExecutionService,
@@ -8,7 +8,6 @@ import type {
 } from '../lib/types';
 
 const REASONS = Object.entries(REASON_LABELS) as [MovementReason, string][];
-const CONDITIONS: TireCondition[] = ['N', 'R1', 'R2', 'R3', 'R4'];
 
 interface Props {
   ordinal: number;
@@ -107,7 +106,7 @@ function TireDataGroup({ direction, item, itemIndex, onChange }: TireGroupProps)
         <label className="field">
           <span>CONDICIÓN</span>
           <select value={item.condition} onChange={(event) => set({ condition: event.target.value as TireCondition })}>
-            {CONDITIONS.map((condition) => <option key={condition}>{condition}</option>)}
+            {TIRE_CONDITIONS.map((condition) => <option key={condition}>{condition}</option>)}
           </select>
         </label>
         {item.condition !== 'N' ? (

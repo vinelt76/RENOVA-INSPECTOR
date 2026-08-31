@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../state/useApp';
+import { useApp } from '../state/context';
 import { unidadRepo } from '../db/repos/unidadRepo';
 import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';

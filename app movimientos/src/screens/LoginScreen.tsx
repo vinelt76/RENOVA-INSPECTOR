@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import Brand from '../components/Brand';
-import { useAuth } from '../state/useAuth';
+import { useAuth } from '../state/AuthContext';
 
 export default function LoginScreen() {
   const { signIn, error: setupError } = useAuth();

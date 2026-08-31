@@ -26,8 +26,7 @@
     "jeep-sqlite": "^2.8.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.0",
-    "uuid": "^14.0.1"
+    "react-router-dom": "^7.18.0"
   },
   "overrides": {
     "uuid": "^14.0.1"
@@ -36,11 +35,9 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.2",
     "exceljs": "^3.10.0",
     "oxlint": "^1.69.0",
-    "playwright": "^1.61.1",
     "tsx": "^4.19.2",
     "typescript": "~6.0.2",
     "vite": "^8.1.0",

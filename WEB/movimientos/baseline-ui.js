@@ -1,13 +1,7 @@
 import { createFocusTrap } from "./a11y.js";
+import { createElement } from "../shared/dom.js";
 
 const CONDITIONS = ["N", "R1", "R2", "R3", "R4"];
-
-function createElement(documentObject, tag, className, text) {
-  const element = documentObject.createElement(tag);
-  if (className) element.className = className;
-  if (text != null) element.textContent = text;
-  return element;
-}
 
 function formatInspectionDate(value) {
   if (!value) return "fecha no disponible";

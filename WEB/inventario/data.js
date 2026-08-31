@@ -1,3 +1,5 @@
+import { getFetchView, normalizeNumericColumns } from "../shared/fetch-view.js";
+
 const RETENTION_COLUMNS = [
   "company_id",
   "life_cycle_id",
@@ -37,26 +39,6 @@ const DISCARDED_COLUMNS = [
 
 const RETENTION_NUMERIC_COLUMNS = ["cycle_number", "otd_mm", "last_rtd_mm", "days_in_inventory"];
 const DISCARDED_NUMERIC_COLUMNS = ["cost", "last_position_number"];
-
-function getFetchView(dependency) {
-  if (typeof dependency === "function") return dependency;
-
-  const client = dependency ?? globalThis.RenovaSupabase;
-  if (typeof client?.fetchView !== "function") {
-    throw new TypeError("RenovaSupabase.fetchView no está disponible");
-  }
-
-  return client.fetchView.bind(client);
-}
-
-function normalizeNumericColumns(row, columns) {
-  const normalized = { ...row };
-  for (const column of columns) {
-    if (normalized[column] != null) normalized[column] = Number(normalized[column]);
-  }
-  return normalized;
-}
-
 /**
  * Devuelve todo el inventario disponible para montaje. Retén es un estado
  * derivado: no se filtra por el motivo del último retiro.

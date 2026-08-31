@@ -1,4 +1,4 @@
-import { createContext } from 'react';
+import { createContext, useContext } from 'react';
 import type { Empresa } from '../db/schema';
 
 export interface AppState {
@@ -19,3 +19,8 @@ export interface AppCtx extends AppState {
 }
 
 export const AppContext = createContext<AppCtx | null>(null);
+export function useApp() {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
+}

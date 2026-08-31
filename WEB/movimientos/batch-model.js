@@ -6,6 +6,8 @@
  * covered with deterministic tests.
  */
 
+import { deepFreeze } from "../shared/deep-freeze.js";
+
 export const BATCH_STATUS = Object.freeze({
   EMPTY: "EMPTY",
   EDITING: "EDITING",
@@ -757,27 +759,10 @@ function isObject(value) {
   return value !== null && typeof value === "object";
 }
 
+// ponytail: structuredClone (nativo Node 18+/browsers) clona Maps y objetos anidados en un paso.
 function cloneValue(value) {
-  if (Array.isArray(value)) return value.map(cloneValue);
-  if (!isObject(value)) return value;
-  if (value instanceof Map) {
-    return new Map([...value].map(([key, item]) => [key, cloneValue(item)]));
-  }
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [key, cloneValue(item)]),
-  );
+  return structuredClone(value);
 }
-
-function deepFreeze(value) {
-  if (!isObject(value) || Object.isFrozen(value)) return value;
-  if (value instanceof Map) {
-    for (const item of value.values()) deepFreeze(item);
-  } else {
-    Object.values(value).forEach(deepFreeze);
-  }
-  return Object.freeze(value);
-}
-
 function deduplicateViolations(violations) {
   const seen = new Set();
   return violations.filter((item) => {
