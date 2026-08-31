@@ -14,10 +14,10 @@ node .Codex/skills/verify-data-flow/scripts/compare_golden.mjs
 ```
 
    Añadir `--strict-spec` si además se quiere que el build falle ante cualquier desviación de
-   `specs/reglas_negocio.md` (no solo divergencia Python↔TS). Las suites individuales
-   (`cd reference && python -m pytest test_calculations_golden.py -v`,
-   `cd app && npm test -- calculations.test.ts`) siguen existiendo y pueden correrse aparte, pero
-   ya no prueban paridad entre sí — cada una valida su propio lenguaje contra sus propios casos.
+   `specs/reglas_negocio.md` (no solo divergencia Python↔TS). La suite individual
+   `cd app && npm test -- calculations.test.ts` sigue existiendo y puede correrse aparte, pero ya
+   no prueba paridad — valida TS contra sus propios casos. (`reference/test_calculations_golden.py`
+   se eliminó en 2026-08-31: duplicaba los casos del golden compartido sin cubrir `calcular_isa_peso`).
 3. Si se modifica o agrega una función: añadir el caso a
    `.Codex/skills/verify-data-flow/fixtures/golden.json` (un solo fixture, no dos) en vez de
    duplicarlo en ambas suites. Casos donde la spec no resuelve el resultado se marcan
