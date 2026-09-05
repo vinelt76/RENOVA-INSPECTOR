@@ -1,0 +1,19 @@
+{
+  "cli_version": "0.10.2",
+  "checkpoint_id": "01M1SW26C9Y88P6M83RKF79NTP",
+  "session_id": "01a03ef8-2fbd-72d7-8df5-1b13f98544ba",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-05T22:47:12.951258612Z",
+  "checkpoints_count": 2,
+  "files_touched": null,
+  "agent": "Pi",
+  "model": "qwen/qwen3.8-max-free",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 249731,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3522304,
+    "output_tokens": 51365,
+    "api_call_count": 66
+  }
+}
