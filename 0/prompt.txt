@@ -1,0 +1,11 @@
+fix this, sometimes when i open oh my pi this happens ╰─                                                                                                                     ─╯
+[Uncaught Exception] Error: EPIPE: broken pipe, send
+    at end (unknown)
+    at <anonymous> (internal:fs/streams:402:23)
+    at _destroy (internal:streams/destroy:63:18)
+    at destroy (internal:streams/destroy:41:13)
+    at <anonymous> (internal:streams/writable:601:23)
+    at finish (internal:streams/writable:482:21)
+    at <anonymous> (internal:streams/writable:469:19)
+    at processTicksAndRejections (native:7:39)
+╭──     Gemini 3.1 Pro · 󰪣 high   …Proyectos_y_Desarrollo/RE
