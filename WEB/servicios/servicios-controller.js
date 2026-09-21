@@ -6,6 +6,7 @@ import {
   casingHistoryHref,
   chipsFromSearch,
   filterServices,
+  filterCurrentOrders,
   searchForChips,
   segmentsFromSummary,
   SERVICE_FACETS,
@@ -14,6 +15,7 @@ import {
   serviceTypeMeta,
   summarizeServices,
   summarizeCurrentOrders,
+  reconciliationStatusLabel,
   unitHref,
 } from "./servicios-model.js";
 
@@ -29,6 +31,7 @@ const state = {
   limit: null,
   requestId: 0,
   profile: null,
+  currentOrderFilter: "active",
 };
 
 const elements = {
@@ -46,6 +49,7 @@ const elements = {
   status: document.getElementById("services-status"),
   list: document.getElementById("services-list"),
   currentSummary: document.getElementById("services-current-summary"),
+  currentFilters: document.getElementById("services-current-filters"),
   currentList: document.getElementById("services-current-list"),
 };
 
@@ -141,13 +145,35 @@ function renderCurrentOrders(orders) {
     elements.currentSummary.append(tile);
   }
 
+  elements.currentFilters.replaceChildren();
+  const filters = [
+    ["active", "ACTIVAS", summary.issued + summary.in_progress],
+    ["issued", CURRENT_ORDER_STATUS_LABELS.issued, summary.issued],
+    ["in_progress", CURRENT_ORDER_STATUS_LABELS.in_progress, summary.in_progress],
+    ["completed", CURRENT_ORDER_STATUS_LABELS.completed, summary.completed],
+    ["cancelled", CURRENT_ORDER_STATUS_LABELS.cancelled, summary.cancelled],
+  ];
+  for (const [value, label, count] of filters) {
+    const button = createElement("button", `services-current-filter${state.currentOrderFilter === value ? " is-selected" : ""}`, `${label} · ${count}`);
+    button.type = "button";
+    button.setAttribute("aria-pressed", String(state.currentOrderFilter === value));
+    button.addEventListener("click", () => {
+      state.currentOrderFilter = value;
+      renderCurrentOrders(orders);
+    });
+    elements.currentFilters.append(button);
+  }
+
   elements.currentList.replaceChildren();
-  const active = orders.filter((order) => order.status === "issued" || order.status === "in_progress");
-  if (!active.length) {
-    elements.currentList.append(createElement("p", "services-current-empty", "No hay órdenes en cola o en ejecución."));
+  const visibleOrders = filterCurrentOrders(orders, state.currentOrderFilter);
+  if (!visibleOrders.length) {
+    const emptyMessage = state.currentOrderFilter === "active"
+      ? "No hay órdenes en cola o en ejecución."
+      : "No hay órdenes para este filtro.";
+    elements.currentList.append(createElement("p", "services-current-empty", emptyMessage));
     return;
   }
-  for (const order of active) {
+  for (const order of visibleOrders) {
     const card = createElement("article", `services-current-card status-${order.status}`);
     const head = createElement("div", "services-current-card-head");
     head.append(
@@ -252,6 +278,7 @@ function createServiceRow(row) {
   );
   const entry = entryLabel(row);
   if (entry) facts.append(createElement("span", "services-entry", entry));
+  facts.append(createElement("span", `services-reconciliation status-${row?.reconciliation_status ?? "unknown"}`, reconciliationStatusLabel(row?.reconciliation_status)));
   const details = createElement("details", "services-row-details");
   details.append(
     createElement("summary", null, "VER DATOS DEL SERVICIO"),

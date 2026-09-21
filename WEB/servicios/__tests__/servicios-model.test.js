@@ -9,6 +9,8 @@ import {
   SERVICE_FACETS,
   SERVICE_TYPES,
   canDeleteMovementOrder,
+  filterCurrentOrders,
+  reconciliationStatusLabel,
   summarizeCurrentOrders,
   summarizeServices,
   unitHref,
@@ -43,6 +45,21 @@ describe("órdenes actuales", () => {
     expect(canDeleteMovementOrder(orders[1], "u1")).toBe(false);
     expect(canDeleteMovementOrder(orders[2], "u1")).toBe(false);
     expect(canDeleteMovementOrder(orders[0], "u2")).toBe(false);
+  });
+
+  it("filtra órdenes por estado sin perder el conjunto activo", () => {
+    expect(filterCurrentOrders(orders, "active").map((order) => order.id)).toEqual(["o1", "o2"]);
+    expect(filterCurrentOrders(orders, "completed").map((order) => order.id)).toEqual(["o3"]);
+    expect(filterCurrentOrders(orders, "cancelled").map((order) => order.id)).toEqual(["o4"]);
+    expect(filterCurrentOrders(orders, "all")).toHaveLength(4);
+  });
+});
+
+describe("conciliación", () => {
+  it("explica que una ejecución está registrada pero pendiente de confirmación", () => {
+    expect(reconciliationStatusLabel("pending")).toBe("CONCILIACIÓN PENDIENTE");
+    expect(reconciliationStatusLabel("reconciled")).toBe("CONCILIADA");
+    expect(reconciliationStatusLabel(null)).toBe("SIN ESTADO");
   });
 });
 

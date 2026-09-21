@@ -24,6 +24,20 @@ export function summarizeCurrentOrders(orders) {
   return summary;
 }
 
+export function filterCurrentOrders(orders, filter = "active") {
+  const source = Array.isArray(orders) ? orders : [];
+  if (filter === "all") return source;
+  if (filter === "active") return source.filter((order) => ["issued", "in_progress"].includes(order?.status));
+  return source.filter((order) => order?.status === filter);
+}
+
+export function reconciliationStatusLabel(status) {
+  if (status === "reconciled") return "CONCILIADA";
+  if (status === "needs_review") return "REQUIERE REVISIÓN";
+  if (status === "pending") return "CONCILIACIÓN PENDIENTE";
+  return "SIN ESTADO";
+}
+
 export function canDeleteMovementOrder(order, userId) {
   return Boolean(order?.id && order.status === "issued" && order.requested_by && order.requested_by === userId);
 }

@@ -4,6 +4,7 @@ import ServiceCard from '../components/ServiceCard';
 import {
   draftFromOrder,
   draftStorageKey,
+  completionSummary,
   groupExecutionServices,
   prefillMovementItemsFromInspections,
   validateDraft,
@@ -40,6 +41,7 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
   const [complete, setComplete] = useState(order.status === 'completed');
   const errors = useMemo(() => validateDraft(draft, order.last_odometer), [draft, order.last_odometer]);
   const services = useMemo(() => groupExecutionServices(draft.items), [draft.items]);
+  const completion = useMemo(() => completionSummary(draft), [draft]);
   const invalidPositions = useMemo(() => new Set(
     errors
       .map((message) => message.match(/^P(\d+):/)?.[1])
@@ -149,10 +151,11 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
           <div className="success-mark">✓</div>
           <div className="section-kicker">ORDEN REGISTRADA</div>
           <h1>BUS {order.plate}</h1>
-          <p>{services.length} servicios quedaron guardados con salida, ingreso y trazabilidad del operario.</p>
+          <p>{completion.services} servicios quedaron guardados con salida, ingreso y trazabilidad del operario.</p>
           <div className="success-summary">
             <span>KILOMETRAJE</span>
             <strong>{Number(draft.odometer || order.odometer_km || 0).toLocaleString('es-PE')} KM</strong>
+            <span>{completion.executions} ejecuciones técnicas · {completion.pendingReconciliation ? 'conciliación pendiente de confirmación' : 'conciliación confirmada'}</span>
           </div>
           <button className="secondary-button" type="button" onClick={() => onBack(true)}>VOLVER A ÓRDENES →</button>
         </main>

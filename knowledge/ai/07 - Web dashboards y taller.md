@@ -91,9 +91,9 @@ en su lugar. Una rotación entre dos posiciones son **2** servicios, uno por pos
 reemplazo es **1**. Cuatro tiles, barra de distribución segmentada con leyenda accesible, 12 facetas
 con OR dentro / AND entre y estado en URL multivalor, igual que ADR-0006.
 
-**Qué NO mide:** consumo, vida útil ni costo. `reconciliation_status` es `pending` al 100 %: los
-servicios no están ligados a casco/ciclo/instalación. La faceta se expone justamente para que el
-usuario descubra esa limitación en vez de asumir que la pantalla está completa.
+**Qué NO mide:** consumo, vida útil ni costo. `reconciliation_status` sigue `pending` mientras los
+servicios no estén ligados a casco/ciclo/instalación por una confirmación física. Servicios lo
+declara como **CONCILIACIÓN PENDIENTE**; no lo presenta como error ni inventa un vínculo.
 
 Tampoco mide **lo que se hace sin desmontar el neumático** —presión, torque, alineación— ni las
 inspecciones, que viven en su propia cadena (`inspections` / `inspection_measurements`). El párrafo
@@ -110,10 +110,10 @@ código de casco (→ `historial-neumatico.html`) son enlaces; un código sin hi
 `SIN HISTORIAL` sin `href`. Es el mismo límite de ADR-0005: dos objetos navegables, y Servicios
 enruta hacia ellos sin volverse un tercero. Pantalla de solo lectura: ningún camino alcanza una RPC.
 
-La actualización usa dos redes complementarias: conserva la suscripción Realtime y, como
-`tire_movement_executions` todavía no está publicada, vuelve a consultar silenciosamente al enfocar
-la ventana, al regresar a una pestaña visible y cada 10 segundos mientras permanece visible. El
-sondeo conserva los datos actuales si falla y no muestra un estado de carga intermedio.
+La actualización usa dos redes complementarias: Realtime publica `tire_movement_orders` y
+`tire_movement_executions` desde el 2026-09-21, y el sondeo silencioso al enfocar la ventana, al
+regresar a una pestaña visible y cada 10 segundos permanece como respaldo. El sondeo conserva los
+datos actuales si falla y no muestra un estado de carga intermedio.
 
 Límite de 2.000 filas con banner explícito cuando la respuesta lo llena — un recorte silencioso es
 un error de datos disfrazado de rendimiento. Decisiones y porqué: **ADR-0008**

@@ -132,6 +132,10 @@ son superficies vigentes.
   listado inicial de inventario a búsquedas concretas y muestra el estado del borrador local.
 - La app de Movimientos identifica los datos precargados desde la última inspección y lleva el foco
   al primer campo inválido al intentar completar una orden.
+- La confirmación final de Movimientos resume servicios visuales y ejecuciones técnicas, y declara
+  «conciliación pendiente de confirmación» cuando la operación aún no tiene enlace físico confirmado.
+- Servicios permite filtrar las órdenes actuales por activas, en cola, en ejecución, completadas o
+  canceladas; cada ejecución histórica muestra su estado de conciliación sin ocultar la trazabilidad.
 - La interfaz sigue una divulgación progresiva: unidad, posición, identidad, estado y acción son
   lo primero; los datos técnicos precargados quedan agrupados en **Editar datos técnicos** y siguen
   siendo editables. En Servicios, la cola actual queda arriba, mientras que métricas, distribución

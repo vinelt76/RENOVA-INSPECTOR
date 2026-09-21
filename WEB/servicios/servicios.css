@@ -65,6 +65,20 @@ body { margin: 0; overflow-x: hidden; }
 .services-current-stat.status-completed { border-color: #3b8b64; }
 
 .services-current-list { display: grid; gap: 9px; margin-top: 13px; }
+.services-current-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.services-current-filter {
+  background: transparent;
+  border: 2px solid var(--border-dark);
+  border-radius: 8px;
+  color: var(--label-blue);
+  cursor: pointer;
+  font: 800 10px var(--mono);
+  min-height: 44px;
+  padding: 8px 11px;
+}
+.services-current-filter:hover,
+.services-current-filter:focus-visible,
+.services-current-filter.is-selected { border-color: var(--signal-yellow); color: var(--value-ice); outline: none; }
 .services-current-card {
   background: var(--field-dark);
   border: 2px solid var(--border-dark);
@@ -73,14 +87,21 @@ body { margin: 0; overflow-x: hidden; }
 }
 .services-current-card.status-issued { border-color: var(--signal-yellow); }
 .services-current-card.status-in_progress { border-color: var(--ember-orange); }
+.services-current-card.status-completed { border-color: #3b8b64; }
+.services-current-card.status-cancelled { border-color: var(--border-dark); opacity: .82; }
 .services-current-card-head { align-items: center; display: flex; justify-content: space-between; gap: 10px; }
 .services-current-card-head strong { color: var(--value-ice); font-size: 13px; }
 .services-current-card-head span { color: var(--signal-yellow); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
 .services-current-card.status-in_progress .services-current-card-head span { color: var(--ember-orange); }
+.services-current-card.status-completed .services-current-card-head span { color: #73c696; }
+.services-current-card.status-cancelled .services-current-card-head span { color: var(--label-blue); }
 .services-current-meta,
 .services-current-instructions { color: var(--label-blue); font-size: 11px; line-height: 1.45; margin-top: 7px; }
 .services-current-instructions { color: var(--value-ice); }
 .services-current-empty { color: var(--label-blue); font-size: 11px; margin: 13px 0 0; }
+.services-reconciliation { color: var(--signal-yellow); font-size: 10px; font-weight: 800; letter-spacing: .06em; }
+.services-reconciliation.status-reconciled { color: #73c696; }
+.services-reconciliation.status-needs_review { color: var(--ember-orange); }
 
 .services-filter { margin: 24px 0 18px; }
 .services-analysis {

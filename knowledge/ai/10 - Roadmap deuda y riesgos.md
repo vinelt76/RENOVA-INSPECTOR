@@ -163,15 +163,9 @@ migración ni introducir React en `WEB/` mientras se mejora la interfaz existent
   ADR-0008 dejó claro que **es el mismo problema que el origen externo**: saber si un neumático que
   entra viene de retén, de reparación o es nuevo exige el historial del casco, o sea la misma
   consulta mirada desde el otro lado. Hacerlas por separado sería trabajo duplicado.
-- **`tire_movement_executions` no está en la publicación `supabase_realtime`.** Medido en campo el
-  2026-07-21 (`tasks_servicios/PRUEBA_CAMPO.md` punto 17): cinco pestañas autenticadas conservaron 0
-  filas tras cerrar una orden, mientras una consulta directa desde esas mismas sesiones ya devolvía
-  1; `pg_publication_tables` confirma que la publicación solo incluye `inspections` e
-  `inspection_measurements`. **Mitigado en cliente el 2026-07-22:** Servicios conserva la
-  suscripción y además hace una lectura silenciosa al volver a la pestaña y cada 10 segundos mientras
-  está visible. Ya no exige recarga manual ni parpadea durante el sondeo. La deuda restante es de
-  infraestructura/latencia: publicar la tabla permitiría volver al evento inmediato y retirar el
-  polling, pero ya no bloquea la demo.
+- **Realtime de Movimientos — resuelto 2026-09-21.** La publicación `supabase_realtime` ahora incluye
+  `tire_movement_orders` y `tire_movement_executions`. Servicios conserva el sondeo al enfocar,
+  volver a una pestaña visible y cada 10 segundos como respaldo ante desconexiones.
 - **Límite de 2.000 filas sin paginación** en Servicios (`SERVICES_FETCH_LIMIT`), con banner visible
   cuando la respuesta lo llena. Con ~500 unidades en uso sostenido el banner empezará a aparecer: ese
   es el momento de implementar paginación por cursor o ventana temporal, diseñada y no implementada.

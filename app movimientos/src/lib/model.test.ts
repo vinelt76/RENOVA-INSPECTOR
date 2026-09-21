@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   draftFromOrder,
+  completionSummary,
   groupExecutionServices,
   loginIdentifierCandidates,
   prefillMovementItemsFromInspections,
@@ -116,6 +117,18 @@ describe('modelo de captura de movimientos', () => {
       },
     ]);
     expect(serviceCountFromOrder(rotation)).toBe(2);
+  });
+
+  it('resume una rotación como dos servicios y cuatro ejecuciones técnicas', () => {
+    const rotation = order();
+    rotation.request_items = [
+      { direction: 'exit', position: 3, reason: 'rotation' },
+      { direction: 'entry', position: 3, origin_type: 'vehicle', origin_position: 4 },
+      { direction: 'exit', position: 4, reason: 'rotation' },
+      { direction: 'entry', position: 4, origin_type: 'vehicle', origin_position: 3 },
+    ];
+    const summary = completionSummary(draftFromOrder(rotation));
+    expect(summary).toEqual({ services: 2, executions: 4, pendingReconciliation: true });
   });
 
   it('reconoce el origen de rotaciones antiguas por la nota contractual', () => {

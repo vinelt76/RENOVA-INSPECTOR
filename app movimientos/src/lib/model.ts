@@ -163,6 +163,14 @@ export function serviceCountFromOrder(order: Pick<MovementOrder, 'request_items'
   return new Set(order.request_items.map((item) => item.position)).size;
 }
 
+export function completionSummary(draft: Pick<MovementDraft, 'items'>) {
+  return {
+    services: groupExecutionServices(draft.items).length,
+    executions: draft.items.length,
+    pendingReconciliation: true,
+  };
+}
+
 export function validateDraft(
   draft: MovementDraft,
   lastOdometer: number | null,
