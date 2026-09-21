@@ -75,6 +75,34 @@ function executionIdentity(row) {
   return row.casing_code || "CÓDIGO PENDIENTE";
 }
 
+const ORDER_ACTION_SELECTORS = Object.freeze({
+  reason: "[data-order-reason]",
+  target: "[data-order-target]",
+  notes: "[data-order-notes]",
+  inventorySearch: "[data-order-inventory-search]",
+});
+
+export function captureOrderActionState(root) {
+  const read = (selector) => root?.querySelector?.(selector)?.value ?? "";
+  return {
+    reason: read(ORDER_ACTION_SELECTORS.reason),
+    target: read(ORDER_ACTION_SELECTORS.target),
+    notes: read(ORDER_ACTION_SELECTORS.notes),
+    inventorySearch: read(ORDER_ACTION_SELECTORS.inventorySearch),
+  };
+}
+
+export function restoreOrderActionState(root, saved = {}) {
+  const write = (selector, value) => {
+    const field = root?.querySelector?.(selector);
+    if (field && value != null) field.value = value;
+  };
+  write(ORDER_ACTION_SELECTORS.reason, saved.reason);
+  write(ORDER_ACTION_SELECTORS.target, saved.target);
+  write(ORDER_ACTION_SELECTORS.notes, saved.notes);
+  write(ORDER_ACTION_SELECTORS.inventorySearch, saved.inventorySearch);
+}
+
 export function createSupervisorOrdersUI({
   details,
   workspace,
@@ -168,11 +196,17 @@ export function createSupervisorOrdersUI({
   }
 
   function renderActions(state) {
+    const preserveWhileTransient = active && state.authorized &&
+      (state.status === "loading" || state.status === "error");
+    if (preserveWhileTransient) return;
+
+    const saved = captureOrderActionState(actions);
     actions.replaceChildren();
     if (!active || state.status !== "ready" || !state.selected || !state.authorized) return;
 
     const title = element(documentObject, "div", "tc-action-title", "DIRIGIR MOVIMIENTO");
     const reason = element(documentObject, "select", "tc-order-input");
+    reason.dataset.orderReason = "";
     reason.setAttribute("aria-label", "Destino o razón de salida");
     const reasonPlaceholder = element(documentObject, "option", "", "ELIGE UNA RAZÓN DE SALIDA");
     reasonPlaceholder.value = "";
@@ -185,10 +219,12 @@ export function createSupervisorOrdersUI({
       reason.append(option);
     }
     const notes = element(documentObject, "input", "tc-order-input");
+    notes.dataset.orderNotes = "";
     notes.type = "text";
     notes.maxLength = 240;
     notes.placeholder = "Nota para el operario (opcional)";
     const target = positionOptions(state, state.selected);
+    target.dataset.orderTarget = "";
     const rotate = element(documentObject, "button", "btn-accion tc-order-rotate", "AGREGAR ROTACIÓN");
     rotate.type = "button";
     rotate.addEventListener("click", () => {
@@ -208,6 +244,7 @@ export function createSupervisorOrdersUI({
       ? element(documentObject, "p", "tc-order-inventory-help", movementActionHelp(selectedRow))
       : null;
     const search = element(documentObject, "input", "tc-order-input");
+    search.dataset.orderInventorySearch = "";
     search.type = "search";
     search.placeholder = "Buscar código, marca, modelo o medida";
     search.setAttribute("aria-label", "Buscar neumático disponible en inventario");
@@ -296,6 +333,7 @@ export function createSupervisorOrdersUI({
       renderInventory();
     });
     actions.append(title, reason, target, notes, rotate, inventory);
+    restoreOrderActionState(actions, saved);
     updateFlow();
   }
 

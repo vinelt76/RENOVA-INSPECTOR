@@ -157,3 +157,5 @@ son superficies vigentes.
 - Se validó el cambio Inspección ↔ Servicios en escritorio, tablet horizontal, tablet vertical y
   móvil; en pantallas pequeñas el escenario se simplifica sin ocultar la acción ni el estado de la
   unidad.
+- Las actualizaciones automáticas de Servicios no interrumpen una orden en edición: el borrador y
+  los controles del editor sobreviven al refresco, incluida una falla temporal de red.
