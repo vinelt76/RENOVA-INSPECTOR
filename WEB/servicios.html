@@ -44,6 +44,7 @@
       </div>
       <div id="services-current-summary" class="services-current-summary" aria-label="Resumen de órdenes actuales"></div>
       <div id="services-current-filters" class="services-current-filters" role="toolbar" aria-label="Filtrar órdenes por estado"></div>
+      <div id="services-current-feedback" class="services-current-feedback" role="status" aria-live="polite" hidden></div>
       <div id="services-current-list" class="services-current-list"></div>
     </section>
 
@@ -82,7 +83,7 @@
     <section id="services-list" class="services-list" aria-label="Lista de servicios ejecutados"></section>
   </main>
 
-  <footer class="services-footer">Vista de solo lectura · esta pantalla no ejecuta ni modifica movimientos</footer>
+  <footer class="services-footer">Consulta de servicios · puedes cancelar tus órdenes que sigan en cola</footer>
   <script type="module" src="servicios/servicios-controller.js"></script>
   <script type="module">
     import { createFinderController } from "./buscador/finder-controller.js";

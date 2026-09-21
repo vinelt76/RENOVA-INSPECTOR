@@ -46,14 +46,14 @@ html,body{height:100%}
 body{
   font-size:13px;
   overflow-x:hidden;
-  overflow-y:hidden;
+  overflow-y:auto;
 }
 .dash{
-  min-width:1280px;
+  min-width:0;
+  width:100%;
   height:100vh;
   display:flex;
   flex-direction:column;
-  transform-origin:top left;
 }
 .num{font-variant-numeric:tabular-nums}
 .lbl{
@@ -438,6 +438,84 @@ main{flex:1;display:flex;min-height:0}
   .world{animation:none}
   .wheel.estado-cambio .pulse{animation:none;opacity:.5;transform:scale(1.05)}
 }
+
+/* ============ RESPONSIVE ============
+   La vista conserva el panel + escenario en escritorio, pero no fuerza un
+   lienzo de 1280px en tablets. La cabecera pasa a filas antes de que sus
+   controles se superpongan y el escenario se apila cuando el ancho ya no
+   permite leer ambos bloques con comodidad. */
+@media (max-width: 1240px){
+  header{height:auto;min-height:70px;padding:10px 14px}
+  .unit-office-head{
+    grid-template-columns:minmax(210px, .8fr) minmax(0, 1.2fr);
+    grid-template-areas:
+      "brand tools"
+      "nav nav";
+    align-items:center;
+    gap:10px 14px;
+  }
+  .unit-brand-cluster{gap:12px}
+  .unit-nav{grid-area:nav;justify-content:flex-start;overflow-x:auto;padding-bottom:2px}
+  .unit-tools{grid-area:tools;justify-content:flex-end;min-width:0}
+  .unit-tools .chip{min-width:0}
+  #user-chip{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .panel{width:380px}
+  .stage-eyebrow{top:14px;left:14px}
+  .mode-tabs{top:12px}
+  .unit-card{top:76px;right:14px}
+}
+
+@media (max-width: 900px){
+  .unit-office-head{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "brand"
+      "tools"
+      "nav";
+  }
+  .unit-brand-cluster{justify-content:space-between}
+  .hdr-sep,.hdr-empresa{display:none}
+  .unit-tools{justify-content:flex-start;overflow-x:auto}
+  .unit-tools .chip{flex:0 0 auto}
+  .unit-nav{width:100%}
+  main{display:block;overflow:visible}
+  .panel{width:100%;max-height:none;border-right:0;border-bottom:2px solid var(--border);overflow:visible}
+  .stage{min-height:680px;height:680px;overflow:hidden}
+  .stage-eyebrow{top:14px;left:14px}
+  .mode-tabs{top:12px}
+  .unit-card{top:76px;right:14px}
+}
+
+@media (max-width: 600px){
+  header{padding:10px}
+  .wordmark .l1{font-size:24px}
+  .wordmark .l2{font-size:11px}
+  .unit-tools{width:100%}
+  .unit-tools .chip{height:42px;padding-inline:10px}
+  #user-chip{flex:1 1 auto;max-width:none}
+  .panel{padding:10px;gap:8px}
+  .card{padding:12px;border-radius:12px}
+  .card-head{gap:8px}
+  .card-head h2{font-size:13px}
+  .badge{font-size:8px;padding:4px 6px;white-space:normal;text-align:right}
+  .row2{grid-template-columns:1fr}
+  .src-note{justify-content:flex-start;font-size:8px}
+  .stage{min-height:620px;height:620px}
+  .stage-eyebrow .t1{font-size:8px}
+  .stage-eyebrow .t2{font-size:16px}
+  .unit-card{top:68px;left:10px;right:10px;min-width:0;padding:10px 12px}
+  .unit-card .placa{font-size:19px;margin:3px 0 6px}
+  .unit-row{font-size:9px;gap:8px}
+  .scene{perspective:1100px}
+  .world{transform:translateY(28px) scale3d(.7,.7,.7) rotateX(-16deg) rotateY(-30deg)}
+  @keyframes sway{
+    from{transform:translateY(28px) scale3d(.7,.7,.7) rotateX(-16deg) rotateY(-24deg)}
+    to{transform:translateY(28px) scale3d(.7,.7,.7) rotateX(-16deg) rotateY(-38deg)}
+  }
+  .pos-dock{bottom:10px;gap:6px;padding:0 10px}
+  .pos-chip{padding:8px 9px;gap:5px}
+  .pos-chip .pl{font-size:7px}
+}
 </style>
 
 <div class="dash">
@@ -723,24 +801,6 @@ main{flex:1;display:flex;min-height:0}
 
 <script>
 'use strict';
-/* Escala el panel de 1280px al ancho real cuando es menor (iPad, portátil chica).
-   Mismo truco de "escenario escalado" que usa el deck de la presentación. */
-(function(){
-  var dash = document.querySelector('.dash');
-  function fitDash(){
-    var s = Math.min(1, window.innerWidth / 1280);
-    if (s < 1){
-      dash.style.transform = 'scale(' + s + ')';
-      dash.style.height = (100 / s) + 'vh';
-    } else {
-      dash.style.transform = '';
-      dash.style.height = '100vh';
-    }
-  }
-  fitDash();
-  window.addEventListener('resize', fitDash);
-  window.addEventListener('orientationchange', fitDash);
-})();
 /* ============================================================
    DATOS REALES — este panel lee Supabase/Excel.
    Umbrales: SIEMPRE configuración por empresa y medida.
@@ -778,7 +838,9 @@ function fmtDate(iso){
 }
 function posName(r){
   const axle = r.axle_type || (r.position_number <= 2 ? 'Direccional' : r.position_number >= 7 ? 'Libre' : 'Tracción');
-  const side = r.side || (r.position_number % 2 ? 'Izq' : 'Der');
+  // En buses la numeración alterna siempre izquierda/derecha: impares Izq,
+  // pares Der. No dejar que un valor de catálogo legado cambie esta lectura.
+  const side = Number(r.position_number) % 2 ? 'Izq' : 'Der';
   if(r.position_number <= 2) return `DELANTERA ${side === 'Der' ? 'DERECHA' : 'IZQUIERDA'}`;
   if(r.position_number >= 7) return `EJE LIBRE ${side === 'Der' ? 'DERECHA' : 'IZQUIERDA'}`;
   return `${String(axle).toUpperCase()} · ${side === 'Der' ? 'DERECHA' : 'IZQUIERDA'}`;
@@ -1036,7 +1098,7 @@ document.getElementById('am-cerrar').addEventListener('click', ()=>{
 });
 
 /* ================= SELECCIÓN + DOCK ================= */
-const SHORT={1:'DEL IZQ',2:'DEL DER',3:'TRAC IZQ',4:'TRAC IZQ',5:'TRAC DER',6:'TRAC DER',7:'LIB IZQ',8:'LIB DER'};
+const SHORT={1:'DEL IZQ',2:'DEL DER',3:'TRAC IZQ',4:'TRAC DER',5:'TRAC IZQ',6:'TRAC DER',7:'LIB IZQ',8:'LIB DER'};
 let selected = 1;
 
 function renderDock(){

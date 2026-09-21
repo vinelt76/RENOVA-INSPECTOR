@@ -648,7 +648,7 @@ function buildTireRowsFromSupabase(rows){
     const axName = r.axle_type || ("Eje " + axNum);
     return {
       unitId: r.plate, plate: r.plate, companyName: r.company_name,
-      pos: "P" + r.position_number, lado: r.side || "Izq",
+      pos: "P" + r.position_number, lado: Number(r.position_number) % 2 ? "Izq" : "Der",
       axleNumber: axNum, axleKey: AXLE_KEY_BY_TYPE[axName] || ("eje" + axNum), axleName: axName,
       casingCode: r.casing_code || null,   // código real del casco (o null si N/V)
       // Campos crudos de faceta (CONTRATOS_DATOS.md §2) — sin normalizar, F7/F1.

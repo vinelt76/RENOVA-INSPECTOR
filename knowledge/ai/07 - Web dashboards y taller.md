@@ -81,9 +81,10 @@ actuales (`issued`/en cola e `in_progress`/en ejecución), alimentado por
 rápidamente qué sigue pendiente, completando el par con el modo Servicios por unidad: uno **emite
 y sigue órdenes**, el otro **consulta** el resultado consolidado.
 
-El supervisor puede eliminar una orden propia todavía en cola desde el seguimiento de la unidad.
-La operación es una cancelación auditada (`cancel_tire_movement_order`), no un borrado físico; una
-orden en ejecución o completada no se puede eliminar.
+El supervisor puede cancelar una orden propia todavía en cola desde el seguimiento de la unidad o
+desde la bandeja general de Servicios. La operación es una cancelación auditada
+(`cancel_tire_movement_order`), no un borrado físico; una orden en ejecución o completada no se
+puede cancelar.
 
 **Qué mide:** actividad declarada por personas, contada por **posición atendida** (ADR-0008): el
 neumático que sale de una posición con su tipo (`rotation`, `retread`, `discard`, …) y el que entra

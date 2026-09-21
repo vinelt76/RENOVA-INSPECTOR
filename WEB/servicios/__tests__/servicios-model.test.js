@@ -9,6 +9,7 @@ import {
   SERVICE_FACETS,
   SERVICE_TYPES,
   canDeleteMovementOrder,
+  currentOrderCancelLabel,
   filterCurrentOrders,
   reconciliationStatusLabel,
   summarizeCurrentOrders,
@@ -45,6 +46,12 @@ describe("órdenes actuales", () => {
     expect(canDeleteMovementOrder(orders[1], "u1")).toBe(false);
     expect(canDeleteMovementOrder(orders[2], "u1")).toBe(false);
     expect(canDeleteMovementOrder(orders[0], "u2")).toBe(false);
+  });
+
+  it("muestra la acción de cancelación solo para la orden propia en cola", () => {
+    expect(currentOrderCancelLabel(orders[0], "u1")).toBe("CANCELAR ORDEN");
+    expect(currentOrderCancelLabel(orders[1], "u1")).toBeNull();
+    expect(currentOrderCancelLabel(orders[0], "u2")).toBeNull();
   });
 
   it("filtra órdenes por estado sin perder el conjunto activo", () => {

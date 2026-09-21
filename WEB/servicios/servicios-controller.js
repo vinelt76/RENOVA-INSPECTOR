@@ -1,6 +1,7 @@
 import { createFilterBar } from "../shared/filter-bar.js";
 import { createElement } from "../shared/dom.js";
 import { loadCurrentMovementOrders, loadServices, loadServicesProfile } from "./data.js";
+import { cancelMovementOrder } from "../movimientos/orders-rpc.js";
 import { createServicesRefreshFallback } from "./refresh-fallback.js";
 import {
   casingHistoryHref,
@@ -12,6 +13,7 @@ import {
   SERVICE_FACETS,
   SERVICES_ALLOWED_ROLES,
   CURRENT_ORDER_STATUS_LABELS,
+  currentOrderCancelLabel,
   serviceTypeMeta,
   summarizeServices,
   summarizeCurrentOrders,
@@ -32,6 +34,8 @@ const state = {
   requestId: 0,
   profile: null,
   currentOrderFilter: "active",
+  currentOrderActionId: null,
+  currentOrderFeedback: null,
 };
 
 const elements = {
@@ -50,6 +54,7 @@ const elements = {
   list: document.getElementById("services-list"),
   currentSummary: document.getElementById("services-current-summary"),
   currentFilters: document.getElementById("services-current-filters"),
+  currentFeedback: document.getElementById("services-current-feedback"),
   currentList: document.getElementById("services-current-list"),
 };
 
@@ -146,6 +151,15 @@ function renderCurrentOrders(orders) {
   }
 
   elements.currentFilters.replaceChildren();
+  elements.currentFeedback.replaceChildren();
+  if (state.currentOrderFeedback) {
+    elements.currentFeedback.hidden = false;
+    elements.currentFeedback.className = `services-current-feedback is-${state.currentOrderFeedback.tone}`;
+    elements.currentFeedback.textContent = state.currentOrderFeedback.text;
+  } else {
+    elements.currentFeedback.hidden = true;
+    elements.currentFeedback.className = "services-current-feedback";
+  }
   const filters = [
     ["active", "ACTIVAS", summary.issued + summary.in_progress],
     ["issued", CURRENT_ORDER_STATUS_LABELS.issued, summary.issued],
@@ -187,7 +201,40 @@ function renderCurrentOrders(orders) {
       createElement("div", "services-current-meta", order.status === "in_progress" ? `Operario: ${clean(order.assigned_to_name, "sin asignar")}` : `Emitida por: ${clean(order.requested_by_name, "sin registro")}`),
     );
     if (order.instructions) card.append(createElement("div", "services-current-instructions", order.instructions));
+    const cancelLabel = currentOrderCancelLabel(order, state.profile?.id);
+    if (cancelLabel) {
+      const cancel = createElement(
+        "button",
+        "services-current-cancel",
+        state.currentOrderActionId === order.id ? "CANCELANDO…" : cancelLabel,
+      );
+      cancel.type = "button";
+      cancel.disabled = state.currentOrderActionId !== null;
+      cancel.addEventListener("click", () => void cancelCurrentOrder(order));
+      card.append(cancel);
+    }
     elements.currentList.append(card);
+  }
+}
+
+async function cancelCurrentOrder(order) {
+  if (state.currentOrderActionId || !activeClient?.supabase) return;
+  if (!currentOrderCancelLabel(order, state.profile?.id)) return;
+  if (!globalThis.confirm?.(`¿Cancelar la orden emitida para BUS ${clean(order.plate, "SIN PLACA")}? Se quitará de la cola del operario y quedará registrada como cancelada.`)) return;
+
+  state.currentOrderActionId = order.id;
+  state.currentOrderFeedback = null;
+  renderCurrentOrders(state.currentOrders);
+  try {
+    await cancelMovementOrder(order.id, activeClient.supabase);
+    state.currentOrderFeedback = { tone: "success", text: "Orden cancelada y retirada de la cola del operario." };
+    await reload({ silent: true });
+  } catch (error) {
+    state.currentOrderFeedback = { tone: "error", text: error?.message || "No se pudo cancelar la orden." };
+    renderCurrentOrders(state.currentOrders);
+  } finally {
+    state.currentOrderActionId = null;
+    renderCurrentOrders(state.currentOrders);
   }
 }
 

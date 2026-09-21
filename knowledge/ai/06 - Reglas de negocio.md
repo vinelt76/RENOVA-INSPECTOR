@@ -7,6 +7,12 @@ sources: [specs/reglas_negocio.md, specs/reglas_fijas_vs_configurables.md, refer
 
 # Reglas de negocio
 
+## Numeración lateral de buses
+
+En las configuraciones BUS, las posiciones se numeran alternando lados desde el frente:
+P1 izquierda, P2 derecha, P3 izquierda, P4 derecha y así sucesivamente. La aplicación usa
+esta regla para presentar la posición; el catálogo remoto se normaliza con el mismo criterio.
+
 > [!CAUTION]
 > Esto es un mapa. La autoridad literal es `specs/reglas_negocio.md`. No cambiar fórmulas leyendo solo esta nota.
 

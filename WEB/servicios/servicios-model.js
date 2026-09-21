@@ -41,6 +41,10 @@ export function reconciliationStatusLabel(status) {
 export function canDeleteMovementOrder(order, userId) {
   return Boolean(order?.id && order.status === "issued" && order.requested_by && order.requested_by === userId);
 }
+
+export function currentOrderCancelLabel(order, userId) {
+  return canDeleteMovementOrder(order, userId) ? "CANCELAR ORDEN" : null;
+}
 import { applyFilters, distinctValues } from "../shared/filter-facets.js";
 import {
   distinctInspectionExactDateValues,

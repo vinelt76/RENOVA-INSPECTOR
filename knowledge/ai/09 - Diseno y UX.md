@@ -136,6 +136,8 @@ son superficies vigentes.
   «conciliación pendiente de confirmación» cuando la operación aún no tiene enlace físico confirmado.
 - Servicios permite filtrar las órdenes actuales por activas, en cola, en ejecución, completadas o
   canceladas; cada ejecución histórica muestra su estado de conciliación sin ocultar la trazabilidad.
+- Servicios permite cancelar directamente una orden propia que siga en cola, con confirmación y
+  mensaje de resultado; no obliga a volver a abrir la unidad específica.
 - La interfaz sigue una divulgación progresiva: unidad, posición, identidad, estado y acción son
   lo primero; los datos técnicos precargados quedan agrupados en **Editar datos técnicos** y siguen
   siendo editables. En Servicios, la cola actual queda arriba, mientras que métricas, distribución
