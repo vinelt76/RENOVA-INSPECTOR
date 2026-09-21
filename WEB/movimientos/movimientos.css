@@ -431,7 +431,8 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
 }
 
 .movimientos-panel{
-  width:432px;
+  width:min(432px, 38vw);
+  min-width:0;
   flex:none;
   overflow-y:auto;
   padding:14px;
@@ -901,6 +902,64 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   }
 }
 
+/* En la vista de unidad el encabezado usa `.unit-tools`, no `.hdr-right`.
+   Estas reglas son deliberadamente específicas del modo Servicios para que
+   el cambio de pestaña no herede un layout de otra carcasa. */
+@media (max-width:1024px){
+  .movimientos-panel{
+    width:min(380px, 100%);
+  }
+
+  html[data-renova-mode="movimientos"] .dash{
+    min-width:0;
+    width:100%;
+  }
+
+  html[data-renova-mode="movimientos"] .unit-tools{
+    min-width:0;
+    overflow-x:auto;
+    justify-content:flex-end;
+  }
+
+  html[data-renova-mode="movimientos"] .unit-tools .chip{
+    flex:0 0 auto;
+  }
+
+  html[data-renova-mode="movimientos"] .movimientos-panel{
+    width:min(380px, 38vw);
+  }
+
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode{
+    min-width:0;
+  }
+
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode .stage-eyebrow{
+    top:76px;
+    left:14px;
+  }
+
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode .unit-card{
+    top:112px;
+    right:14px;
+    min-width:0;
+  }
+
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode .movimientos-dock{
+    left:0;
+    right:0;
+    bottom:12px;
+    justify-content:flex-start;
+    overflow-x:auto;
+    flex-wrap:nowrap;
+    padding:4px 14px 8px;
+    scrollbar-width:thin;
+  }
+
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode .movimientos-dock .tc-position{
+    flex:0 0 170px;
+  }
+}
+
 @media (max-width:900px){
   html[data-renova-mode="movimientos"],
   html[data-renova-mode="movimientos"] body{
@@ -918,6 +977,27 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
     min-width:0;
     min-height:100dvh;
     height:auto;
+  }
+
+  html[data-renova-mode="movimientos"] header > .unit-office-head{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "brand"
+      "tools"
+      "nav";
+  }
+
+  html[data-renova-mode="movimientos"] .unit-brand-cluster{
+    justify-content:space-between;
+  }
+
+  html[data-renova-mode="movimientos"] .unit-tools{
+    justify-content:flex-start;
+    width:100%;
+  }
+
+  html[data-renova-mode="movimientos"] .unit-nav{
+    width:100%;
   }
 
   html[data-renova-mode="movimientos"] header{
@@ -956,6 +1036,11 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
     flex:none;
   }
 
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode .unit-card{
+    left:14px;
+    right:14px;
+  }
+
   html[data-renova-mode="movimientos"] .movimientos-panel{
     order:2;
     width:100%;
@@ -989,6 +1074,11 @@ html[data-renova-mode="movimientos"] :where(button, input, select, textarea):dis
   html[data-renova-mode="movimientos"] .stage{
     height:430px;
     min-height:430px;
+  }
+
+  html[data-renova-mode="movimientos"] .stage.movimientos-mode .stage-eyebrow{
+    top:76px;
+    left:12px;
   }
 
   .mode-tabs{

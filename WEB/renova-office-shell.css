@@ -23,7 +23,10 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   margin: 0;
+  min-width: 0;
 }
+
+html { overflow-x: hidden; }
 
 /* El desplazamiento debe ser descubrible en escritorio y móvil. */
 html { scrollbar-color: var(--border-dark) var(--screen-dark); scrollbar-width: thin; }
@@ -114,6 +117,7 @@ header > .office-head {
   grid-template-columns: minmax(0, 1fr) auto;
   margin: 0 auto;
   max-width: 1280px;
+  min-width: 0;
   width: 100%;
 }
 
@@ -163,6 +167,7 @@ header > .office-head--compact {
   /* Columnas estables: el largo del nombre de pantalla no debe desplazar
      la navegación al cambiar de sección. */
   grid-template-columns: 220px minmax(0, 1fr) 253px;
+  min-width: 0;
   /* La marca y el buscador anclan los extremos de la ventana. La columna
      central absorbe el ancho extra sin desplazar la navegación. */
   max-width: none;
@@ -204,6 +209,8 @@ header > .office-head--compact .screen-nav {
   letter-spacing: .08em;
   padding: 10px 12px;
   text-transform: uppercase;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .finder-trigger:hover,
@@ -250,12 +257,16 @@ a.casing-history-link:focus-visible {
   margin: 0 0 9px;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1024px) {
   header > .office-head--compact {
     grid-template-areas:
       "brand finder"
       "nav nav";
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  header > .office-head--compact .finder-trigger {
+    justify-self: end;
   }
 
   header > .office-head--compact .nav,

@@ -146,3 +146,14 @@ son superficies vigentes.
 - La navegación web conserva barras de desplazamiento discretas para que el contenido adicional sea
   descubrible; los filtros muestran el tipo de datos que aceptan y el importador mantiene accesible
   la selección de archivos por teclado.
+
+## Alineación responsive 2026-09-21
+
+- La carcasa común de los tableros usa el mismo límite de tablet y permite que marca, buscador,
+  navegación y contenido se reacomoden sin imponer un ancho mínimo al viewport.
+- La vista de unidad recompone Servicios en tablet y móvil: el panel operativo deja de competir con
+  el escenario, las posiciones se desplazan horizontalmente cuando corresponde y el encabezado usa
+  sus propias herramientas, sin heredar reglas de otra pantalla.
+- Se validó el cambio Inspección ↔ Servicios en escritorio, tablet horizontal, tablet vertical y
+  móvil; en pantallas pequeñas el escenario se simplifica sin ocultar la acción ni el estado de la
+  unidad.
