@@ -75,3 +75,12 @@ export async function loadServicesProfile(userId, dependency) {
   });
   return rows[0] ?? null;
 }
+
+export async function loadCurrentMovementOrders(dependency) {
+  const rows = await getFetchView(dependency)("v_operator_movement_orders", {
+    select: "id,company_id,unit_id,plate,requested_by,requested_by_name,assigned_to_name,status,scheduled_for,instructions,request_items,requested_items_count,issued_at,started_at,completed_at,odometer_km",
+    order: "issued_at.desc",
+    limit: "100",
+  });
+  return Array.isArray(rows) ? rows : [];
+}

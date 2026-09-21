@@ -63,6 +63,7 @@ describe("orden del supervisor", () => {
   it("acepta el rol web histórico sin habilitar al operario", () => {
     expect(SUPERVISOR_ORDER_ROLES).toContain("fleet_manager");
     expect(SUPERVISOR_ORDER_ROLES).toContain("tire_supervisor");
+    expect(SUPERVISOR_ORDER_ROLES).toContain("supervisor");
     expect(SUPERVISOR_ORDER_ROLES).not.toContain("operator");
   });
 

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">RENOVA Inspector</string>
-    <string name="title_activity_main">RENOVA Inspector</string>
+    <string name="app_name">VULCAN INSPECTOR</string>
+    <string name="title_activity_main">VULCAN INSPECTOR</string>
     <string name="package_name">com.renova.inspector</string>
     <string name="custom_url_scheme">com.renova.inspector</string>
 </resources>

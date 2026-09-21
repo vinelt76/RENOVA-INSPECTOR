@@ -108,3 +108,35 @@ con texto navy y hovers limitados a los tokens de paleta. `historial-neumatico.h
 `WEB/renova-office-shell.css` con los demás tableros para tokens, fondo, header,
 marca y navegación. `inventario.html` y `comparativo.html` fueron retirados el mismo día y no
 son superficies vigentes.
+
+## Alineación UX aplicada 2026-09-20
+
+- Movimientos ya no toma una orden al abrirla: una orden `issued` se revisa primero y pasa a
+  `in_progress` solo al pulsar **Iniciar orden**. Esto evita cambiar el estado operativo por una
+  consulta accidental.
+- La app distingue explícitamente **guardado en este equipo**, **sincronizando**, **enviado** y
+  **pendiente de sincronizar**. El guardado local sigue siendo inmediato y no depende de red.
+- Se elevó la legibilidad de etiquetas y estados pequeños de la app de Movimientos y se usa texto
+  navy sobre el naranja de acciones para conservar contraste en el trabajo de campo.
+- Servicios web muestra primero el seguimiento de órdenes actuales; se retiró el bloque explicativo
+  sobrante para no ocultar la tarea principal.
+- La bandeja móvil de Movimientos actualiza órdenes al volver a primer plano, recuperar conexión y
+  cada 10 segundos mientras está visible; muestra la hora de la última actualización.
+- La vista web de Movimientos mantiene el mismo respaldo de actualización al volver a primer plano,
+  recuperar conexión y cada 10 segundos; el seguimiento muestra la hora de la última lectura.
+- Completar una orden pide una confirmación resumida con unidad, servicios y kilometraje. La web
+  usa «Cancelar orden» para una cancelación auditada, en vez de presentar la operación como borrado.
+- El acceso del operario identifica el campo como «Correo o usuario» y muestra un ejemplo de correo
+  CIVA; en móvil conserva el estado del borrador y resalta la posición con errores de validación.
+- La web exige elegir explícitamente la razón de salida antes de agregar un servicio, limita el
+  listado inicial de inventario a búsquedas concretas y muestra el estado del borrador local.
+- La app de Movimientos identifica los datos precargados desde la última inspección y lleva el foco
+  al primer campo inválido al intentar completar una orden.
+- La interfaz sigue una divulgación progresiva: unidad, posición, identidad, estado y acción son
+  lo primero; los datos técnicos precargados quedan agrupados en **Editar datos técnicos** y siguen
+  siendo editables. En Servicios, la cola actual queda arriba, mientras que métricas, distribución
+  y datos técnicos de cada fila se abren solo cuando hacen falta. Esta reducción no oculta errores,
+  origen, estado del borrador ni información necesaria para auditar una operación.
+- La navegación web conserva barras de desplazamiento discretas para que el contenido adicional sea
+  descubrible; los filtros muestran el tipo de datos que aceptan y el importador mantiene accesible
+  la selección de archivos por teclado.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createInspectionScopeIndex,
+  inspectionScopeTitle,
   postgrestFilterForScope,
   resolveInspectionScope,
 } from "../inspection-scope.js";
@@ -31,6 +32,16 @@ describe("inspection scope", () => {
       values: ["2026-07-15"],
       label: "Última fecha · 15 julio 2026",
     });
+  });
+
+  it("describe el corte inicial como última inspección y conserva todas sus llantas", () => {
+    const scope = resolveInspectionScope(
+      createInspectionScopeIndex(inspections, units),
+      [],
+      formatDate,
+    );
+
+    expect(inspectionScopeTitle(scope, 48)).toBe("Última inspección · 15 julio 2026 · 48 llantas");
   });
 
   it("unidad seleccionada usa sólo su inspection_id más reciente", () => {

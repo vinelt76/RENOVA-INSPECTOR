@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   loadAvailableInventory,
   loadUnitPositionState,
+  movementNavigationFromPage,
   resolveUnitId,
 } from "../data.js";
 
@@ -68,6 +69,17 @@ const INVENTORY_COLUMNS = [
 ].join(",");
 
 describe("resolveUnitId", () => {
+  it("usa la placa visible de la unidad cuando la URL solo trae mode=movimientos", () => {
+    const documentObject = {
+      getElementById: vi.fn().mockReturnValue({ textContent: " 471 " }),
+    };
+
+    expect(movementNavigationFromPage({ search: "?mode=movimientos", documentObject })).toEqual({
+      inspectionId: null,
+      plate: "471",
+    });
+  });
+
   it("prefiere la placa y resuelve la unidad sin consultar la inspección", async () => {
     const client = {
       fetchView: vi.fn().mockResolvedValue([{ unit_id: UNIT_ID, plate: "ABC-123" }]),

@@ -14,7 +14,8 @@ sources: [specs/flujo_inspeccion.md, app/src/screens, app/src/db, app/src/sync]
 3. Al elegir empresa se inicia `pullUmbrales()` en segundo plano.
 4. En `/unidad` se busca la placa localmente; si falta metadata, puede precargarse desde `get_unidad_preload`.
 5. Se crea/reutiliza `inspeccion_cabecera` con UUID local y se navega a `/inspeccion/:cabeceraId`.
-6. Cada posición se precarga desde la inspección anterior y sigue siendo editable.
+6. Cada posición se precarga desde la inspección anterior y sigue siendo editable; esto incluye
+   `model_name` cuando la inspección anterior realmente lo guardó.
 7. Antes del primer guardado, `waitForUmbralesPendientes()` espera como máximo 3 s al pull activo.
 8. `inspeccionRepo.upsertNeumatico()` calcula derivados, guarda snapshot de umbrales y encola la cabecera.
 9. Un debounce de 1200 ms dispara `drainSyncQueue()`; el guardado local ya terminó.
@@ -56,4 +57,3 @@ sequenceDiagram
 La app envía empresa por nombre, placa, fecha, odómetro, tipo/configuración y posiciones con identidad, RTD, presión, anomalía, condición y snapshots RTD. `operation` no tiene fuente actual en la app y queda `NULL`. `not_measured` se infiere de presión nula.
 
 Ver [[06 - Reglas de negocio]] y [[10 - Roadmap deuda y riesgos]].
-

@@ -28,7 +28,7 @@ function GuardedApp() {
     return (
       <main className="blocked-screen">
         <Brand />
-        <div className="error-box">{error ?? 'Tu cuenta no tiene un perfil RENOVA activo.'}</div>
+        <div className="error-box">{error ?? 'Tu cuenta no tiene un perfil VULCAN INSPECTOR activo.'}</div>
         <button className="primary-button" type="button" onClick={() => void retryProfile()}>REINTENTAR</button>
         <button className="text-button" type="button" onClick={() => void signOut()}>CERRAR SESIÓN</button>
       </main>

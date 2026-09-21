@@ -66,6 +66,22 @@ const POSITION_NUMERIC_COLUMNS = [
 ];
 
 const INVENTORY_NUMERIC_COLUMNS = ["otd_mm", "last_rtd_mm"];
+
+export function movementNavigationFromPage({
+  search = globalThis.location?.search ?? "",
+  documentObject = globalThis.document,
+} = {}) {
+  const params = new URLSearchParams(search);
+  const urlPlate = String(params.get("plate") ?? "").trim();
+  const visiblePlate = String(
+    documentObject?.getElementById?.("unit-plate")?.textContent ?? "",
+  ).trim();
+  return {
+    inspectionId: params.get("inspection_id"),
+    plate: urlPlate || visiblePlate || null,
+  };
+}
+
 /**
  * Resuelve la unidad visible para la sesión actual. La placa de navegación
  * tiene prioridad para evitar una lectura adicional de la inspección.

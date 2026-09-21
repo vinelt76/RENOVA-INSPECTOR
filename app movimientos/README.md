@@ -13,7 +13,10 @@ continúa alimentando inspecciones y no puede entrar a este flujo.
 3. Completa una tarjeta por **servicio/posición atendida**. Cada tarjeta contiene dos grupos:
    **Neumático que sale** (datos + razón) y **Neumático que entra** (datos + origen). En una
    rotación el origen dice la posición de la misma unidad; desde retén/inventario se muestra y
-   precarga la llanta elegida por el supervisor.
+   precarga la llanta elegida por el supervisor. Al abrir una orden nueva, las salidas y los
+   ingresos con origen en otra posición también cargan los datos de la última inspección de esa
+   posición. La precarga solo completa campos vacíos, se puede editar y nunca pisa un borrador
+   guardado.
 4. El borrador queda versionado en el equipo. Al completar, la RPC valida usuario, rol,
    empresa, configuración de posiciones y que el odómetro no retroceda.
 

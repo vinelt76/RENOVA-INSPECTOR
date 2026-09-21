@@ -37,13 +37,14 @@ export default function LoginScreen() {
         <p>Tu cuenta abre solamente las órdenes de la empresa que tienes asignada.</p>
 
         <label className="field field--full">
-          <span>USUARIO</span>
+          <span>CORREO O USUARIO</span>
           <input
             value={identifier}
             onChange={(event) => setIdentifier(event.target.value)}
             autoComplete="username"
             autoCapitalize="none"
-            placeholder="USUARIO"
+            inputMode="email"
+            placeholder="nombre@civa.com"
           />
         </label>
         <label className="field field--full">
@@ -63,7 +64,7 @@ export default function LoginScreen() {
           {submitting ? 'VERIFICANDO…' : 'ENTRAR →'}
         </button>
       </form>
-      <footer className="login-footer">RENOVA · OPERACIÓN CONTROLADA POR EMPRESA</footer>
+      <footer className="login-footer">VULCAN INSPECTOR · OPERACIÓN CONTROLADA POR EMPRESA</footer>
     </main>
   );
 }

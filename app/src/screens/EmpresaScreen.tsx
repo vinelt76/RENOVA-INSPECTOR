@@ -42,7 +42,7 @@ export default function EmpresaScreen() {
       <div style={{ flexShrink: 0 }}>
         <div style={{ background: NAVY, padding: 'calc(20px + env(safe-area-inset-top, 0px)) 24px 20px' }}>
           <div style={{ lineHeight: 1 }}>
-            <div style={{ fontFamily: BEBAS, fontSize: 42, color: '#fff', letterSpacing: '0.06em' }}>RENOVA</div>
+            <div style={{ fontFamily: BEBAS, fontSize: 42, color: '#fff', letterSpacing: '0.06em' }}>VULCAN</div>
             <div style={{ fontFamily: BEBAS, fontSize: 24, color: LABEL_BLUE, letterSpacing: '0.1em', marginTop: -6 }}>INSPECTOR</div>
           </div>
         </div>

@@ -1,0 +1,81 @@
+-- Ajusta la RPC de precarga: una sola inspección completa y privilegios explícitos.
+-- El acceso anon/authenticated se conserva por compatibilidad con la app piloto;
+-- PUBLIC no debe recibir EXECUTE implícitamente al recrear una función.
+
+drop function if exists public.get_unidad_preload(text, text);
+
+create function public.get_unidad_preload(p_company_name text, p_plate text)
+returns table (
+  plate text,
+  inspected_on date,
+  odometer_km integer,
+  unit_photo_url text,
+  vehicle_type text,
+  notation text,
+  position_number smallint,
+  tire_code text,
+  casing_code text,
+  brand_name text,
+  model_name text,
+  condition text,
+  retread_design text,
+  size_name text,
+  rtd_a_mm numeric,
+  rtd_b_mm numeric,
+  rtd_c_mm numeric,
+  rtd_d_mm numeric,
+  pressure_psi numeric,
+  valve_cap text,
+  anomaly text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    u.plate,
+    i.inspected_on,
+    i.odometer_km,
+    i.unit_photo_url,
+    u.vehicle_type,
+    vc.notation,
+    im.position_number,
+    im.tire_code,
+    cs.code as casing_code,
+    im.brand_name,
+    im.model_name,
+    im.condition,
+    im.retread_design,
+    im.size_name,
+    im.rtd_a_mm,
+    im.rtd_b_mm,
+    im.rtd_c_mm,
+    im.rtd_d_mm,
+    im.pressure_psi,
+    im.valve_cap,
+    im.anomaly
+  from public.units u
+  join public.companies co on co.id = u.company_id
+  join public.vehicle_configs vc on vc.id = u.config_id
+  join lateral (
+    select i0.*
+    from public.inspections i0
+    where i0.unit_id = u.id
+    order by i0.inspected_on desc, i0.updated_at desc nulls last,
+      i0.created_at desc, i0.id desc
+    limit 1
+  ) i on true
+  join public.inspection_measurements im on im.inspection_id = i.id
+  left join public.tire_life_cycles lc on lc.id = im.life_cycle_id
+  left join public.tire_casings cs on cs.id = lc.casing_id
+  where lower(co.name) = lower(p_company_name)
+    and u.plate = p_plate
+  order by im.position_number asc;
+$$;
+
+comment on function public.get_unidad_preload(text, text) is
+  'Precarga la inspección más reciente completa de una unidad, incluyendo el model_name capturado. No infiere datos por marca o medida.';
+
+revoke all on function public.get_unidad_preload(text, text) from public;
+grant execute on function public.get_unidad_preload(text, text) to anon, authenticated;

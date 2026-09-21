@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [hydrateProfile]);
 
   const signIn = useCallback(async (identifier: string, password: string) => {
-    if (!supabase) throw new Error('La app no está conectada a RENOVA.');
+    if (!supabase) throw new Error('La app no está conectada a VULCAN INSPECTOR.');
     setError(null);
 
     const candidates = loginIdentifierCandidates(identifier);

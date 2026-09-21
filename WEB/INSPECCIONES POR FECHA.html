@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<title>RENOVA — Inspecciones</title>
+<title>VULCAN INSPECTOR — Inspecciones</title>
 <!--
   PANTALLA INSPECCIONES — lista de neumáticos filtrable (F4, tasks_filtros_facetados/task_06).
   Autocontenida: abrir directamente en el navegador. Datos reales desde Supabase/Excel.
@@ -199,6 +199,16 @@
     font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--label-blue);
     text-transform:uppercase;
   }
+  .uc-details{
+    border-top:1px solid rgba(255,255,255,.06);
+    padding-top:8px;
+  }
+  .uc-details summary{
+    color:var(--label-blue);cursor:pointer;font-size:9px;font-weight:800;
+    letter-spacing:.08em;text-transform:uppercase;
+  }
+  .uc-details summary:focus-visible{outline:2px solid var(--value-ice);outline-offset:3px;border-radius:3px}
+  .uc-details-body{display:flex;flex-direction:column;gap:6px;padding-top:8px}
   .uc-retread{
     font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--signal-yellow);
     text-transform:uppercase;
@@ -257,7 +267,7 @@
 <header class="office-header--compact">
   <div class="head-row office-head office-head--compact">
     <div class="brand">
-      <div class="logo">RENOVA<b>·</b></div>
+      <div class="logo">VULCAN INSPECTOR<b>·</b></div>
       <div class="screen-name">INSPECCIONES</div>
     </div>
     <div class="header-tools">
@@ -280,6 +290,7 @@
        unidad. Un chip de fecha es la salida explícita hacia el histórico. -->
   <div class="filter-block">
     <div class="selector-label">Filtrar neumáticos</div>
+    <p class="filter-scope-hint">Busca por unidad, código, estado, fecha, marca, modelo o medida.</p>
     <div id="filterMount"></div>
   </div>
 
@@ -488,7 +499,7 @@ function tireCardIdentity(tire){
 function renderGrid(tires, chips, scope){
   currentResultTires = tires;
   const grid = document.getElementById("fleetGrid");
-  document.getElementById("gridTitle").textContent = `Neumáticos inspeccionados · ${tires.length} · ${scope?.label || "Última inspección"}`;
+  document.getElementById("gridTitle").textContent = window.RenovaInspectionScopeTitle(scope, tires.length);
 
   if(!tires.length){
     grid.innerHTML = `<div class="empty">${chips.length
@@ -529,13 +540,17 @@ function renderGrid(tires, chips, scope){
             <div class="uc-plate">${identity}</div>
             <div class="uc-meta">${t.plate} · ${t.pos} · ${formatDate(t.inspectedOn)}</div>
           </div>
-          <span class="uc-dot"></span>
         </div>
-        <div class="uc-config">${modelLine || "—"}</div>
-        ${retreadLine}
-        ${historyNote}
         <div class="uc-status">${STATUS_LABEL[status]}</div>
       </button>
+      <details class="uc-details">
+        <summary>Ver datos técnicos</summary>
+        <div class="uc-details-body">
+          <div class="uc-config">${modelLine || "—"}</div>
+          ${retreadLine}
+          ${historyNote}
+        </div>
+      </details>
       ${installationAction}
     </article>`;
   }).join("");
@@ -579,9 +594,15 @@ import {
 } from "./shared/inspection-date-facets.js";
 import {
   createInspectionScopeIndex,
+  inspectionScopeTitle,
   postgrestFilterForScope,
   resolveInspectionScope,
 } from "./shared/inspection-scope.js";
+
+// El render de tarjetas vive en el script clásico anterior. Exponer solo
+// este formateador evita que ese render dependa de un binding privado del
+// módulo de filtros.
+window.RenovaInspectionScopeTitle = inspectionScopeTitle;
 
 const finderTrigger = document.querySelector("[data-finder-trigger]");
 const finderReady = new Promise((resolve) => {
@@ -941,7 +962,6 @@ async function reloadInspectionIndexAndRows(){
     inspectionScopeIndex, inspeccionesChips,
     (iso) => window.RenovaInspecciones.formatDate(iso), formatInspectionMonth,
   );
-  if(nextScope.kind === "fleet-latest") await loadFacetCatalog();
   await applyTemporalScope({
     force: true,
     prefetchedRows: bootstrap && nextScope.kind === "global-latest"

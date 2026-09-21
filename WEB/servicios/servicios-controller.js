@@ -1,6 +1,6 @@
 import { createFilterBar } from "../shared/filter-bar.js";
 import { createElement } from "../shared/dom.js";
-import { loadServices, loadServicesProfile } from "./data.js";
+import { loadCurrentMovementOrders, loadServices, loadServicesProfile } from "./data.js";
 import { createServicesRefreshFallback } from "./refresh-fallback.js";
 import {
   casingHistoryHref,
@@ -9,17 +9,21 @@ import {
   searchForChips,
   segmentsFromSummary,
   SERVICE_FACETS,
+  SERVICES_ALLOWED_ROLES,
+  CURRENT_ORDER_STATUS_LABELS,
   serviceTypeMeta,
   summarizeServices,
+  summarizeCurrentOrders,
   unitHref,
 } from "./servicios-model.js";
 
-const ALLOWED_ROLES = new Set(["operator", "tire_supervisor", "fleet_manager", "admin"]);
-const REALTIME_TABLES = ["tire_movement_executions"];
+const ALLOWED_ROLES = new Set(SERVICES_ALLOWED_ROLES);
+const REALTIME_TABLES = ["tire_movement_executions", "tire_movement_orders"];
 
 const state = {
   status: "loading",
   rows: [],
+  currentOrders: [],
   chips: chipsFromSearch(globalThis.location?.search),
   truncated: false,
   limit: null,
@@ -41,6 +45,8 @@ const elements = {
   legend: document.getElementById("services-legend"),
   status: document.getElementById("services-status"),
   list: document.getElementById("services-list"),
+  currentSummary: document.getElementById("services-current-summary"),
+  currentList: document.getElementById("services-current-list"),
 };
 
 let activeClient = null;
@@ -121,6 +127,42 @@ function renderStats(summary) {
   elements.units.textContent = hasRows ? String(summary.units) : "—";
   elements.orders.textContent = hasRows ? String(summary.orders) : "—";
   elements.period.textContent = hasRows ? formatPeriod(summary) : "—";
+}
+
+function renderCurrentOrders(orders) {
+  const summary = summarizeCurrentOrders(orders);
+  elements.currentSummary.replaceChildren();
+  for (const status of ["issued", "in_progress"]) {
+    const tile = createElement("div", `services-current-stat status-${status}`);
+    tile.append(
+      createElement("span", null, CURRENT_ORDER_STATUS_LABELS[status]),
+      createElement("strong", null, String(summary[status])),
+    );
+    elements.currentSummary.append(tile);
+  }
+
+  elements.currentList.replaceChildren();
+  const active = orders.filter((order) => order.status === "issued" || order.status === "in_progress");
+  if (!active.length) {
+    elements.currentList.append(createElement("p", "services-current-empty", "No hay órdenes en cola o en ejecución."));
+    return;
+  }
+  for (const order of active) {
+    const card = createElement("article", `services-current-card status-${order.status}`);
+    const head = createElement("div", "services-current-card-head");
+    head.append(
+      createElement("strong", null, `BUS ${clean(order.plate, "SIN PLACA")}`),
+      createElement("span", null, CURRENT_ORDER_STATUS_LABELS[order.status] ?? order.status),
+    );
+    const items = Array.isArray(order.request_items) ? order.request_items : [];
+    card.append(
+      head,
+      createElement("div", "services-current-meta", `${formatDate(order.scheduled_for) ?? "FECHA SIN REGISTRO"} · ${items.length} movimiento${items.length === 1 ? "" : "s"}`),
+      createElement("div", "services-current-meta", order.status === "in_progress" ? `Operario: ${clean(order.assigned_to_name, "sin asignar")}` : `Emitida por: ${clean(order.requested_by_name, "sin registro")}`),
+    );
+    if (order.instructions) card.append(createElement("div", "services-current-instructions", order.instructions));
+    elements.currentList.append(card);
+  }
 }
 
 function renderSegments(summary) {
@@ -210,7 +252,12 @@ function createServiceRow(row) {
   );
   const entry = entryLabel(row);
   if (entry) facts.append(createElement("span", "services-entry", entry));
-  article.append(header, identity, facts);
+  const details = createElement("details", "services-row-details");
+  details.append(
+    createElement("summary", null, "VER DATOS DEL SERVICIO"),
+    facts,
+  );
+  article.append(header, identity, details);
   return article;
 }
 
@@ -268,13 +315,14 @@ function render() {
   elements.main?.setAttribute("aria-busy", String(state.status === "loading"));
   filterBar.setRows(ready ? state.rows : []);
   renderStats(summary);
+  renderCurrentOrders(state.currentOrders);
   renderSegments(summary);
   renderStatus(visibleRows);
   renderList(visibleRows);
 
   elements.truncated.hidden = !(ready && state.truncated);
   elements.truncated.textContent = ready && state.truncated
-    ? `Se muestran los ${state.limit} servicios más recientes. Acotá con filtros para revisar este corte; puede haber registros anteriores.`
+    ? `Se muestran los ${state.limit} servicios más recientes. Acota con filtros para revisar este corte; puede haber registros anteriores.`
     : "";
 }
 
@@ -286,9 +334,13 @@ async function reload({ silent = false } = {}) {
     render();
   }
   try {
-    const result = await loadServices({}, activeClient);
+    const [result, currentOrders] = await Promise.all([
+      loadServices({}, activeClient),
+      loadCurrentMovementOrders(activeClient),
+    ]);
     if (requestId !== state.requestId) return;
     state.rows = result.rows;
+    state.currentOrders = currentOrders;
     state.limit = result.limit;
     state.truncated = result.truncated;
     state.status = "ready";
@@ -298,6 +350,7 @@ async function reload({ silent = false } = {}) {
     console.warn("Servicios: no se pudo cargar la vista.", error);
     if (silent && state.status === "ready") return;
     state.rows = [];
+    state.currentOrders = [];
     state.truncated = false;
     state.status = "error";
   }

@@ -56,7 +56,8 @@ Separarlos permite medir rendimiento de una banda, posición y vida completa sin
 - Rutas: `assign_unit_route`.
 - Seguridad interna: `fn_require_workshop_profile`, `fn_validate_free_position`, `current_company_id`.
 - Órdenes de operario: `create_tire_movement_order`, `claim_tire_movement_order` y
-  `complete_tire_movement_order`. La primera exige `tire_supervisor`; las otras dos, `operator`.
+  `complete_tire_movement_order`. La primera admite `supervisor` legado, `tire_supervisor`,
+  `fleet_manager` y `admin`; las otras dos, `operator`.
 
 ## Vistas principales
 

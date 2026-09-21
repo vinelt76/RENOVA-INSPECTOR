@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppHeader from '../components/AppHeader';
 import ServiceCard from '../components/ServiceCard';
-import { draftFromOrder, draftStorageKey, groupExecutionServices, validateDraft } from '../lib/model';
-import { claimMovementOrder, completeMovementOrder } from '../lib/supabase';
+import {
+  draftFromOrder,
+  draftStorageKey,
+  groupExecutionServices,
+  prefillMovementItemsFromInspections,
+  validateDraft,
+} from '../lib/model';
+import { claimMovementOrder, completeMovementOrder, loadLatestInspectionForPosition } from '../lib/supabase';
 import type { ExecutionItem, MovementDraft, MovementOrder, OperatorProfile } from '../lib/types';
 
 interface Props {
@@ -25,20 +31,69 @@ function loadDraft(key: string, order: MovementOrder): MovementDraft {
 export default function ExecutionScreen({ order, profile, onBack, onSignOut }: Props) {
   const storageKey = draftStorageKey(profile.id, profile.company_id, order.id);
   const [draft, setDraft] = useState<MovementDraft>(() => loadDraft(storageKey, order));
-  const [claiming, setClaiming] = useState(order.status === 'issued');
+  const [started, setStarted] = useState(order.status !== 'issued');
+  const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [prefilledPositions, setPrefilledPositions] = useState<Set<number>>(() => new Set());
   const [complete, setComplete] = useState(order.status === 'completed');
   const errors = useMemo(() => validateDraft(draft, order.last_odometer), [draft, order.last_odometer]);
   const services = useMemo(() => groupExecutionServices(draft.items), [draft.items]);
+  const invalidPositions = useMemo(() => new Set(
+    errors
+      .map((message) => message.match(/^P(\d+):/)?.[1])
+      .filter(Boolean)
+      .map(Number),
+  ), [errors]);
+  const odometerInvalid = errors.some((message) =>
+    message.startsWith('Ingresa el kilometraje') || message.startsWith('El kilometraje'),
+  );
+
+  const startOrder = async () => {
+    setStarting(true);
+    setError(null);
+    try {
+      await claimMovementOrder(order.id);
+      setStarted(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo iniciar la orden.');
+    } finally {
+      setStarting(false);
+    }
+  };
 
   useEffect(() => {
-    if (order.status !== 'issued') return;
-    void claimMovementOrder(order.id)
-      .catch((cause) => setError(cause instanceof Error ? cause.message : 'No se pudo tomar la orden.'))
-      .finally(() => setClaiming(false));
-  }, [order.id, order.status]);
+    if (order.status === 'completed') return;
+    let cancelled = false;
+    const positions = [...new Set(draft.items.flatMap((item) => {
+      if (item.direction === 'exit') return [item.position];
+      if (item.origin_type === 'vehicle' && item.origin_position) return [item.origin_position];
+      return [];
+    }))];
+    if (!positions.length) return;
+
+    void Promise.all(positions.map(async (position) => {
+      try {
+        return [position, await loadLatestInspectionForPosition(order.unit_id, position)] as const;
+      } catch {
+        // La precarga es una ayuda. Si no hay red o la vista no está disponible,
+        // el operario conserva la captura manual y puede completar la orden.
+        return [position, null] as const;
+      }
+    })).then((entries) => {
+      if (cancelled) return;
+      const inspections = new Map(entries.filter(([, row]) => row).map(([position, row]) => [position, row!]));
+      if (!inspections.size) return;
+      setPrefilledPositions(new Set(inspections.keys()));
+      setDraft((current) => ({
+        ...current,
+        items: prefillMovementItemsFromInspections(current.items, inspections),
+      }));
+    });
+
+    return () => { cancelled = true; };
+  }, [order.status, order.unit_id]);
 
   useEffect(() => {
     if (complete) return;
@@ -57,7 +112,22 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
 
   const submit = async () => {
     setShowErrors(true);
-    if (errors.length > 0 || claiming) return;
+    if (errors.length > 0 || !started || starting) {
+      if (errors.length > 0) {
+        window.setTimeout(() => {
+          const firstInvalid = document.querySelector<HTMLInputElement>(
+            '.odometer-panel--error input, .service-card--error input:not([type="checkbox"]), .service-card--error select',
+          );
+          firstInvalid?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstInvalid?.focus();
+        }, 0);
+      }
+      return;
+    }
+    const confirmed = window.confirm(
+      `¿Confirmar la orden del BUS ${order.plate}?\n\n${services.length} servicio${services.length === 1 ? '' : 's'} · ${Number(draft.odometer).toLocaleString('es-PE')} km\n\nEsta acción registrará la ejecución.`,
+    );
+    if (!confirmed) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -98,9 +168,13 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
           <div>
             <div className="section-kicker">ORDEN DE MOVIMIENTO</div>
             <h1>BUS {order.plate}</h1>
-            <p>CONFIG. {order.vehicle_config} · {services.length} SERVICIOS · {draft.items.length} CAPTURAS</p>
+            <p>CONFIG. {order.vehicle_config} · {services.length} SERVICIOS</p>
           </div>
-          <span className="status-chip status-chip--in_progress">{claiming ? 'TOMANDO…' : 'EN CURSO'}</span>
+          {order.status === 'issued' && !started ? (
+            <span className="status-chip status-chip--issued">PENDIENTE DE INICIO</span>
+          ) : (
+            <span className="status-chip status-chip--in_progress">EN CURSO</span>
+          )}
         </section>
 
         {order.instructions ? (
@@ -111,9 +185,9 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
           </section>
         ) : null}
 
-        <section className="odometer-panel">
+        <section className={`odometer-panel${showErrors && odometerInvalid ? ' odometer-panel--error' : ''}`}>
           <div>
-            <span>KILOMETRAJE DE LA MÁQUINA</span>
+          <span>KILOMETRAJE DE LA UNIDAD</span>
             <small>UNA SOLA LECTURA PARA TODA LA ORDEN</small>
           </div>
           <label>
@@ -131,11 +205,12 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
         </section>
 
         <section className="service-list" aria-label="Servicios de la orden">
-          {services.map((service, index) => (
+          {services.map((service) => (
             <ServiceCard
               key={service.position}
-              ordinal={index + 1}
               service={service}
+              invalid={showErrors && invalidPositions.has(service.position)}
+              prefilled={prefilledPositions.has(service.position)}
               onChange={updateItem}
             />
           ))}
@@ -147,15 +222,30 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
             <ul>{errors.map((message) => <li key={message}>{message}</li>)}</ul>
           </div>
         ) : null}
-        {error ? <div className="error-box" role="alert">{error}</div> : null}
+        {error ? (
+          <div className="error-box" role="alert">
+            <strong>NO SE PUDO COMPLETAR LA ORDEN</strong>
+            <span>{error}</span>
+            <button className="text-button error-box__action" type="button" onClick={() => onBack()}>
+              VOLVER A ÓRDENES Y ACTUALIZAR
+            </button>
+          </div>
+        ) : null}
 
         <section className="submit-panel">
+          {!started ? (
           <div>
-            <span>BORRADOR GUARDADO EN ESTE EQUIPO</span>
-            <small>Si falla la señal, no pierdes lo escrito.</small>
-          </div>
-          <button className="primary-button" type="button" onClick={() => void submit()} disabled={submitting || claiming}>
-            {submitting ? 'ENVIANDO…' : 'COMPLETAR ORDEN →'}
+              <span>ORDEN LISTA PARA INICIAR</span>
+              <small>Revisa la indicación y comienza cuando estés frente a la unidad.</small>
+            </div>
+          ) : (
+            <div>
+              <span>BORRADOR GUARDADO EN ESTE EQUIPO</span>
+              <small>Si falla la señal, no pierdes lo escrito.</small>
+            </div>
+          )}
+          <button className={started ? 'primary-button' : 'secondary-button'} type="button" onClick={() => void (started ? submit() : startOrder())} disabled={submitting || starting}>
+            {starting ? 'INICIANDO…' : submitting ? 'ENVIANDO…' : started ? 'COMPLETAR ORDEN →' : 'INICIAR ORDEN →'}
           </button>
         </section>
       </main>

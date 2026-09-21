@@ -64,7 +64,7 @@ export async function preloadUnidadFromSupabase(empresaId: string, plate: string
       posicion: row.position_number,
       codigo: row.tire_code ?? row.casing_code,
       marca: row.brand_name,
-      modelo: null,
+      modelo: row.model_name,
       condicion: row.condition,
       reencauche: row.retread_design,
       medida: row.size_name,

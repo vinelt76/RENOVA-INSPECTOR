@@ -33,7 +33,7 @@ El modo visible **Servicios** vive en `WEB/movimientos/` (módulos ES puros +
 del gemelo digital. Un selector accesible **Inspección / Servicios** (persistido internamente en
 `?mode=movimientos`, sin recarga) alterna panel, dock y selección sin tocar el flujo histórico de
 Inspección. El enlace histórico `?mode=cambios` sigue abriendo Servicios y se canonicaliza a la
-URL nueva. Un perfil activo `tire_supervisor`, `fleet_manager` histórico o `admin` puede armar y
+URL nueva. Un perfil activo `supervisor` legado, `tire_supervisor`, `fleet_manager` histórico o `admin` puede armar y
 emitir órdenes. La pantalla separada `instalacion.html` se retiró por redundante.
 
 ## Buscador global
@@ -75,9 +75,15 @@ enlazadas por casco. Ver ADR-0006.
 ## Servicios ejecutados
 
 `WEB/servicios.html` (`WEB/servicios/`: `data.js` + `servicios-model.js` + `servicios-controller.js`)
-es la superficie de lectura sobre `v_tire_services`. Responde **qué se hizo con los neumáticos**,
-completando el par con el modo Servicios por unidad: uno **emite y sigue órdenes**, el otro
-**consulta** el resultado consolidado.
+es la superficie de lectura sobre `v_tire_services` y ahora incluye arriba un resumen de órdenes
+actuales (`issued`/en cola e `in_progress`/en ejecución), alimentado por
+`v_operator_movement_orders`. Las completadas siguen disponibles en el listado histórico. Responde **qué se hizo con los neumáticos** y permite revisar
+rápidamente qué sigue pendiente, completando el par con el modo Servicios por unidad: uno **emite
+y sigue órdenes**, el otro **consulta** el resultado consolidado.
+
+El supervisor puede eliminar una orden propia todavía en cola desde el seguimiento de la unidad.
+La operación es una cancelación auditada (`cancel_tire_movement_order`), no un borrado físico; una
+orden en ejecución o completada no se puede eliminar.
 
 **Qué mide:** actividad declarada por personas, contada por **posición atendida** (ADR-0008): el
 neumático que sale de una posición con su tipo (`rotation`, `retread`, `discard`, …) y el que entra
@@ -127,6 +133,11 @@ metadato de la orden (`vehicle` + posición o `inventory`); las órdenes antigua
 interpretan desde su nota `Rotar desde Pn`. Las entradas de retén/inventario precargan código,
 marca, medida, diseño, condición y RTD disponibles para que el operario confirme o corrija.
 
+**Presentación minimalista:** la pantalla de Servicios prioriza la cola operativa y muestra las
+métricas históricas y la distribución bajo **Ver resumen y distribución**. Cada fila conserva a la
+vista el tipo, posición, unidad y casco; fecha, operador, origen y datos técnicos se consultan en
+**Ver datos del servicio**. La reducción es solo visual: no elimina datos, filtros ni trazabilidad.
+
 ## Patrón común
 
 - `supabase-config.public.js` contiene configuración pública, nunca secretos.
@@ -149,6 +160,9 @@ La pestaña web dirige el trabajo; no confirma por sí misma movimientos físico
 
 La empresa se deriva del perfil autenticado. La RPC de órdenes admite `tire_supervisor`,
 `fleet_manager` histórico y `admin`.
+
+La app del operario permite revisar una orden `issued` sin tomarla. El cambio a `in_progress` se
+realiza únicamente al pulsar **Iniciar orden**; completar permanece bloqueado hasta ese momento.
 
 ### Posiciones pendientes de línea base
 

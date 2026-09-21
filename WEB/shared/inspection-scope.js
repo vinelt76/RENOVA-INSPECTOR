@@ -138,3 +138,12 @@ export function postgrestFilterForScope(scope) {
     value: values.length === 1 ? `eq.${values[0]}` : `in.(${values.join(",")})`,
   };
 }
+
+export function inspectionScopeTitle(scope, count) {
+  const safeCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+  const rawLabel = String(scope?.label || "Última inspección");
+  const label = rawLabel.replace(/^Última fecha\s*·\s*/, "");
+  const prefix = scope?.kind === "global-latest" ? "Última inspección" : "Inspecciones";
+  const noun = safeCount === 1 ? "llanta" : "llantas";
+  return `${prefix} · ${label} · ${safeCount} ${noun}`;
+}

@@ -3,6 +3,7 @@ import {
   draftFromOrder,
   groupExecutionServices,
   loginIdentifierCandidates,
+  prefillMovementItemsFromInspections,
   serviceCountFromOrder,
   validateDraft,
 } from './model';
@@ -58,6 +59,35 @@ describe('modelo de captura de movimientos', () => {
         retread_design: 'BANDA-A',
       },
     ]);
+  });
+
+  it('completa salida y entrada desde la posición correcta sin pisar datos ya capturados', () => {
+    const draft = draftFromOrder(order());
+    draft.items[0].brand = 'MARCA EDITADA';
+    draft.items[1] = {
+      ...draft.items[1],
+      code: '', brand: '', size: '', design: '', rtd_min_mm: '', condition: 'N', retread_design: '',
+    };
+    draft.items[1].origin_type = 'vehicle';
+    draft.items[1].origin_position = 4;
+    const result = prefillMovementItemsFromInspections(draft.items, new Map([
+      [3, {
+        tire_code: 'TIRE-003', casing_code: 'CASCO-003', brand_name: 'MICHELIN',
+        model_name: 'X MULTI', size_name: '295/80R22.5', condition: 'R1',
+        retread_design: 'BANDA-A', rtd_movi_mm: 12.4,
+      }],
+      [4, {
+        tire_code: 'TIRE-004', casing_code: 'CASCO-004', brand_name: 'GOODYEAR',
+        model_name: 'FUELMAX', size_name: '315/80R22.5', condition: 'N',
+        retread_design: '', rtd_movi_mm: 15.2,
+      }],
+    ]));
+
+    expect(result[0]).toMatchObject({
+      code: 'CASCO-003', brand: 'MARCA EDITADA', size: '295/80R22.5',
+      design: 'X MULTI', condition: 'R1', retread_design: 'BANDA-A', rtd_min_mm: '12.4',
+    });
+    expect(result[1]).toMatchObject({ code: 'CASCO-004', brand: 'GOODYEAR', size: '315/80R22.5', design: 'FUELMAX', rtd_min_mm: '15.2' });
   });
 
   it('agrupa la estructura técnica en un servicio por posición', () => {

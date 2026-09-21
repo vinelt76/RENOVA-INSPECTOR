@@ -109,7 +109,7 @@ function renderLoginModal(onSuccess) {
       border:2px solid #1B2D42;border-radius:14px;padding:28px 24px;display:flex;
       flex-direction:column;gap:14px;">
       <div style="color:#F0F8FF;font-weight:800;font-size:16px;letter-spacing:.04em;">
-        RENOVA INSPECTOR
+        VULCAN INSPECTOR
       </div>
       <div style="color:#7AABCC;font-size:11px;font-weight:700;letter-spacing:.08em;
         margin-bottom:4px;">
@@ -208,4 +208,3 @@ window.RenovaSupabase = {
 // su arranque en window.onRenovaSupabaseReady(fn) en vez de asumir que
 // window.RenovaSupabase ya existe.
 window.dispatchEvent(new CustomEvent("renova-supabase-ready"));
-

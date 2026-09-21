@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RENOVA — Supervisión de Neumáticos</title>
+<title>VULCAN INSPECTOR — Supervisión de Neumáticos</title>
 <link rel="icon" href="data:,">
 <!-- Dashboard web: inspecciones de lectura y emisión/seguimiento de órdenes de movimiento. -->
 <script src="supabase-config.public.js"></script>
@@ -445,14 +445,14 @@ main{flex:1;display:flex;min-height:0}
     <div class="unit-office-head">
       <div class="unit-brand-cluster">
         <div class="wordmark">
-          <span class="l1">RENOVA<b>·</b></span>
+          <span class="l1">VULCAN INSPECTOR<b>·</b></span>
           <span class="l2">VISTA DE UNIDAD</span>
         </div>
         <div class="hdr-sep"></div>
         <div class="hdr-empresa">
           <div class="hdr-avatar">T</div>
           <div>
-            <div class="name" id="hdr-company-name">RENOVA</div>
+            <div class="name" id="hdr-company-name">VULCAN INSPECTOR</div>
             <div class="sub" id="hdr-company-sub">CARGANDO DATOS DEL EXCEL</div>
           </div>
         </div>
@@ -535,7 +535,7 @@ main{flex:1;display:flex;min-height:0}
         <div class="tc-selected-identity" id="movimientos-selected-position">POSICIÓN —</div>
         <span class="tc-selected-state" id="movimientos-selected-state">—</span>
         <button class="tc-retry tc-baseline-open" id="movimientos-baseline-open" type="button" hidden>
-          Completar instalación en esta unidad
+          Completar instalación canónica (opcional para servicios)
         </button>
       </section>
 
@@ -571,12 +571,12 @@ main{flex:1;display:flex;min-height:0}
             <div class="bahia"><span>BAHÍA 01</span></div>
             <div class="sombra"></div>
           </div>
-          <div class="face wall"><div class="marca">RENOVA</div></div>
+          <div class="face wall"><div class="marca">VULCAN INSPECTOR</div></div>
 
           <div class="bus">
             <div class="shell">
-              <div class="face f-left"><div class="ventanas"></div><div class="zocalo"></div><div class="flota-tag">RENOVA · —</div></div>
-              <div class="face f-right"><div class="ventanas"></div><div class="zocalo"></div><div class="flota-tag">RENOVA · —</div></div>
+              <div class="face f-left"><div class="ventanas"></div><div class="zocalo"></div><div class="flota-tag">VULCAN INSPECTOR · —</div></div>
+              <div class="face f-right"><div class="ventanas"></div><div class="zocalo"></div><div class="flota-tag">VULCAN INSPECTOR · —</div></div>
               <div class="face f-front"><div class="parabrisas"></div><div class="farol i"></div><div class="farol d"></div></div>
               <div class="face f-back"></div>
               <div class="face f-top"></div>
@@ -761,7 +761,7 @@ const FOTO_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
 
 let POSICIONES = {};
 let INSPECTION_META = {
-  company:'RENOVA',
+  company:'VULCAN INSPECTOR',
   plate:'—',
   inspected_on:null,
   odometer_km:null,
@@ -783,6 +783,7 @@ function posName(r){
   if(r.position_number >= 7) return `EJE LIBRE ${side === 'Der' ? 'DERECHA' : 'IZQUIERDA'}`;
   return `${String(axle).toUpperCase()} · ${side === 'Der' ? 'DERECHA' : 'IZQUIERDA'}`;
 }
+
 function rowsToPositions(rows){
   const out = {};
   rows.forEach(r => {
@@ -835,7 +836,7 @@ function rowsToPositions(rows){
   return out;
 }
 function applyMeta(){
-  document.getElementById('hdr-company-name').textContent = INSPECTION_META.company || 'RENOVA';
+  document.getElementById('hdr-company-name').textContent = INSPECTION_META.company || 'VULCAN INSPECTOR';
   document.getElementById('hdr-company-sub').textContent =
     INSPECTION_META.source === 'supabase' ? 'INSPECCIÓN EXCEL · SUPABASE' : 'SIN DATOS EXCEL';
   document.getElementById('unit-plate').textContent = INSPECTION_META.plate || '—';
@@ -844,7 +845,7 @@ function applyMeta(){
   document.getElementById('unit-date').textContent = fmtDate(INSPECTION_META.inspected_on);
   document.getElementById('unit-inspector').textContent = INSPECTION_META.inspector_name || 'SIN DATO';
   document.querySelectorAll('.flota-tag').forEach(el => {
-    el.textContent = `${INSPECTION_META.company || 'RENOVA'} · ${INSPECTION_META.plate || '—'}`;
+    el.textContent = `${INSPECTION_META.company || 'VULCAN INSPECTOR'} · ${INSPECTION_META.plate || '—'}`;
   });
   document.getElementById('src-note').innerHTML = INSPECTION_META.source === 'supabase'
     ? '<span class="dot g"></span>FUENTE: SUPABASE · SOLO LECTURA · DATOS DEL EXCEL'
@@ -875,7 +876,7 @@ async function loadSupabaseInspection(){
     POSICIONES = rowsToPositions(sameInspection);
     const h = sameInspection[0];
     INSPECTION_META = {
-      company: h.company_name || 'RENOVA',
+      company: h.company_name || 'VULCAN INSPECTOR',
       plate: h.plate,
       inspected_on: h.inspected_on,
       odometer_km: h.odometer_km,

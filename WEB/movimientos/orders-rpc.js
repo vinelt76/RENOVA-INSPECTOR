@@ -13,3 +13,11 @@ export async function createMovementOrder({ orderId, unitId, scheduledFor, instr
   return data;
 }
 
+export async function cancelMovementOrder(orderId, client) {
+  if (!client?.rpc) throw new TypeError("El cliente Supabase no permite eliminar órdenes.");
+  const { data, error } = await client.rpc("cancel_tire_movement_order", {
+    p_order_id: orderId,
+  });
+  if (error) throw error;
+  return data;
+}

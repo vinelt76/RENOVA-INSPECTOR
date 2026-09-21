@@ -27,6 +27,7 @@ export default function OrdersScreen({ profile, onOpen, onSignOut }: Props) {
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const cacheKey = `renova:movements:orders:v1:${profile.id}:${profile.company_id}`;
 
   const refresh = useCallback(async () => {
@@ -37,6 +38,7 @@ export default function OrdersScreen({ profile, onOpen, onSignOut }: Props) {
       setOrders(fresh);
       localStorage.setItem(cacheKey, JSON.stringify(fresh));
       setOffline(false);
+      setLastUpdated(new Date());
     } catch (cause) {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -52,6 +54,22 @@ export default function OrdersScreen({ profile, onOpen, onSignOut }: Props) {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  // La orden se emite desde otra sesión (supervisor). Mantener la bandeja
+  // actualizada reduce el riesgo de que el operario trabaje con una lista vieja.
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (!document.hidden) void refresh();
+    };
+    const timer = window.setInterval(refreshIfVisible, 10_000);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+    window.addEventListener('online', refreshIfVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+      window.removeEventListener('online', refreshIfVisible);
+    };
+  }, [refresh]);
+
   const active = orders.filter((order) => order.status !== 'completed');
   const completed = orders.filter((order) => order.status === 'completed').slice(0, 10);
 
@@ -63,8 +81,11 @@ export default function OrdersScreen({ profile, onOpen, onSignOut }: Props) {
           <div>
             <div className="section-kicker">TRABAJO ASIGNADO</div>
             <h1>ÓRDENES DE MOVIMIENTO</h1>
+            <p className="orders-updated">
+              {lastUpdated ? `ACTUALIZADO ${lastUpdated.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}` : 'CARGANDO ESTADO'}
+            </p>
           </div>
-          <button className="refresh-button" type="button" onClick={() => void refresh()} disabled={loading}>
+          <button className="refresh-button" type="button" onClick={() => void refresh()} disabled={loading} aria-label="Actualizar órdenes" title="Actualizar órdenes">
             ↻
           </button>
         </section>

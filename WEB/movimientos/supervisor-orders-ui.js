@@ -53,6 +53,13 @@ export function inventoryOptionsForService(inventory, draft, query = "") {
   }));
 }
 
+export function movementActionHelp(row) {
+  if (row?.baseline_pending === true) {
+    return "Esta posición no tiene instalación registrada. Puedes emitir un servicio igualmente; la captura del operario quedará pendiente de reconciliación.";
+  }
+  return "Haz clic en la llanta que reemplazará a la actual en esta misma posición.";
+}
+
 function formatDate(value) {
   if (!value) return "—";
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
@@ -77,6 +84,7 @@ export function createSupervisorOrdersUI({
   onRemovePosition,
   onDraftHeader,
   onEmit,
+  onDeleteOrder,
   onReload,
   documentObject = globalThis.document,
 } = {}) {
@@ -94,7 +102,7 @@ export function createSupervisorOrdersUI({
     element(documentObject, "div", "tc-eyebrow", "ORDEN DEL SUPERVISOR"),
     element(documentObject, "h2", "", "Indicaciones para el operario"),
   );
-  editorHead.append(editorTitle, element(documentObject, "span", "tc-readonly-badge", "SIN CAPTURA TÉCNICA"));
+  editorHead.append(editorTitle, element(documentObject, "span", "tc-readonly-badge", "BORRADOR LOCAL"));
 
   const headerGrid = element(documentObject, "div", "tc-order-header-grid");
   const dateLabel = element(documentObject, "label", "tc-field-label", "FECHA PROGRAMADA");
@@ -112,11 +120,12 @@ export function createSupervisorOrdersUI({
   headerGrid.append(dateLabel, instructionsLabel);
 
   const items = element(documentObject, "div", "tc-order-items");
+  const draftStatus = element(documentObject, "p", "tc-order-draft-status", "Borrador guardado localmente en este navegador.");
   const feedback = element(documentObject, "p", "tc-status tc-order-feedback");
   feedback.setAttribute("role", "status");
   const emit = element(documentObject, "button", "btn-accion tc-order-emit", "EMITIR ORDEN AL OPERARIO");
   emit.type = "button";
-  editor.append(editorHead, headerGrid, items, feedback, emit);
+  editor.append(editorHead, headerGrid, items, draftStatus, feedback, emit);
 
   const tracking = element(documentObject, "section", "tc-card tc-order-tracking");
   const trackingHead = element(documentObject, "div", "tc-card-head");
@@ -125,9 +134,10 @@ export function createSupervisorOrdersUI({
     element(documentObject, "div", "tc-eyebrow", "SEGUIMIENTO"),
     element(documentObject, "h2", "", "Órdenes de esta unidad"),
   );
+  const trackingUpdated = element(documentObject, "span", "tc-order-updated");
   const reload = element(documentObject, "button", "tc-order-refresh", "ACTUALIZAR");
   reload.type = "button";
-  trackingHead.append(trackingTitle, reload);
+  trackingHead.append(trackingTitle, trackingUpdated, reload);
   const orderList = element(documentObject, "div", "tc-order-list");
   tracking.append(trackingHead, orderList);
   root.append(editor, tracking);
@@ -164,6 +174,11 @@ export function createSupervisorOrdersUI({
     const title = element(documentObject, "div", "tc-action-title", "DIRIGIR MOVIMIENTO");
     const reason = element(documentObject, "select", "tc-order-input");
     reason.setAttribute("aria-label", "Destino o razón de salida");
+    const reasonPlaceholder = element(documentObject, "option", "", "ELIGE UNA RAZÓN DE SALIDA");
+    reasonPlaceholder.value = "";
+    reasonPlaceholder.disabled = true;
+    reasonPlaceholder.selected = true;
+    reason.append(reasonPlaceholder);
     for (const [value, label] of Object.entries(MOVEMENT_REASONS)) {
       const option = element(documentObject, "option", "", label);
       option.value = value;
@@ -186,19 +201,21 @@ export function createSupervisorOrdersUI({
 
     const inventory = element(documentObject, "section", "tc-order-inventory");
     const inventoryTitle = element(documentObject, "div", "tc-action-title", "NEUMÁTICO QUE ENTRA DESDE INVENTARIO");
-    const inventoryHelp = element(
-      documentObject,
-      "p",
-      "tc-order-inventory-help",
-      "Haz clic en la llanta que reemplazará a la actual en esta misma posición.",
+    const selectedRow = state.remoteState?.find(
+      (row) => Number(row.position_number) === Number(state.selected),
     );
+    const inventoryHelp = selectedRow?.baseline_pending === true
+      ? element(documentObject, "p", "tc-order-inventory-help", movementActionHelp(selectedRow))
+      : null;
     const search = element(documentObject, "input", "tc-order-input");
     search.type = "search";
     search.placeholder = "Buscar código, marca, modelo o medida";
     search.setAttribute("aria-label", "Buscar neumático disponible en inventario");
     const inventoryList = element(documentObject, "div", "tc-order-inventory-list");
     inventoryList.setAttribute("aria-live", "polite");
-    inventory.append(inventoryTitle, inventoryHelp, search, inventoryList);
+    inventory.append(inventoryTitle);
+    if (inventoryHelp) inventory.append(inventoryHelp);
+    inventory.append(search, inventoryList);
 
     function renderInventory() {
       inventoryList.replaceChildren();
@@ -257,14 +274,27 @@ export function createSupervisorOrdersUI({
 
     function updateFlow() {
       const rotation = reason.value === "rotation";
+      const hasReason = Boolean(reason.value);
       target.hidden = !rotation;
       rotate.hidden = !rotation;
-      inventory.hidden = rotation;
-      if (!rotation) renderInventory();
+      inventory.hidden = rotation || !hasReason;
+      if (!rotation && hasReason) {
+        if (search.value.trim().length < 2) {
+          inventoryList.replaceChildren(element(documentObject, "p", "tc-order-empty", "Escribe al menos 2 caracteres para buscar una llanta disponible."));
+        } else {
+          renderInventory();
+        }
+      }
     }
 
     reason.addEventListener("change", updateFlow);
-    search.addEventListener("input", renderInventory);
+    search.addEventListener("input", () => {
+      if (search.value.trim().length < 2) {
+        inventoryList.replaceChildren(element(documentObject, "p", "tc-order-empty", "Escribe al menos 2 caracteres para buscar una llanta disponible."));
+        return;
+      }
+      renderInventory();
+    });
     actions.append(title, reason, target, notes, rotate, inventory);
     updateFlow();
   }
@@ -301,7 +331,7 @@ export function createSupervisorOrdersUI({
       }
 
       const notes = group.exit?.notes || group.entry?.notes;
-      copy.append(element(documentObject, "span", "", notes || "Sin nota adicional"));
+      if (notes) copy.append(element(documentObject, "span", "", notes));
 
       const buttons = element(documentObject, "div", "tc-order-item-actions");
       const remove = element(documentObject, "button", "tc-order-remove", "QUITAR");
@@ -335,6 +365,9 @@ export function createSupervisorOrdersUI({
 
   function renderOrders(state) {
     orderList.replaceChildren();
+    trackingUpdated.textContent = state.lastUpdated
+      ? `ACTUALIZADO ${state.lastUpdated.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`
+      : "CARGANDO ESTADO";
     if (state.status === "loading") {
       orderList.append(element(documentObject, "p", "tc-status is-loading", "Cargando órdenes…"));
       return;
@@ -369,6 +402,12 @@ export function createSupervisorOrdersUI({
       const executionRows = state.executions.filter((row) => row.order_id === order.id);
       const executionList = renderExecutions(order, executionRows);
       if (executionList) card.append(executionList);
+      if (order.status === "issued" && state.profile?.id === order.requested_by) {
+        const deleteButton = element(documentObject, "button", "tc-order-delete", "CANCELAR ORDEN");
+        deleteButton.type = "button";
+        deleteButton.addEventListener("click", () => void onDeleteOrder?.(order));
+        card.append(deleteButton);
+      }
       orderList.append(card);
     }
   }

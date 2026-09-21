@@ -1,12 +1,11 @@
 import { supabase } from './supabaseClient';
 
 // listInspeccionesPorPlaca usa get_unidad_preload() (RPC SECURITY DEFINER,
-// supabase/migrations/20260711000000_preload_rpc_vehicle_metadata.sql) en vez de leer
+// supabase/migrations/20260920220000_harden_preload_rpc_latest_inspection.sql) en vez de leer
 // v_inspection_dashboard_rows directo: desde que RLS quedó activa
 // (20260710090000_dashboard_public_rls.sql) esa vista solo es legible por
-// `authenticated` con profiles, y la app móvil todavía lee como `anon` sin
-// sesión (no tiene login de inspector — eso es tasks_opencode/task_14, aparte).
-// El RPC expone el mismo shape acotado a UNA placa de UNA empresa puntual.
+// `authenticated` con profiles. El login del inspector fija la empresa en el
+// perfil y el RPC expone el mismo shape acotado a UNA placa de ESA empresa.
 
 /** Shape acotado que devuelve get_unidad_preload() — subconjunto de InspeccionDashboardRow. */
 export interface UnidadPreloadRow {
@@ -22,6 +21,7 @@ export interface UnidadPreloadRow {
   tire_code: string | null;
   casing_code: string | null;
   brand_name: string | null;
+  model_name: string | null;
   condition: string | null;
   retread_design: string | null;
   size_name: string | null;

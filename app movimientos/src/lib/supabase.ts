@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { InspectionPrefill } from './model';
 import type { MovementDraft, MovementOrder, OperatorProfile } from './types';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -14,7 +15,7 @@ export const supabase = url && publishableKey
   : null;
 
 function requireClient() {
-  if (!supabase) throw new Error('La app no tiene configurada la conexión a RENOVA.');
+  if (!supabase) throw new Error('La app no tiene configurada la conexión a VULCAN INSPECTOR.');
   return supabase;
 }
 
@@ -49,6 +50,24 @@ export async function loadMovementOrders(): Promise<MovementOrder[]> {
 
   if (error) throw error;
   return (data ?? []) as MovementOrder[];
+}
+
+export async function loadLatestInspectionForPosition(
+  unitId: string,
+  position: number,
+): Promise<InspectionPrefill | null> {
+  const { data, error } = await requireClient()
+    .from('v_inspection_dashboard_rows')
+    .select('tire_code,casing_code,brand_name,model_name,size_name,condition,retread_design,rtd_movi_mm')
+    .eq('unit_id', unitId)
+    .eq('position_number', position)
+    .order('inspected_on', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as InspectionPrefill | null;
 }
 
 export async function claimMovementOrder(orderId: string): Promise<void> {

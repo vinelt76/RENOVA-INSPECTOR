@@ -5,7 +5,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 // porque Vite solo expone al bundle del cliente las env vars con ese prefijo
 // (SUPABASE_URL / SUPABASE_ANON_KEY a secas no llegarían al navegador).
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const anonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY
+  ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) as string | undefined;
 
 export const supabase: SupabaseClient | null =
   url && anonKey ? createClient(url, anonKey) : null;

@@ -1,11 +1,32 @@
 ---
 title: "Roadmap, deuda y riesgos"
-updated: 2026-07-26
+updated: 2026-09-20
 status: vigente
 sources: [tasks_opencode/STATE.md, specs, decisions, docs/run6_known_limits.md, code audit 2026-07-12, tasks_buscador_global/AUDIT.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PRUEBA_CAMPO.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md, tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md]
 ---
 
 # Roadmap, deuda y riesgos
+
+## Pendientes de ingeniería después de la demo (2026-09-20)
+
+Estas tareas quedaron identificadas durante la validación headless de autenticación,
+aislamiento por empresa y permisos de Movimientos. No bloquean la demo actual, pero deben
+resolverse antes de considerar el sistema listo para producción:
+
+- [ ] Activar la protección de Supabase contra contraseñas filtradas y comprobar el flujo de
+  cambio/restablecimiento de credenciales.
+- [ ] Revisar las funciones `SECURITY DEFINER` que todavía pueden ejecutarse con roles amplios;
+  conservar únicamente los grants necesarios y verificar cada RPC con una matriz de roles.
+- [ ] Revisar la extensión `btree_gist` instalada en el esquema `public` y moverla a un esquema
+  dedicado si la compatibilidad de las migraciones lo permite.
+- [ ] Completar una prueba E2E controlada de Movimientos: supervisor emite, operario toma,
+  captura salida/entrada, completa y Servicios refleja el resultado sin duplicados.
+- [ ] Resolver las advertencias de build de `flatDir`, Gradle deprecated API y el bundle grande de
+  Vite cuando se abra la fase de empaquetado/optimización.
+
+La validación del 2026-09-20 no creó ni modificó órdenes remotas; confirmó autenticación de las
+tres cuentas CIVA, aislamiento de empresa, RLS en tablas críticas y la matriz de autorización de
+las RPCs con identificadores inexistentes.
 
 ## Prioridad inmediata
 
@@ -20,7 +41,7 @@ El inventario operativo completo, prioridad y condición de cierre están en
 `deuda_tecnica/00-inventario.md`. Esta nota conserva el resumen canónico y las
 fuentes de evidencia.
 
-- La app móvil de inspecciones opera como `anon`, sin identidad de inspector. La app separada
+- La app móvil de inspecciones usa la identidad autenticada del inspector y deriva el tenant desde su perfil. La app separada
   de movimientos ya exige Auth y distingue `operator` de `tire_supervisor`.
 - `drainQueue` no agenda un despertar autónomo al vencer backoff.
 - Precargar desde Supabase reencola datos espejo y puede hacer un push redundante.

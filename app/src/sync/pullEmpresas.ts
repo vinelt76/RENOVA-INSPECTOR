@@ -4,10 +4,9 @@ import { slugify } from '../db/slugify';
 
 // Pull de empresas desde Supabase (public.companies) al arrancar la app.
 //
-// Modelo: el inspector de RENOVA visita VARIAS empresas y elige cuál inspecciona.
-// La lista viene del servidor cuando hay red; el seed local es el fallback
-// offline-first. La app móvil lee como `anon` (sin login) gracias a la policy
-// `select_companies_anon` (migración 20260710240000).
+// Modelo: la empresa viene del perfil autenticado del inspector. La consulta
+// solo devuelve su tenant por RLS; el seed local sigue siendo fallback
+// offline-first para completar la copia de trabajo.
 //
 // Fusión POR NOMBRE, no por id: los ids locales son slugs cortos ('movil',
 // 'civa') que ya son FK de `unidad` e `inspeccion_cabecera` y clave del

@@ -43,7 +43,7 @@ function fmtKm(n: number) {
 }
 
 export default function UnidadScreen() {
-  const { empresaId, empresa, setUnidad, setCabecera, clearUnidad } = useApp();
+  const { empresaId, empresa, setUnidad, setCabecera, clearUnidad, signOut } = useApp();
   const navigate = useNavigate();
 
   const [query, setQuery] = useState('');
@@ -331,10 +331,13 @@ export default function UnidadScreen() {
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M13 4l-6 6 6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: BEBAS, fontSize: 34, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>RENOVA</div>
+            <div style={{ fontFamily: BEBAS, fontSize: 34, color: '#fff', letterSpacing: '0.06em', lineHeight: 1 }}>VULCAN</div>
             <div style={{ fontFamily: BEBAS, fontSize: 19, color: LABEL_BLUE, letterSpacing: '0.1em', lineHeight: 1, marginTop: -4 }}>INSPECTOR</div>
           </div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '30%' }}>{empresa?.nombre ?? ''}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 130 }}>{empresa?.nombre ?? ''}</div>
+            <button onClick={() => void signOut()} aria-label="Cerrar sesión" style={{ background: 'transparent', border: `1px solid ${BORDER_DARK}`, color: LABEL_BLUE, borderRadius: 6, padding: '8px 10px', minWidth: 44, minHeight: 44, font: `700 10px ${MONO}`, whiteSpace: 'nowrap' }}>SALIR</button>
+          </div>
         </div>
         <div className="hazard-edge" />
       </div>

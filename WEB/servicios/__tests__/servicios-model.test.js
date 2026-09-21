@@ -5,8 +5,11 @@ import {
   filterServices,
   searchForChips,
   segmentsFromSummary,
+  SERVICES_ALLOWED_ROLES,
   SERVICE_FACETS,
   SERVICE_TYPES,
+  canDeleteMovementOrder,
+  summarizeCurrentOrders,
   summarizeServices,
   unitHref,
 } from "../servicios-model.js";
@@ -16,6 +19,32 @@ const rows = [
   { service_id: "s2", order_id: "o2", unit_id: "u1", service_type: "installation", direction: "entry", plate: "ABC-123", position_number: 4, brand_key: "GOODYEAR", captured_on: "2026-07-13", captured_by_name: "Luis", requested_by_name: "Sol", reconciliation_status: "pending" },
   { service_id: "s3", order_id: "o3", unit_id: "u2", service_type: "repair", plate: "XYZ-900", position_number: 10, brand_key: null, captured_on: "2026-06-01", captured_by_name: "Ana", requested_by_name: "Max", reconciliation_status: "needs_review", observations: "parche lateral" },
 ];
+
+describe("autorización de Servicios", () => {
+  it("autoriza el rol legado supervisor para consultar servicios", () => {
+    expect(SERVICES_ALLOWED_ROLES).toContain("supervisor");
+  });
+});
+
+describe("órdenes actuales", () => {
+  const orders = [
+    { id: "o1", status: "issued", requested_by: "u1", plate: "460" },
+    { id: "o2", status: "in_progress", requested_by: "u1", plate: "471" },
+    { id: "o3", status: "completed", requested_by: "u2", plate: "500" },
+    { id: "o4", status: "cancelled", requested_by: "u1", plate: "501" },
+  ];
+
+  it("resume rápidamente las órdenes por estado", () => {
+    expect(summarizeCurrentOrders(orders)).toEqual({ issued: 1, in_progress: 1, completed: 1, cancelled: 1, total: 4 });
+  });
+
+  it("solo permite eliminar una orden propia todavía emitida", () => {
+    expect(canDeleteMovementOrder(orders[0], "u1")).toBe(true);
+    expect(canDeleteMovementOrder(orders[1], "u1")).toBe(false);
+    expect(canDeleteMovementOrder(orders[2], "u1")).toBe(false);
+    expect(canDeleteMovementOrder(orders[0], "u2")).toBe(false);
+  });
+});
 
 describe("resumen y segmentos", () => {
   it("cuenta una rotación pareada una vez y no inventa una instalación", () => {

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<title>RENOVA — Importar Inspecciones</title>
+<title>VULCAN INSPECTOR — Importar Inspecciones</title>
 <!--
   PANTALLA NUEVA E INDEPENDIENTE — Importar Inspecciones desde Excel.
   Autocontenida: abrir directamente en el navegador.
@@ -91,7 +91,11 @@
     margin-top:14px;
   }
   .drop-zone:hover,.drop-zone.dragover{border-color:var(--ember-orange);background:rgba(240,104,34,.06)}
-  .drop-zone input{display:none}
+  .drop-zone input{
+    position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;
+    clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;
+  }
+  .drop-zone:focus-within{outline:2px solid var(--signal-yellow);outline-offset:3px}
   .drop-zone .dz-title{font-size:14px;font-weight:800;color:var(--value-ice)}
   .drop-zone .dz-sub{font-size:11px;color:var(--label-blue);margin-top:6px}
   .file-picked{
@@ -156,7 +160,7 @@
 <header class="office-header--compact">
   <div class="head-row office-head office-head--compact">
     <div class="brand">
-      <div class="logo">RENOVA<b>·</b></div>
+      <div class="logo">VULCAN INSPECTOR<b>·</b></div>
       <div class="screen-name">IMPORTAR INSPECCIONES</div>
     </div>
     <nav class="screen-nav" aria-label="Pantallas">
@@ -192,10 +196,10 @@
 
   <section class="panel">
     <h2>1. Elegir archivo</h2>
-    <label class="drop-zone" id="dropZone">
-      <input type="file" id="fileInput" accept=".xlsx,.xls" />
+    <label class="drop-zone" id="dropZone" tabindex="0" aria-describedby="dropZoneHelp">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" aria-label="Elegir archivo Excel de inspecciones" />
       <div class="dz-title">Arrastra tu .xlsx aquí o haz clic para elegirlo</div>
-      <div class="dz-sub">Se procesa en tu navegador — nada se sube hasta que confirmes el envío</div>
+      <div class="dz-sub" id="dropZoneHelp">Se procesa en tu navegador — nada se sube hasta que confirmes el envío</div>
     </label>
     <div class="file-picked" id="filePicked" style="display:none">
       <span><b id="fileName"></b> · <span id="fileRows"></span></span>

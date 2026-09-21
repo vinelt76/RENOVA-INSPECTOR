@@ -1,4 +1,32 @@
 import { MOVEMENT_REASONS } from "../movimientos/supervisor-order-model.js";
+
+export const SERVICES_ALLOWED_ROLES = Object.freeze([
+  "operator",
+  "supervisor",
+  "tire_supervisor",
+  "fleet_manager",
+  "admin",
+]);
+
+export const CURRENT_ORDER_STATUS_LABELS = Object.freeze({
+  issued: "EN COLA",
+  in_progress: "EN EJECUCIÓN",
+  completed: "COMPLETADA",
+  cancelled: "CANCELADA",
+});
+
+export function summarizeCurrentOrders(orders) {
+  const summary = { issued: 0, in_progress: 0, completed: 0, cancelled: 0, total: 0 };
+  for (const order of Array.isArray(orders) ? orders : []) {
+    if (Object.hasOwn(summary, order?.status)) summary[order.status] += 1;
+    summary.total += 1;
+  }
+  return summary;
+}
+
+export function canDeleteMovementOrder(order, userId) {
+  return Boolean(order?.id && order.status === "issued" && order.requested_by && order.requested_by === userId);
+}
 import { applyFilters, distinctValues } from "../shared/filter-facets.js";
 import {
   distinctInspectionExactDateValues,

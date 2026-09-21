@@ -290,15 +290,15 @@ export default function InspeccionScreen() {
           {flash && (
             <div className="tick-in" aria-label="Guardado" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: 'rgba(244,184,33,0.14)', borderRadius: 6, padding: '4px 8px' }}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5L4.5 9L10 3" stroke={YELLOW} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, letterSpacing: '0.06em' }}>GUARDADO</span>
+              <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, letterSpacing: '0.06em' }}>GUARDADO EN ESTE EQUIPO</span>
             </div>
           )}
 
           {/* Estado de envío a Supabase — solo visible si la integración está configurada (.env) */}
           {supabaseEnabled && syncState !== 'idle' && (
             <div aria-label="Estado de sincronización" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: syncState === 'error' ? 'rgba(229,72,77,0.16)' : 'rgba(31,157,107,0.16)', borderRadius: 6, padding: '4px 8px' }}>
-              <span style={{ color: syncState === 'sending' ? LABEL_BLUE : syncState === 'ok' ? GREEN : RED, fontWeight: 800, fontSize: 9, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                {syncState === 'sending' ? 'ENVIANDO A SUPABASE…' : syncState === 'ok' ? '☁ SINCRONIZADO' : '⚠ ERROR DE ENVÍO'}
+              <span style={{ color: syncState === 'sending' ? LABEL_BLUE : syncState === 'ok' ? GREEN : RED, fontWeight: 800, fontSize: 10, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                {syncState === 'sending' ? 'SINCRONIZANDO…' : syncState === 'ok' ? '☁ ENVIADO' : '⚠ PENDIENTE DE SINCRONIZAR'}
               </span>
             </div>
           )}

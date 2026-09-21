@@ -49,8 +49,8 @@ export function createFilterBar({ mount, facets = [], rows = [], chips = [], onC
   input.setAttribute("aria-autocomplete", "list");
   input.setAttribute("aria-expanded", "false");
   input.setAttribute("aria-controls", `${instanceId}-listbox`);
-  input.setAttribute("aria-label", "Filtrar");
-  input.placeholder = "Escribe para filtrar…";
+  input.setAttribute("aria-label", "Filtrar por unidad, código, marca, modelo, medida o estado");
+  input.placeholder = "Escribe unidad, código, marca o medida…";
   fieldWrap.append(input);
 
   const listbox = createElement(documentObject, "div", "filter-bar-listbox");

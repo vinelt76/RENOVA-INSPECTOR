@@ -10,8 +10,9 @@ import type {
 const REASONS = Object.entries(REASON_LABELS) as [MovementReason, string][];
 
 interface Props {
-  ordinal: number;
   service: ExecutionService;
+  invalid?: boolean;
+  prefilled?: boolean;
   onChange: (index: number, patch: Partial<ExecutionItem>) => void;
 }
 
@@ -19,6 +20,7 @@ interface TireGroupProps {
   direction: 'exit' | 'entry';
   item: ExecutionItem;
   itemIndex: number;
+  prefilled: boolean;
   onChange: Props['onChange'];
 }
 
@@ -30,9 +32,15 @@ function originLabel(item: ExecutionItem): string {
   return 'ORIGEN NO DETERMINADO';
 }
 
-function TireDataGroup({ direction, item, itemIndex, onChange }: TireGroupProps) {
+function TireDataGroup({ direction, item, itemIndex, prefilled, onChange }: TireGroupProps) {
   const isExit = direction === 'exit';
   const set = (patch: Partial<ExecutionItem>) => onChange(itemIndex, patch);
+  const hasTechnicalData = Boolean(item.code || item.brand || item.size || item.design || item.rtd_min_mm);
+  const identitySummary = item.code_unreadable
+    ? 'CÓDIGO NO LEGIBLE'
+    : [item.code || 'CÓDIGO PENDIENTE', item.brand, item.design, item.size, item.rtd_min_mm ? `${item.rtd_min_mm} MM` : '']
+      .filter(Boolean)
+      .join(' · ');
 
   return (
     <section
@@ -43,7 +51,6 @@ function TireDataGroup({ direction, item, itemIndex, onChange }: TireGroupProps)
         <span className="direction-chip">{isExit ? 'SALE' : 'ENTRA'}</span>
         <div>
           <strong>{isExit ? 'NEUMÁTICO QUE SALE' : 'NEUMÁTICO QUE ENTRA'}</strong>
-          <small>{isExit ? 'IDENTIDAD Y DESTINO' : 'IDENTIDAD Y PROCEDENCIA'}</small>
         </div>
       </div>
 
@@ -64,7 +71,11 @@ function TireDataGroup({ direction, item, itemIndex, onChange }: TireGroupProps)
         </label>
       ) : null}
 
-      <div className="field-grid">
+      <p className="tire-identity-summary">{identitySummary}</p>
+
+      <details className="technical-details" open={!prefilled || !hasTechnicalData}>
+        <summary>EDITAR DATOS TÉCNICOS</summary>
+        <div className="field-grid">
         <label className="field field--wide">
           <span>CÓDIGO</span>
           <input
@@ -115,26 +126,31 @@ function TireDataGroup({ direction, item, itemIndex, onChange }: TireGroupProps)
             <input value={item.retread_design} onChange={(event) => set({ retread_design: event.target.value.toUpperCase() })} />
           </label>
         ) : null}
-      </div>
+        </div>
 
-      <label className="field field--full">
-        <span>OBSERVACIONES</span>
-        <textarea rows={2} value={item.observations} onChange={(event) => set({ observations: event.target.value })} placeholder="DETALLE DEL TRABAJO" />
-      </label>
+        <label className="field field--full">
+          <span>OBSERVACIONES</span>
+          <textarea rows={2} value={item.observations} onChange={(event) => set({ observations: event.target.value })} placeholder="DETALLE DEL TRABAJO" />
+        </label>
+      </details>
     </section>
   );
 }
 
-function ServiceCard({ ordinal, service, onChange }: Props) {
+function ServiceCard({ service, invalid = false, prefilled = false, onChange }: Props) {
   return (
-    <article className="service-card" data-service-position={service.position}>
+    <article
+      className={`service-card${invalid ? ' service-card--error' : ''}`}
+      data-service-position={service.position}
+      aria-describedby={invalid ? `service-error-${service.position}` : undefined}
+    >
       <header className="service-card__heading">
         <div>
-          <span>SERVICIO {String(ordinal).padStart(2, '0')}</span>
           <strong>POSICIÓN P{service.position}</strong>
         </div>
-        <b>{service.exit && service.entry ? 'CAMBIO COMPLETO' : 'REVISAR ORDEN'}</b>
+        {prefilled ? <small className="service-card__prefilled">DATOS PRECARGADOS</small> : null}
       </header>
+      {invalid ? <p className="service-card__error" id={`service-error-${service.position}`} role="alert">Revisa los datos obligatorios de esta posición.</p> : null}
 
       <div className="service-card__groups">
         {service.exit && service.exitIndex !== null ? (
@@ -142,6 +158,7 @@ function ServiceCard({ ordinal, service, onChange }: Props) {
             direction="exit"
             item={service.exit}
             itemIndex={service.exitIndex}
+            prefilled={prefilled}
             onChange={onChange}
           />
         ) : null}
@@ -150,6 +167,7 @@ function ServiceCard({ ordinal, service, onChange }: Props) {
             direction="entry"
             item={service.entry}
             itemIndex={service.entryIndex}
+            prefilled={prefilled}
             onChange={onChange}
           />
         ) : null}

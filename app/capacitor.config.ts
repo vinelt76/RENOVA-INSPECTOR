@@ -3,7 +3,7 @@ import { KeyboardResize } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.renova.inspector',
-  appName: 'RENOVA Inspector',
+  appName: 'VULCAN INSPECTOR',
   webDir: 'dist',
   plugins: {
     CapacitorSQLite: {

@@ -4,13 +4,14 @@ import {
   loadMovementExecutions,
   loadSupervisorMovementOrders,
   loadUnitPositionState,
+  movementNavigationFromPage,
   resolveUnitId,
 } from "./data.js";
 import { createBaselineModel } from "./baseline-model.js";
 import { createBaselineUI } from "./baseline-ui.js";
 import { createDiagramView } from "./diagram-view.js";
 import { createModeToggle, MOVIMIENTOS_MODES } from "./mode-toggle.js";
-import { createMovementOrder } from "./orders-rpc.js";
+import { cancelMovementOrder, createMovementOrder } from "./orders-rpc.js";
 import {
   applyPendingBaselineBatch,
   classifyBatchError,
@@ -52,6 +53,7 @@ export const movimientosState = {
   selected: null,
   projection: new Map(),
   error: null,
+  lastUpdated: null,
 };
 
 const elements = {
@@ -79,6 +81,19 @@ let baselineModel = null;
 let baselineUI = null;
 let baselineScope = null;
 let baselineConfirming = false;
+let movementRefreshTimer = null;
+
+function refreshMovimientosIfVisible() {
+  if (movimientosState.mode !== MOVIMIENTOS_MODES.MOVEMENTS || document.hidden) return;
+  void loadMovimientosData({ force: true });
+}
+
+function configureMovementRefresh() {
+  if (movementRefreshTimer !== null) return;
+  movementRefreshTimer = window.setInterval(refreshMovimientosIfVisible, 10_000);
+  document.addEventListener("visibilitychange", refreshMovimientosIfVisible);
+  window.addEventListener("online", refreshMovimientosIfVisible);
+}
 
 function emitState() {
   for (const listener of subscribers) listener(movimientosState);
@@ -442,11 +457,11 @@ export async function loadMovimientosData({ force = false } = {}) {
         throw new Error(`Tu perfil (${profile?.role ?? "sin rol"}) no puede emitir órdenes de movimientos.`);
       }
 
-      const params = new URLSearchParams(window.location.search);
-      const unitId = await resolveUnitId({
-        inspectionId: params.get("inspection_id"),
-        plate: params.get("plate"),
-      }, client);
+      const navigation = movementNavigationFromPage({
+        search: window.location.search,
+        documentObject: document,
+      });
+      const unitId = await resolveUnitId(navigation, client);
       if (!unitId) {
         movimientosState.unitId = null;
         movimientosState.remoteState = [];
@@ -475,6 +490,7 @@ export async function loadMovimientosData({ force = false } = {}) {
         movimientosState.selected = remoteState[0] ? Number(remoteState[0].position_number) : null;
       }
       movimientosState.status = remoteState.length ? "ready" : "empty";
+      movimientosState.lastUpdated = new Date();
       loaded = true;
       configureRealtime(client);
       render();
@@ -519,7 +535,7 @@ async function emitOrder() {
     }, activeClient.supabase);
     clearDraft();
     await loadMovimientosData({ force: true });
-    ordersUI.setFeedback(`Orden emitida para ${result?.plate ?? "la unidad"}. Ya aparece en la app del operario.`, "success");
+    ordersUI.setFeedback(`Orden emitida para ${result?.plate ?? "la unidad"}. La bandeja del operario se actualizará automáticamente.`, "success");
     return result;
   } catch (error) {
     const forbidden = error?.code === "42501";
@@ -527,6 +543,27 @@ async function emitOrder() {
       forbidden ? "Tu sesión no tiene permiso para emitir órdenes." : error?.message || "No se pudo emitir la orden.",
       "error",
     );
+    return null;
+  } finally {
+    busy = false;
+    ordersUI.setBusy(false);
+    render();
+  }
+}
+
+async function deleteOrder(order) {
+  if (busy || order?.status !== "issued" || !activeClient?.supabase) return null;
+  if (!window.confirm(`¿Cancelar la orden emitida para BUS ${order.plate}? Se quitará de la cola del operario y quedará registrada como cancelada.`)) return null;
+  busy = true;
+  ordersUI.setBusy(true);
+  ordersUI.setFeedback();
+  try {
+    await cancelMovementOrder(order.id, activeClient.supabase);
+    await loadMovimientosData({ force: true });
+    ordersUI.setFeedback("Orden cancelada y retirada de la cola.", "success");
+    return true;
+  } catch (error) {
+    ordersUI.setFeedback(error?.message || "No se pudo eliminar la orden.", "error");
     return null;
   } finally {
     busy = false;
@@ -550,6 +587,7 @@ function onModeChange(mode) {
   ordersUI.setActive(active);
   baselineUI?.setActive(active);
   if (active) {
+    configureMovementRefresh();
     render();
     void loadMovimientosData();
   } else {
@@ -570,6 +608,7 @@ function init() {
     onRemovePosition: removePosition,
     onDraftHeader: updateDraftHeader,
     onEmit: emitOrder,
+    onDeleteOrder: deleteOrder,
     onReload: () => loadMovimientosData({ force: true }),
   });
   baselineUI = createBaselineUI({

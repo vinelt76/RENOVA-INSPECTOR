@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RENOVA — Servicios</title>
+  <title>VULCAN INSPECTOR — Servicios</title>
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +20,7 @@
   <header class="office-header--compact">
     <div class="services-head office-head office-head--compact">
       <div class="brand">
-        <div class="logo">RENOVA<b>·</b></div>
+        <div class="logo">VULCAN INSPECTOR<b>·</b></div>
         <div class="screen-name">SERVICIOS</div>
       </div>
       <nav class="nav" aria-label="Pantallas">
@@ -37,35 +37,45 @@
   </header>
 
   <main class="services-main" aria-busy="true">
-    <section class="services-intro" aria-label="Descripción de la pantalla">
-      <p>Un servicio es una posición atendida: el neumático que sale de esa posición y el que entra en su lugar. Una rotación entre dos posiciones cuenta como dos servicios, uno por posición. Un ingreso que no reemplaza ninguna salida se muestra como instalación.</p>
-      <p class="services-scope-limits">No incluye lo que se hace sin desmontar el neumático —presión, torque, alineación— ni las inspecciones, que se registran aparte. El origen del neumático que entra solo se conoce cuando salió de otra posición de la misma orden; si viene de retén, de reparación o es nuevo, se muestra como no determinado. Estos registros todavía no están ligados a un casco ni a su ciclo de vida.</p>
+    <section class="services-current" aria-labelledby="services-current-title">
+      <div class="services-section-heading">
+        <p>SEGUIMIENTO OPERATIVO</p>
+        <h2 id="services-current-title">Órdenes actuales</h2>
+      </div>
+      <div id="services-current-summary" class="services-current-summary" aria-label="Resumen de órdenes actuales"></div>
+      <div id="services-current-list" class="services-current-list"></div>
     </section>
 
     <section class="services-filter" aria-label="Filtrar servicios">
+      <p class="filter-scope-hint">Filtra por unidad, código, marca, medida o tipo de servicio.</p>
       <div id="services-filter-mount"></div>
     </section>
 
     <aside id="services-truncated" class="services-banner" role="note" hidden></aside>
 
-    <section class="services-stats" aria-label="Resumen de servicios">
-      <article class="services-stat"><span>SERVICIOS</span><strong id="services-stat-total">—</strong></article>
-      <article class="services-stat"><span>UNIDADES ATENDIDAS</span><strong id="services-stat-units">—</strong></article>
-      <article class="services-stat"><span>ÓRDENES</span><strong id="services-stat-orders">—</strong></article>
-      <article class="services-stat"><span>PERIODO</span><strong id="services-stat-period">—</strong></article>
-    </section>
+    <details class="services-analysis">
+      <summary>VER RESUMEN Y DISTRIBUCIÓN</summary>
+      <div class="services-analysis-body">
+        <section class="services-stats" aria-label="Resumen de servicios">
+          <article class="services-stat"><span>SERVICIOS</span><strong id="services-stat-total">—</strong></article>
+          <article class="services-stat"><span>UNIDADES ATENDIDAS</span><strong id="services-stat-units">—</strong></article>
+          <article class="services-stat"><span>ÓRDENES</span><strong id="services-stat-orders">—</strong></article>
+          <article class="services-stat"><span>PERIODO</span><strong id="services-stat-period">—</strong></article>
+        </section>
 
-    <section class="services-mix" aria-labelledby="services-mix-title">
-      <div class="services-section-heading">
-        <p>MEZCLA DE ACTIVIDAD</p>
-        <h2 id="services-mix-title">Distribución por tipo</h2>
+        <section class="services-mix" aria-labelledby="services-mix-title">
+          <div class="services-section-heading">
+            <p>MEZCLA DE ACTIVIDAD</p>
+            <h2 id="services-mix-title">Distribución por tipo</h2>
+          </div>
+          <div id="services-segments-empty" class="services-mix-empty">La distribución aparecerá cuando haya servicios visibles.</div>
+          <div id="services-segments-wrap" hidden>
+            <div id="services-segments" class="services-segments" role="img"></div>
+            <div id="services-legend" class="services-legend" aria-label="Leyenda de tipos de servicio"></div>
+          </div>
+        </section>
       </div>
-      <div id="services-segments-empty" class="services-mix-empty">La distribución aparecerá cuando haya servicios visibles.</div>
-      <div id="services-segments-wrap" hidden>
-        <div id="services-segments" class="services-segments" role="img"></div>
-        <div id="services-legend" class="services-legend" aria-label="Leyenda de tipos de servicio"></div>
-      </div>
-    </section>
+    </details>
 
     <div id="services-status" class="services-status" role="status" aria-live="polite"></div>
     <section id="services-list" class="services-list" aria-label="Lista de servicios ejecutados"></section>

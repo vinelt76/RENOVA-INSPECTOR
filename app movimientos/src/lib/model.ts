@@ -10,6 +10,17 @@ import type {
   TireCondition,
 } from './types';
 
+export interface InspectionPrefill {
+  tire_code?: string | null;
+  casing_code?: string | null;
+  brand_name?: string | null;
+  model_name?: string | null;
+  size_name?: string | null;
+  condition?: TireCondition | null;
+  retread_design?: string | null;
+  rtd_movi_mm?: number | null;
+}
+
 export const REASON_LABELS: Readonly<Record<MovementReason, string>> = {
   repair: 'PARA REPARACIÓN',
   retention: 'PARA RETÉN',
@@ -91,6 +102,41 @@ export function draftFromOrder(order: MovementOrder): MovementDraft {
   };
 }
 
+function firstText(...values: unknown[]): string {
+  return values.find((value) => typeof value === 'string' && value.trim())?.toString().trim() ?? '';
+}
+
+export function prefillMovementItemsFromInspections(
+  items: ExecutionItem[],
+  inspections: ReadonlyMap<number, InspectionPrefill>,
+): ExecutionItem[] {
+  return items.map((item) => {
+    const sourcePosition = item.direction === 'exit'
+      ? item.position
+      : item.origin_type === 'vehicle' && item.origin_position
+        ? item.origin_position
+        : null;
+    if (!sourcePosition) return item;
+    const inspection = inspections.get(sourcePosition);
+    if (!inspection) return item;
+    const condition = item.condition !== 'N'
+      ? item.condition
+      : inspection.condition && TIRE_CONDITIONS.includes(inspection.condition)
+      ? inspection.condition
+      : item.condition;
+    return {
+      ...item,
+      code: item.code || firstText(inspection.casing_code, inspection.tire_code),
+      brand: item.brand || firstText(inspection.brand_name),
+      size: item.size || firstText(inspection.size_name),
+      design: item.design || firstText(inspection.model_name),
+      rtd_min_mm: item.rtd_min_mm || (inspection.rtd_movi_mm == null ? '' : String(inspection.rtd_movi_mm)),
+      condition,
+      retread_design: item.retread_design || firstText(inspection.retread_design),
+    };
+  });
+}
+
 export function groupExecutionServices(items: ExecutionItem[]): ExecutionService[] {
   const groups = new Map<number, ExecutionService>();
   items.forEach((item, index) => {
@@ -125,7 +171,7 @@ export function validateDraft(
   const odometer = Number(draft.odometer);
 
   if (!draft.odometer.trim() || !Number.isInteger(odometer) || odometer < 0) {
-    errors.push('Ingresa el kilometraje entero que marca la máquina.');
+    errors.push('Ingresa el kilometraje entero que marca la unidad.');
   } else if (lastOdometer !== null && odometer < lastOdometer) {
     errors.push(`El kilometraje no puede ser menor a ${lastOdometer.toLocaleString('es-PE')} km.`);
   }

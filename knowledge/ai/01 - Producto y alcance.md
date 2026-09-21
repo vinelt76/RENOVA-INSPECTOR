@@ -13,7 +13,7 @@ RENOVA inspecciona neumáticos de buses y hoy reemplaza un proceso basado en Exc
 
 ## Usuarios
 
-- **Inspector de campo:** selecciona empresa/unidad, registra odómetro, identidad del neumático, RTD, presión, válvula y anomalías.
+- **Inspector de campo:** inicia sesión, trabaja únicamente con la empresa asignada a su perfil, busca la unidad, registra odómetro, identidad del neumático, RTD, presión, válvula y anomalías.
 - **Jefe de flota:** consulta cobertura, alertas, estado por unidad/fecha y rendimiento.
 - **Taller:** instala, retira, transfiere y registra la salida de cascos a reencauche.
 - **Administrador/supervisor:** configura empresas, usuarios, umbrales y catálogos; esta operación aún no tiene una consola completa.
@@ -30,7 +30,7 @@ RENOVA inspecciona neumáticos de buses y hoy reemplaza un proceso basado en Exc
 
 ## Fuera o incompleto
 
-- La app móvil todavía usa acceso `anon`; no hay login de inspector implementado extremo a extremo.
+- La app móvil de inspecciones exige login de Supabase; la empresa se deriva del perfil y no se puede elegir otra desde la app.
 - No hay pantalla separada de Inventario ni Comparativo; fueron retiradas por decisión de producto el 2026-07-12.
 - Pull/versionado completo de todos los catálogos no está cerrado.
 - Presión CALIENTE no tiene regla confirmada.
