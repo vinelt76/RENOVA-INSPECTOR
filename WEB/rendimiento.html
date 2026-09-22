@@ -372,6 +372,10 @@
     padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) auto;
     gap:24px;align-items:center;
   }
+  /* La cobertura del costo es una segunda fila. En una tarjeta de media
+     pantalla, mantenerla como columna `auto` hace que su etiqueta se monte
+     sobre "Sin costo fuente" cuando el texto principal es largo. */
+  .fleet-cost{grid-template-columns:minmax(0,1fr)}
   /* `nowrap`: al pasar de una tarjeta de ancho completo a dos de media fila, "S/ 0.0012"
      se partía en dos líneas. La cifra principal nunca debe quebrarse. */
   .fleet-vur .a-value,.fleet-cost .a-value{font-size:clamp(22px,2.2vw,32px);font-weight:800;line-height:1;margin-top:9px;color:var(--value-ice);white-space:nowrap}
@@ -1190,6 +1194,9 @@ function aggregateKpis(group){
   const consumptionProgress = Number.isFinite(group.avgPct)
     ? Math.min(100, Math.max(0, group.avgPct))
     : 0;
+  const usefulDepthHint = group.avgKmProyectado == null
+    ? "Falta el umbral de retiro configurado"
+    : weightedLabel;
   // Mediana, no `total / valid`: el km acumulado tiene cola larga (cascos
   // reencauchados varias veces acumulan mucho más que uno nuevo) y la media
   // describe un neumático que no existe en el conjunto.
@@ -1216,7 +1223,7 @@ function aggregateKpis(group){
           </div>
         </div>
         <div class="a-label">Km Proyectado</div>
-        <div class="a-sub">${weightedLabel}</div>
+        <div class="a-sub">${usefulDepthHint}</div>
       </article>
       <article class="fleet-stat is-consumption">
         <div class="metric-dial is-progress" style="--dial-progress:${consumptionProgress}%"
@@ -1227,7 +1234,9 @@ function aggregateKpis(group){
           </div>
         </div>
         <div class="a-label">Consumo</div>
-        <div class="a-sub">% de vida útil consumida · ${group.valid} neumático${group.valid===1?"":"s"}</div>
+        <div class="a-sub">${group.avgPct == null
+          ? "Falta el umbral de retiro configurado"
+          : `% de vida útil consumida · ${group.valid} neumático${group.valid===1?"":"s"}`}</div>
       </article>
       <article class="fleet-stat is-accumulated">
         <div class="metric-dial" aria-label="${fmtKm(accumulatedTypical)} kilómetros acumulados, mediana del conjunto">

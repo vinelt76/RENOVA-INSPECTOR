@@ -109,6 +109,7 @@ create table profiles (
   full_name   text not null,
   role        user_role not null default 'inspector',
   active      boolean not null default true,
+  deactivated_at timestamptz,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

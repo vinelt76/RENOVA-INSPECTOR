@@ -1,6 +1,6 @@
 ---
 title: "Datos y Supabase"
-updated: 2026-07-22
+updated: 2026-09-21
 status: vigente
 sources: [app/src/db/sqlite.ts, app/src/db/schema.ts, supabase/migrations, docs/run2_tire_lifecycle_architecture.md, tasks_cambios_neumaticos/CONTRATOS_UI.md, tasks_pantalla_inventario/CONTRATOS_DATOS.md, tasks_buscador_global/CONTRATOS_DATOS.md, tasks_buscador_global/STATE.md, tasks_filtros_facetados/REVISION_FINAL.md, tasks_servicios/CONTRATOS_DATOS.md, tasks_servicios/REVISION_FINAL.md, tasks_servicios/PLAN_PAREO.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md, decisions/0008-servicio-por-posicion-atendida.md]
 ---
@@ -203,3 +203,11 @@ exponen a `anon`. La tabla permite al cliente consultar lotes de su empresa, per
 pasa por `confirm_tire_change_batch`, que exige un perfil de taller y deriva la empresa del JWT.
 
 No confundir `GRANT` con RLS: el primero permite acceder al objeto; RLS decide qué filas puede ver. Ver [[08 - Infraestructura seguridad y despliegue]].
+
+### Baja de usuarios y auditoría
+
+La baja de una persona es lógica: `profiles.active=false` y `profiles.deactivated_at` registra la fecha.
+La FK `profiles.id → auth.users.id` usa `ON DELETE RESTRICT`, por lo que borrar una cuenta de Auth no
+arrastra el perfil ni inspecciones, órdenes, ejecuciones, lotes, instalaciones o retiros históricos.
+Los hechos conservan su `profile_id`; la cuenta desactivada deja de resolver empresa y rol para RLS/RPCs.
+No borrar filas de negocio para retirar acceso.
