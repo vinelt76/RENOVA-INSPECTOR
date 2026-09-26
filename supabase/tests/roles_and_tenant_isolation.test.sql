@@ -43,7 +43,6 @@ begin
       and tablename in ('tire_movement_orders', 'tire_movement_executions')
       and (qual::text like '%fleet_manager%'
         or qual::text like '%workshop_manager%'
-        or qual::text like '%supervisor%'
         or qual::text like '%admin%')
   ) then
     raise exception 'RLS: una política de Movimientos conserva roles heredados';
