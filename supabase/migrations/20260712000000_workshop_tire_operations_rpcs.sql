@@ -12,7 +12,7 @@
 --   * La empresa NUNCA viaja desde el navegador: se deriva del profile del
 --     usuario autenticado (fn_require_workshop_profile) y toda entidad tocada
 --     se valida contra esa empresa.
---   * Rol requerido: workshop_manager, fleet_manager o admin (activo).
+--   * Rol requerido: tire_supervisor (activo).
 --   * REVOKE de PUBLIC/anon; EXECUTE solo para authenticated.
 --
 -- Integridad (los índices parciales existentes son el candado final):
@@ -351,7 +351,3 @@ grant execute on function public.register_removal(uuid,date,public.removal_reaso
 revoke all on function public.transfer_tire(uuid,uuid,smallint,date,integer,numeric,integer,text) from public, anon;
 grant execute on function public.transfer_tire(uuid,uuid,smallint,date,integer,numeric,integer,text) to authenticated;
 
--- Hardening extra detectado en la auditoría: delete_inspections_by_date es un
--- helper administrativo (nadie lo llama desde WEB/app) — no debe ser ejecutable
--- por anon/authenticated.
-revoke all on function public.delete_inspections_by_date(date, date) from public, anon, authenticated;

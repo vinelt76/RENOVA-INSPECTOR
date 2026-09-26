@@ -15,7 +15,7 @@ declare
   v_order public.tire_movement_orders;
 begin
   v_profile := public.fn_require_tire_movement_profile(
-    array['tire_supervisor', 'supervisor', 'fleet_manager', 'admin']
+    array['tire_supervisor']
   );
 
   select * into v_order

@@ -16,12 +16,22 @@ export interface PushResult {
  * save_inspection() hace upsert por (placa, fecha) y por (inspección, posición).
  * No lanza: siempre devuelve un resultado, para no romper el flujo local si falla.
  */
-export async function pushInspeccionToSupabase(cabeceraId: string): Promise<PushResult> {
+export async function pushInspeccionToSupabase(cabeceraId: string, expectedUserId?: string): Promise<PushResult> {
   if (!supabase) return { ok: false, skipped: true };
 
   try {
     const cabecera = await inspeccionRepo.getCabecera(cabeceraId);
     if (!cabecera) return { ok: false, error: 'Cabecera no encontrada localmente' };
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const sessionUserId = sessionData.session?.user.id;
+    if (!sessionUserId) return { ok: false, skipped: true, error: 'No hay una sesión activa.' };
+    if (expectedUserId && expectedUserId !== sessionUserId) {
+      return { ok: false, skipped: true, error: 'La sesión cambió antes del envío.' };
+    }
+    if (!cabecera.captured_by_user_id || cabecera.captured_by_user_id !== sessionUserId) {
+      return { ok: false, skipped: true, error: 'La inspección local pertenece a otra sesión o no tiene propietario.' };
+    }
 
     const empresa = await empresaRepo.getById(cabecera.empresa_id);
     if (!empresa) return { ok: false, error: `Empresa local desconocida: ${cabecera.empresa_id}` };
@@ -33,6 +43,7 @@ export async function pushInspeccionToSupabase(cabeceraId: string): Promise<Push
       // UUID generado en el dispositivo → save_inspection lo usa como id de la
       // cabecera en Supabase: reintentar el mismo push NUNCA duplica filas.
       local_id: cabecera.id,
+      captured_by_user_id: cabecera.captured_by_user_id,
       // El server resuelve company_id por nombre (public.companies.name).
       company_name: empresa.nombre,
       plate_number: cabecera.numero_unidad,
@@ -68,6 +79,10 @@ export async function pushInspeccionToSupabase(cabeceraId: string): Promise<Push
       })),
     };
 
+    const { data: latestSession } = await supabase.auth.getSession();
+    if (latestSession.session?.user.id !== sessionUserId) {
+      return { ok: false, skipped: true, error: 'La sesión cambió antes del envío.' };
+    }
     const { error } = await supabase.rpc('save_inspection', { payload });
     if (error) return { ok: false, error: error.message };
     return { ok: true };

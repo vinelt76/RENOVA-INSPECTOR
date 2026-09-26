@@ -26,10 +26,11 @@ async function fetchView(name, params) {
   const qs = new URLSearchParams(params || {});
   if (!qs.has("select")) qs.set("select", "*");
   const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Se requiere iniciar sesión para consultar datos.");
   const res = await fetch(`${cfg.url.replace(/\/$/, "")}/rest/v1/${name}?${qs}`, {
     headers: {
       apikey: cfg.anonKey,
-      Authorization: `Bearer ${session ? session.access_token : cfg.anonKey}`,
+      Authorization: `Bearer ${session.access_token}`,
     },
   });
   if (!res.ok) throw new Error(`Supabase ${name}: HTTP ${res.status}`);
@@ -76,9 +77,7 @@ function showBadge(mode /* "supabase" | "empty" */, detail) {
 const ROLE_LABELS = Object.freeze({
   inspector: "INSPECTOR",
   operator: "OPERARIO",
-  supervisor: "SUPERVISOR DE NEUMÁTICOS",
   tire_supervisor: "SUPERVISOR DE NEUMÁTICOS",
-  fleet_manager: "JEFE DE FLOTA",
 });
 
 function profileLabel(profile) {

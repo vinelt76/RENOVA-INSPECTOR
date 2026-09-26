@@ -10,6 +10,9 @@ vi.mock('../db/repos/syncQueueRepo', () => ({
   syncQueueRepo: { pendientes, marcarEnviado, marcarError },
 }));
 
+const { getSession } = vi.hoisted(() => ({
+  getSession: vi.fn(),
+}));
 const { pushInspeccionToSupabase } = vi.hoisted(() => ({
   pushInspeccionToSupabase: vi.fn(),
 }));
@@ -17,8 +20,8 @@ vi.mock('./pushInspeccion', () => ({ pushInspeccionToSupabase }));
 
 let supabaseEnabled = true;
 vi.mock('./supabaseClient', () => ({
-  get supabaseEnabled() {
-    return supabaseEnabled;
+  get supabase() {
+    return supabaseEnabled ? { auth: { getSession } } : null;
   },
 }));
 
@@ -43,6 +46,7 @@ describe('drainSyncQueue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     supabaseEnabled = true;
+    getSession.mockResolvedValue({ data: { session: { user: { id: 'inspector-1' } } }, error: null });
   });
 
   it('no hace nada si Supabase no está configurado', async () => {
@@ -52,13 +56,23 @@ describe('drainSyncQueue', () => {
     expect(pendientes).not.toHaveBeenCalled();
   });
 
+  it('no toca la cola si falta una sesión autenticada', async () => {
+    getSession.mockResolvedValue({ data: { session: null }, error: null });
+
+    const res = await drainSyncQueue();
+
+    expect(pendientes).not.toHaveBeenCalled();
+    expect(pushInspeccionToSupabase).not.toHaveBeenCalled();
+    expect(res).toEqual({ enviadas: 0, pendientes: 0 });
+  });
+
   it('drenado exitoso marca la fila como enviada', async () => {
     pendientes.mockResolvedValue([fila()]);
     pushInspeccionToSupabase.mockResolvedValue({ ok: true });
 
     const res = await drainSyncQueue();
 
-    expect(pushInspeccionToSupabase).toHaveBeenCalledWith('cab1');
+    expect(pushInspeccionToSupabase).toHaveBeenCalledWith('cab1', 'inspector-1');
     expect(marcarEnviado).toHaveBeenCalledWith('q1', '2026-07-11T00:00:00.000Z');
     expect(marcarError).not.toHaveBeenCalled();
     expect(res).toEqual({ enviadas: 1, pendientes: 0 });

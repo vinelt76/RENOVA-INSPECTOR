@@ -19,7 +19,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,14 +33,14 @@ const fast = process.argv.includes('--fast');
  * perderlas sí. Al sumar pruebas conviene subir el piso en el mismo commit.
  */
 const SUITES = [
-  { name: 'app',              dir: 'app',              cmd: ['npm', 'test'],  minTests: 47 },
-  { name: 'app movimientos',  dir: 'app movimientos',  cmd: ['npm', 'test'],  minTests: 5 },
-  { name: 'WEB/movimientos',  dir: 'WEB/movimientos',  cmd: ['npm', 'test'],  minTests: 186 },
-  { name: 'WEB/shared',       dir: 'WEB/shared',       cmd: ['npm', 'test'],  minTests: 50 },
-  { name: 'WEB/servicios',    dir: 'WEB/servicios',    cmd: ['npm', 'test'],  minTests: 38 },
-  { name: 'WEB/rendimiento',  dir: 'WEB/rendimiento',  cmd: ['npm', 'test'],  minTests: 51 },
-  { name: 'WEB/buscador',     dir: 'WEB/buscador',     cmd: ['npm', 'test'],  minTests: 19 },
-  { name: 'WEB/inventario',   dir: 'WEB/inventario',   cmd: ['npm', 'test'],  minTests: 15 },
+  { name: 'app', dir: 'app', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-0.json'], reportPath: '/tmp/renova-vitest-0.json', minTests: 50 },
+  { name: 'app movimientos', dir: 'app movimientos', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-1.json'], reportPath: '/tmp/renova-vitest-1.json', minTests: 5 },
+  { name: 'WEB/movimientos', dir: 'WEB/movimientos', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-2.json'], reportPath: '/tmp/renova-vitest-2.json', minTests: 186 },
+  { name: 'WEB/shared', dir: 'WEB/shared', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-3.json'], reportPath: '/tmp/renova-vitest-3.json', minTests: 50 },
+  { name: 'WEB/servicios', dir: 'WEB/servicios', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-4.json'], reportPath: '/tmp/renova-vitest-4.json', minTests: 38 },
+  { name: 'WEB/rendimiento', dir: 'WEB/rendimiento', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-5.json'], reportPath: '/tmp/renova-vitest-5.json', minTests: 51 },
+  { name: 'WEB/buscador', dir: 'WEB/buscador', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-6.json'], reportPath: '/tmp/renova-vitest-6.json', minTests: 19 },
+  { name: 'WEB/inventario', dir: 'WEB/inventario', cmd: ['npm', 'test', '--', '--reporter=json', '--outputFile=/tmp/renova-vitest-7.json'], reportPath: '/tmp/renova-vitest-7.json', minTests: 15 },
 ];
 
 const CHECKS = [
@@ -51,7 +51,8 @@ const CHECKS = [
 const BUILDS = [
   { name: 'build (app)',             dir: 'app',             cmd: ['npm', 'run', 'build'] },
   { name: 'build (app movimientos)', dir: 'app movimientos', cmd: ['npm', 'run', 'build'] },
-];
+  { name: 'paquete web estático',    dir: '.',               cmd: ['node', 'scripts/prepare-static-hosting.mjs'] },
+]
 
 const failures = [];
 let totalTests = 0;
@@ -71,8 +72,14 @@ function run(label, dir, cmd) {
   }
 }
 
-/** Extrae el conteo de la línea "Tests  N passed (N)" de vitest. */
-function parseTestCount(output) {
+/** Lee el total del reporte JSON para no depender del canal stdout/stderr de Vitest. */
+function parseTestCount(output, reportPath) {
+  try {
+    const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+    if (Number.isInteger(report.numTotalTests)) return report.numTotalTests;
+  } catch {
+    // Compatibilidad con una suite que no haya generado el reporte.
+  }
   const match = output.match(/Tests\s+(\d+)\s+passed/);
   return match ? Number(match[1]) : null;
 }
@@ -84,7 +91,7 @@ for (const suite of SUITES) {
     console.log(`  ✗ ${suite.name.padEnd(20)} falló`);
     continue;
   }
-  const count = parseTestCount(output);
+  const count = parseTestCount(output, suite.reportPath);
   if (count === null) {
     failures.push(`${suite.name}: no se pudo leer el conteo de pruebas en la salida de vitest`);
     console.log(`  ✗ ${suite.name.padEnd(20)} sin conteo legible`);

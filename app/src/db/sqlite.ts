@@ -278,6 +278,14 @@ export async function runMigrations(db: SQLiteDBConnection): Promise<void> {
     `);
     await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (4);`);
   }
+  if (currentVersion < 5) {
+    // v5: guarda qué inspector capturó cada cabecera offline. Las filas antiguas
+    // quedan NULL y el drainer las conserva hasta que puedan reconciliarse.
+    await db.execute(`
+      ALTER TABLE inspeccion_cabecera ADD COLUMN captured_by_user_id TEXT;
+    `);
+    await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (5);`);
+  }
   // Plantilla para migraciones futuras:
   // if (currentVersion < 5) { /* ALTER TABLE / CREATE TABLE incremental */ ; await db.execute(`DELETE FROM schema_version; INSERT INTO schema_version (version) VALUES (5);`); }
 }

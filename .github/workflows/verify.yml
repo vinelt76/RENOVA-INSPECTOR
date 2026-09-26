@@ -1,0 +1,54 @@
+name: Verify RENOVA
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install root tools
+        run: npm ci
+      - name: Install inspection app
+        run: npm ci
+        working-directory: app
+      - name: Install operator app
+        run: npm ci
+        working-directory: app movimientos
+      - name: Install dashboard test runner
+        run: npm ci
+        working-directory: WEB/movimientos
+      - name: Run tests, lint, docs checks, builds, and static bundle
+        run: npm run verify
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.118.0
+      - name: Initialize local Supabase config
+        run: supabase init
+      - name: Rebuild local database from migrations
+        run: supabase db start
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Test authenticated inspector and role isolation RPCs
+        run: >-
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          --set ON_ERROR_STOP=1
+          --file supabase/tests/mobile_inspector_rpcs_auth.test.sql
+          --file supabase/tests/roles_and_tenant_isolation.test.sql

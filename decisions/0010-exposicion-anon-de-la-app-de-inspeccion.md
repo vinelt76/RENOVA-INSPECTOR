@@ -1,9 +1,11 @@
 # ADR-0010 — La app de inspección opera como `anon`: riesgo asumido y camino de salida
 
 - **Fecha:** 2026-07-25
-- **Estado:** Aceptada (riesgo asumido para la etapa piloto)
+- **Estado:** Supersedida el 2026-09-25
 - **Contexto de origen:** `auditoria_lunes/` — hallazgo H-01
 - **Decisión pendiente relacionada:** «estrategia final de login/sesión offline para inspectores»
+
+> **Decisión vigente desde 2026-09-25:** la app móvil y los dashboards requieren inicio de sesión de usuario. La decisión de operar como `anon` y las recomendaciones de cuenta de dispositivo descritas abajo quedan obsoletas. Este documento conserva el diagnóstico histórico del 2026-07-25; el cierre técnico requiere validar y aplicar la migración antes de dar por retirado el acceso anónimo en producción.
 
 ## Hecho verificado
 

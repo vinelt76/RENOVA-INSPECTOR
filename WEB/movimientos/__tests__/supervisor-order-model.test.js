@@ -60,11 +60,8 @@ describe("orden del supervisor", () => {
     expect(() => createOrderId(null)).toThrow("generación aleatoria compatible");
   });
 
-  it("acepta el rol web histórico sin habilitar al operario", () => {
-    expect(SUPERVISOR_ORDER_ROLES).toContain("fleet_manager");
-    expect(SUPERVISOR_ORDER_ROLES).toContain("tire_supervisor");
-    expect(SUPERVISOR_ORDER_ROLES).toContain("supervisor");
-    expect(SUPERVISOR_ORDER_ROLES).not.toContain("operator");
+  it("solo autoriza al supervisor de neumáticos actual", () => {
+    expect(SUPERVISOR_ORDER_ROLES).toEqual(["tire_supervisor"]);
   });
 
   it("solo envía indicaciones operativas, sin datos técnicos del neumático", () => {

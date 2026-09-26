@@ -68,6 +68,9 @@ cuenta en uso tenga rol Owner/Admin efectivo en la organización actual.
 - Políticas `select_own_company` restringen filas.
 - Vistas expuestas deben ejecutar como invocador.
 - RPCs de taller revocan `PUBLIC`/`anon` y conceden a `authenticated`, además de validar perfil/rol.
+- Roles activos: `inspector`, `operator` y `tire_supervisor`. La migración de normalización
+  convierte el `fleet_manager` supervisor activo documentado; preserva perfiles heredados inactivos
+  y rechaza otros roles activos hasta conciliarlos.
 - Desde 2026-07-25, las 19 vistas de dashboard conceden solo `SELECT` a `authenticated`; `anon`
   quedó sin acceso (antes arrastraban `INSERT/UPDATE/DELETE/TRUNCATE` de un `GRANT ALL` histórico).
 
@@ -78,7 +81,10 @@ cuenta en uso tenga rol Owner/Admin efectivo en la organización actual.
 > por RLS**, y la clave publicable está commiteada y se publica en el bundle estático.
 > `requireAuth()` cierra la puerta de la UI, no la de la API.
 > **No afirmar en ninguna demo ni documento que los datos exigen autenticación.**
-> Riesgo asumido para el piloto, con camino de salida, en `decisions/0010-exposicion-anon-de-la-app-de-inspeccion.md`.
+> La decisión de aceptar este riesgo fue supersedida el 2026-09-25: el producto requiere cuentas de
+> usuario. La migración de cierre está en revisión; hasta aplicarla y verificar permisos en la base
+> activa, esta exposición sigue vigente. El historial y el criterio de salida están en
+> `decisions/0010-exposicion-anon-de-la-app-de-inspeccion.md`.
 
 ## Despliegue y verificación
 
@@ -100,4 +106,3 @@ Para UI/persistencia se exige smoke test de navegador con consola limpia, datos 
 - [Capacitor](https://capacitorjs.com/docs)
 - [Vite](https://vite.dev/guide/)
 - [Obsidian: enlaces internos](https://obsidian.md/help/links)
-

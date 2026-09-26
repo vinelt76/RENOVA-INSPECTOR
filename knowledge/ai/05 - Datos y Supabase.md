@@ -56,8 +56,9 @@ Separarlos permite medir rendimiento de una banda, posición y vida completa sin
 - Rutas: `assign_unit_route`.
 - Seguridad interna: `fn_require_workshop_profile`, `fn_validate_free_position`, `current_company_id`.
 - Órdenes de operario: `create_tire_movement_order`, `claim_tire_movement_order` y
-  `complete_tire_movement_order`. La primera admite `supervisor` legado, `tire_supervisor`,
-  `fleet_manager` y `admin`; las otras dos, `operator`.
+  `complete_tire_movement_order`. Solo `tire_supervisor` emite/cancela órdenes; solo `operator`
+  las toma/completa. Los perfiles activos `fleet_manager` se normalizan a `tire_supervisor`; los
+  roles históricos permanecen únicamente en perfiles inactivos.
 
 ## Vistas principales
 
@@ -192,11 +193,17 @@ columna `captured_on_utc`.
 
 ## RLS
 
-Las tablas de negocio se filtran por `company_id` derivado del perfil autenticado. Catálogos estructurales son legibles por usuarios autenticados. Excepciones móviles acotadas permiten a `anon` listar empresas y llamar RPCs específicos mientras la app no tenga login. Las vistas expuestas deben usar `security_invoker=true`.
+Las tablas de negocio se filtran por `company_id` derivado del perfil autenticado. Catálogos estructurales son legibles por usuarios autenticados. Las vistas expuestas deben usar `security_invoker=true`.
 
-La excepción `anon` anterior corresponde a la app de inspecciones. La app de movimientos exige
-sesión, perfil activo `operator` y usa `v_operator_movement_orders` con `security_invoker=true`;
-empresa y rol se vuelven a validar dentro de cada RPC de escritura.
+La app de inspecciones y la app de movimientos requieren inicio de sesión. Sin embargo, en
+producción las tres RPC móviles todavía conservan permisos para `anon` hasta aplicar una migración
+de cierre. La decisión ADR-0010 que aceptaba ese riesgo fue supersedida el 2026-09-25. El PR de
+seguridad añade validación de perfil/empresa y atribución al inspector, pero no se debe declarar
+cerrada la exposición hasta aplicar y verificar la migración en la base activa.
+
+La app de movimientos usa `v_operator_movement_orders` con `security_invoker=true`; empresa y rol
+se vuelven a validar dentro de cada RPC de escritura. Los perfiles activos quedan limitados a
+`inspector`, `operator` y `tire_supervisor`; el último también mantiene las operaciones de taller.
 
 Las vistas nuevas de cambios y `tire_change_batches` solo se leen con `authenticated`; no se
 exponen a `anon`. La tabla permite al cliente consultar lotes de su empresa, pero toda escritura

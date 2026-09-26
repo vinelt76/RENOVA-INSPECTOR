@@ -1,6 +1,6 @@
 import { syncQueueRepo } from '../db/repos/syncQueueRepo';
 import { pushInspeccionToSupabase } from './pushInspeccion';
-import { supabaseEnabled } from './supabaseClient';
+import { supabase } from './supabaseClient';
 
 const MAX_BACKOFF_SEC = 300;
 
@@ -9,19 +9,28 @@ export interface DrainResult {
   pendientes: number;
 }
 
-// Drena sync_queue: reintenta cada fila pendiente (enviado=0, next_retry_at vencido)
-// contra pushInspeccionToSupabase (ya idempotente por upsert en save_inspection). Un
-// fallo en una fila no bloquea al resto — se procesan de forma aislada. Reintento con
-// backoff exponencial simple (2^intentos segundos, tope 300s).
+// Drena sync_queue solo bajo una sesión autenticada. Las inspecciones nuevas
+// permanecen locales hasta que un inspector inicie sesión; la clave pública no
+// debe autorizar sincronizaciones ni siquiera durante el arranque de la app.
 export async function drainSyncQueue(): Promise<DrainResult> {
-  if (!supabaseEnabled) return { enviadas: 0, pendientes: 0 };
+  if (!supabase) return { enviadas: 0, pendientes: 0 };
+
+  let sessionUserId: string | null = null;
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    sessionUserId = data.session?.user?.id ?? null;
+    if (error || !sessionUserId) return { enviadas: 0, pendientes: 0 };
+  } catch {
+    // No convertir fallos locales de sesión en errores de cola ni descartar datos.
+    return { enviadas: 0, pendientes: 0 };
+  }
 
   const rows = await syncQueueRepo.pendientes();
   let enviadas = 0;
   let pendientes = 0;
 
   for (const row of rows) {
-    const res = await pushInspeccionToSupabase(row.registro_id);
+    const res = await pushInspeccionToSupabase(row.registro_id, sessionUserId);
     if (res.ok) {
       await syncQueueRepo.marcarEnviado(row.id, row.created_at);
       enviadas++;

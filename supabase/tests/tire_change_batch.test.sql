@@ -53,7 +53,7 @@ begin
     from public.profiles p
     join public.companies c on c.id = p.company_id
    where p.active
-     and p.role in ('workshop_manager', 'fleet_manager', 'admin')
+     and p.role = 'tire_supervisor'
      and (c.name ilike '%MÓVIL%' or c.name ilike '%MOVIL%')
      and exists (
        select 1
@@ -77,7 +77,7 @@ begin
     from public.profiles p
     join public.companies c on c.id = p.company_id
    where p.active
-     and p.role in ('workshop_manager', 'fleet_manager', 'admin')
+     and p.role = 'tire_supervisor'
      and c.name ilike '%CRUZ%'
      and p.company_id <> v_movil.company_id
    order by p.id

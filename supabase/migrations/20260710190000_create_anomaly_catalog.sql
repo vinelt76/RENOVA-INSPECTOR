@@ -100,4 +100,8 @@ insert into public.anomaly_catalog (nombre, posible_causa, desecho) values
 -- pero corresponden a la misma anomalía (confirmado 2026-07-10).
 insert into public.anomaly_catalog (nombre, posible_causa, desecho, alias_de) values
 ('Despegue de linea de unión de la banda de rodamiento', 'Proveedor', false, 'Separacion de la union de la banda de rodamiento'),
-('Desgaste irregular en banda de rodamiento', 'Mantenimiento Alineación', false, 'Desgaste irregular en banda de rodado');
+('Desgaste irregular en banda de rodamiento', 'Mantenimiento Alineación', false, 'Desgaste irregular en banda de rodado')
+on conflict (nombre) do update
+  set posible_causa = excluded.posible_causa,
+      desecho = excluded.desecho,
+      alias_de = excluded.alias_de;

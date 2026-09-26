@@ -72,7 +72,7 @@ describe("loadServicesProfile", () => {
   });
 
   it("carga solo el perfil necesario para decidir acceso", async () => {
-    const profile = { id: "u1", company_id: "c1", role: "fleet_manager", active: true };
+    const profile = { id: "u1", company_id: "c1", role: "tire_supervisor", active: true };
     const fetchView = vi.fn().mockResolvedValue([profile]);
     await expect(loadServicesProfile("u1", fetchView)).resolves.toEqual(profile);
     expect(fetchView).toHaveBeenCalledWith("profiles", {

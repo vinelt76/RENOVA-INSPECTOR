@@ -8,15 +8,23 @@ const appDistDir = path.join(rootDir, 'app', 'dist');
 const webDir = path.join(rootDir, 'WEB');
 const outputDir = path.join(rootDir, 'deploy-static');
 const outputWebDir = path.join(outputDir, 'web');
+const supabaseVendorFile = path.join(webDir, 'vendor', 'supabase-js.mjs');
 
 if (!existsSync(appDistDir)) {
   throw new Error('No existe app/dist. Ejecuta primero `cd app && npm run build`.');
+}
+if (!existsSync(supabaseVendorFile)) {
+  throw new Error('Falta WEB/vendor/supabase-js.mjs. Ejecuta primero `npm run vendor:supabase`.');
 }
 
 rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(outputWebDir, { recursive: true });
 
 cpSync(appDistDir, outputDir, { recursive: true });
+
+const outputVendorDir = path.join(outputWebDir, 'vendor');
+mkdirSync(outputVendorDir, { recursive: true });
+cpSync(supabaseVendorFile, path.join(outputVendorDir, 'supabase-js.mjs'));
 
 for (const entry of ['historial-neumatico.html', 'importar.html', 'inventario.html', 'servicios.html', 'INSPECCIONES POR FECHA.html', 'Inspecciones por unidad.html', 'rendimiento.html', 'renova-office-shell.css', 'renova-ready.js', 'renova-animate.js', 'renova-format.js', 'supabase-config.public.js', 'supabase-demo.js']) {
   cpSync(path.join(webDir, entry), path.join(outputWebDir, entry));

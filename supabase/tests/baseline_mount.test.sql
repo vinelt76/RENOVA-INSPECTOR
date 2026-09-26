@@ -79,9 +79,9 @@ begin
 
   insert into public.profiles (id, company_id, full_name, role)
   values
-    (v_workshop, v_company, 'TEST Workshop', 'workshop_manager'),
+    (v_workshop, v_company, 'TEST Workshop', 'tire_supervisor'),
     (v_inspector, v_company, 'TEST Inspector', 'inspector'),
-    (v_other_workshop, v_other_company, 'TEST Other Workshop', 'workshop_manager');
+    (v_other_workshop, v_other_company, 'TEST Other Workshop', 'tire_supervisor');
 
   insert into public.vehicle_configs (id, vehicle_type, notation, is_mvp)
   values (v_config, 'TEST BUS', 'TEST-' || left(v_config::text, 8), false);
