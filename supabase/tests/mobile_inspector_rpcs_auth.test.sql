@@ -128,12 +128,12 @@ begin
     (v_other_supervisor_id, 'authenticated', 'authenticated', 'test-supervisor-other-' || left(v_other_supervisor_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
     (v_legacy_profile_id, 'authenticated', 'authenticated', 'test-legacy-' || left(v_legacy_profile_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb);
 
-  insert into public.profiles (id, company_id, full_name, role)
+  insert into public.profiles (id, company_id, full_name, role, active)
   values
-    (v_inspector_id, v_company_id, 'TEST Inspector', 'inspector'),
-    (v_operator_id, v_company_id, 'TEST Operator', 'operator'),
-    (v_supervisor_id, v_company_id, 'TEST Supervisor', 'tire_supervisor'),
-    (v_other_supervisor_id, v_other_company_id, 'TEST Other Supervisor', 'tire_supervisor'),
+    (v_inspector_id, v_company_id, 'TEST Inspector', 'inspector', true),
+    (v_operator_id, v_company_id, 'TEST Operator', 'operator', true),
+    (v_supervisor_id, v_company_id, 'TEST Supervisor', 'tire_supervisor', true),
+    (v_other_supervisor_id, v_other_company_id, 'TEST Other Supervisor', 'tire_supervisor', true),
     (v_legacy_profile_id, v_company_id, 'TEST Inactive Legacy', 'fleet_manager', false);
 
   -- Los perfiles activos quedan limitados a los tres roles actuales; los
