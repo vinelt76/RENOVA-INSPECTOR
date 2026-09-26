@@ -7,4 +7,8 @@ set nombre = 'Despegue de linea de unión de la banda de rodamiento'
 where nombre = 'Despegue de linea de union de la banda de rodamiento';
 
 insert into public.anomaly_catalog (nombre, posible_causa, desecho, alias_de) values
-('Desgaste irregular en banda de rodamiento', 'Mantenimiento Alineación', false, 'Desgaste irregular en banda de rodado');
+('Desgaste irregular en banda de rodamiento', 'Mantenimiento Alineación', false, 'Desgaste irregular en banda de rodado')
+on conflict (nombre) do update
+  set posible_causa = excluded.posible_causa,
+      desecho = excluded.desecho,
+      alias_de = excluded.alias_de;
