@@ -4,8 +4,6 @@
 -- las autorizaciones. Otros roles activos heredados requieren revisión manual.
 -- Los valores enum y perfiles inactivos se conservan.
 
-lock table public.profiles in share row exclusive mode;
-
 do $$
 declare
   v_active_fleet_managers bigint;
