@@ -1,5 +1,7 @@
 -- Pruebas de aislamiento para las tres RPC móviles.
--- Ejecutar el archivo como una transacción: TESTS_PASSED revierte todos los fixtures.
+-- Ejecutar con psql -v ON_ERROR_STOP=1. El ROLLBACK final revierte los fixtures.
+
+begin;
 
 do $$
 declare
@@ -235,6 +237,8 @@ begin
     raise exception 'LOCAL_ID: modificó una inspección de otra empresa';
   end if;
 
-  raise exception 'TESTS_PASSED';
+  raise notice 'TESTS_PASSED';
 end;
-$$;
+$;
+
+rollback;
