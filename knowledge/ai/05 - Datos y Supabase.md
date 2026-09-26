@@ -56,8 +56,9 @@ Separarlos permite medir rendimiento de una banda, posición y vida completa sin
 - Rutas: `assign_unit_route`.
 - Seguridad interna: `fn_require_workshop_profile`, `fn_validate_free_position`, `current_company_id`.
 - Órdenes de operario: `create_tire_movement_order`, `claim_tire_movement_order` y
-  `complete_tire_movement_order`. La primera admite `supervisor` legado, `tire_supervisor`,
-  `fleet_manager` y `admin`; las otras dos, `operator`.
+  `complete_tire_movement_order`. Solo `tire_supervisor` emite/cancela órdenes; solo `operator`
+  las toma/completa. Los perfiles activos `fleet_manager` se normalizan a `tire_supervisor`; los
+  roles históricos permanecen únicamente en perfiles inactivos.
 
 ## Vistas principales
 
@@ -201,7 +202,8 @@ seguridad añade validación de perfil/empresa y atribución al inspector, pero 
 cerrada la exposición hasta aplicar y verificar la migración en la base activa.
 
 La app de movimientos usa `v_operator_movement_orders` con `security_invoker=true`; empresa y rol
-se vuelven a validar dentro de cada RPC de escritura.
+se vuelven a validar dentro de cada RPC de escritura. Los perfiles activos quedan limitados a
+`inspector`, `operator` y `tire_supervisor`; el último también mantiene las operaciones de taller.
 
 Las vistas nuevas de cambios y `tire_change_batches` solo se leen con `authenticated`; no se
 exponen a `anon`. La tabla permite al cliente consultar lotes de su empresa, pero toda escritura

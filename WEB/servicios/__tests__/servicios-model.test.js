@@ -24,8 +24,8 @@ const rows = [
 ];
 
 describe("autorización de Servicios", () => {
-  it("autoriza el rol legado supervisor para consultar servicios", () => {
-    expect(SERVICES_ALLOWED_ROLES).toContain("supervisor");
+  it("solo autoriza a operarios y supervisores actuales", () => {
+    expect(SERVICES_ALLOWED_ROLES).toEqual(["operator", "tire_supervisor"]);
   });
 });
 

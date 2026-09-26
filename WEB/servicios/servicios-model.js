@@ -2,10 +2,7 @@ import { MOVEMENT_REASONS } from "../movimientos/supervisor-order-model.js";
 
 export const SERVICES_ALLOWED_ROLES = Object.freeze([
   "operator",
-  "supervisor",
   "tire_supervisor",
-  "fleet_manager",
-  "admin",
 ]);
 
 export const CURRENT_ORDER_STATUS_LABELS = Object.freeze({

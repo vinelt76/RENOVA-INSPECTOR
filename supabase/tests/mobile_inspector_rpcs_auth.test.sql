@@ -10,14 +10,22 @@ declare
   v_inspector_id uuid := gen_random_uuid();
   v_operator_id uuid := gen_random_uuid();
   v_supervisor_id uuid := gen_random_uuid();
+  v_other_supervisor_id uuid := gen_random_uuid();
+  v_legacy_profile_id uuid := gen_random_uuid();
   v_company_name text;
   v_config_id uuid := gen_random_uuid();
+  v_axle_id uuid := gen_random_uuid();
   v_unit_id uuid := gen_random_uuid();
   v_foreign_unit_id uuid := gen_random_uuid();
   v_foreign_inspection_id uuid := gen_random_uuid();
+  v_order_id uuid := gen_random_uuid();
+  v_cancel_order_id uuid := gen_random_uuid();
+  v_foreign_order_id uuid := gen_random_uuid();
   v_odometer integer;
+  v_visible_orders integer;
   v_saved_inspector_id uuid;
   v_saved_plate text;
+  v_role_probe text;
   v_probe_name text;
   v_payload jsonb;
 begin
@@ -29,7 +37,12 @@ begin
 
   if not has_function_privilege('authenticated', 'public.get_unidad_preload(text,text)', 'EXECUTE')
      or not has_function_privilege('authenticated', 'public.get_umbrales_rtd(text)', 'EXECUTE')
-     or not has_function_privilege('authenticated', 'public.save_inspection(jsonb)', 'EXECUTE') then
+     or not has_function_privilege('authenticated', 'public.save_inspection(jsonb)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.create_tire_movement_order(uuid,uuid,date,text,jsonb)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.claim_tire_movement_order(uuid)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.complete_tire_movement_order(uuid,integer,jsonb)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.cancel_tire_movement_order(uuid)', 'EXECUTE')
+     or not has_function_privilege('authenticated', 'public.fn_require_workshop_profile()', 'EXECUTE') then
     raise exception 'GRANTS: falta EXECUTE para authenticated';
   end if;
 
@@ -111,22 +124,143 @@ begin
   values
     (v_inspector_id, 'authenticated', 'authenticated', 'test-inspector-' || left(v_inspector_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
     (v_operator_id, 'authenticated', 'authenticated', 'test-operator-' || left(v_operator_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
-    (v_supervisor_id, 'authenticated', 'authenticated', 'test-supervisor-' || left(v_supervisor_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb);
+    (v_supervisor_id, 'authenticated', 'authenticated', 'test-supervisor-' || left(v_supervisor_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
+    (v_other_supervisor_id, 'authenticated', 'authenticated', 'test-supervisor-other-' || left(v_other_supervisor_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
+    (v_legacy_profile_id, 'authenticated', 'authenticated', 'test-legacy-' || left(v_legacy_profile_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb);
 
   insert into public.profiles (id, company_id, full_name, role)
   values
     (v_inspector_id, v_company_id, 'TEST Inspector', 'inspector'),
     (v_operator_id, v_company_id, 'TEST Operator', 'operator'),
-    (v_supervisor_id, v_company_id, 'TEST Supervisor', 'tire_supervisor');
+    (v_supervisor_id, v_company_id, 'TEST Supervisor', 'tire_supervisor'),
+    (v_other_supervisor_id, v_other_company_id, 'TEST Other Supervisor', 'tire_supervisor'),
+    (v_legacy_profile_id, v_company_id, 'TEST Inactive Legacy', 'fleet_manager', false);
+
+  -- Los perfiles activos quedan limitados a los tres roles actuales; los
+  -- perfiles históricos inactivos se conservan sin conservar autorización.
+  if exists (
+    select 1 from public.profiles
+     where active and role::text not in ('inspector', 'operator', 'tire_supervisor')
+  ) then
+    raise exception 'ROLE: hay perfiles activos fuera del conjunto de tres roles';
+  end if;
+  if (select active from public.profiles where id = v_legacy_profile_id) then
+    raise exception 'ROLE: no preservó el estado inactivo del perfil histórico';
+  end if;
+  foreach v_role_probe in array array['supervisor', 'fleet_manager', 'workshop_manager', 'admin'] loop
+    begin
+      update public.profiles set role = v_role_probe::public.user_role
+       where id = v_supervisor_id;
+      raise exception 'ROLE: permitió activar el rol histórico %', v_role_probe;
+    exception when check_violation then
+      null;
+    end;
+  end loop;
 
   insert into public.vehicle_configs (id, vehicle_type, notation, is_mvp)
   values (v_config_id, 'TEST BUS', 'TEST-RPC-' || left(v_config_id::text, 8), false);
+  insert into public.axles (id, config_id, axle_number, axle_type)
+  values (v_axle_id, v_config_id, 1, 'TEST');
+  insert into public.tire_positions (config_id, axle_id, position_number, side)
+  values (v_config_id, v_axle_id, 1, 'Izq');
   insert into public.units (id, company_id, plate, vehicle_type, config_id)
   values
     (v_unit_id, v_company_id, 'TEST-RPC-' || left(v_unit_id::text, 8), 'TEST BUS', v_config_id),
     (v_foreign_unit_id, v_other_company_id, 'TEST-RPC-OTHER-' || left(v_foreign_unit_id::text, 8), 'TEST BUS', v_config_id);
   insert into public.inspections (id, company_id, unit_id, inspected_on, odometer_km, inspector_id)
   values (v_foreign_inspection_id, v_other_company_id, v_foreign_unit_id, current_date - 1, 777, v_inspector_id);
+
+  -- Supervisor puede emitir/cancelar; operario puede tomar/completar; inspector
+  -- no recibe lectura de Movimientos. Todas las llamadas usan claims reales.
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', v_supervisor_id, 'role', 'authenticated')::text, true);
+  perform public.create_tire_movement_order(
+    v_order_id, v_unit_id, current_date, null,
+    jsonb_build_array(jsonb_build_object('direction', 'exit', 'position', 1, 'reason', 'repair'))
+  );
+  begin
+    perform public.claim_tire_movement_order(v_order_id);
+    raise exception 'MOVEMENT ROLE: tire_supervisor tomó una orden';
+  exception when insufficient_privilege then
+    if sqlerrm not like '%no permite realizar esta acción%' then raise; end if;
+  end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_operator_id, 'role', 'authenticated')::text, true);
+  begin
+    perform public.create_tire_movement_order(
+      gen_random_uuid(), v_unit_id, current_date, null,
+      jsonb_build_array(jsonb_build_object('direction', 'exit', 'position', 1, 'reason', 'repair'))
+    );
+    raise exception 'MOVEMENT ROLE: operator emitió una orden';
+  exception when insufficient_privilege then
+    if sqlerrm not like '%no permite realizar esta acción%' then raise; end if;
+  end;
+  begin
+    perform public.cancel_tire_movement_order(v_order_id);
+    raise exception 'MOVEMENT ROLE: operator canceló una orden';
+  exception when insufficient_privilege then
+    if sqlerrm not like '%no permite realizar esta acción%' then raise; end if;
+  end;
+  perform public.claim_tire_movement_order(v_order_id);
+  perform public.complete_tire_movement_order(
+    v_order_id, 100,
+    jsonb_build_array(jsonb_build_object(
+      'direction', 'exit', 'position', 1, 'reason', 'repair', 'condition', 'N', 'code', 'TEST-MOVE-1'
+    ))
+  );
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_supervisor_id, 'role', 'authenticated')::text, true);
+  perform public.create_tire_movement_order(
+    v_cancel_order_id, v_unit_id, current_date, null,
+    jsonb_build_array(jsonb_build_object('direction', 'exit', 'position', 1, 'reason', 'repair'))
+  );
+  perform public.cancel_tire_movement_order(v_cancel_order_id);
+  execute 'reset role';
+
+  insert into public.tire_movement_orders (id, company_id, unit_id, requested_by, status, scheduled_for)
+  values (v_foreign_order_id, v_other_company_id, v_foreign_unit_id, v_other_supervisor_id, 'issued', current_date);
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', v_inspector_id, 'role', 'authenticated')::text, true);
+  select count(*) into v_visible_orders from public.tire_movement_orders;
+  if v_visible_orders <> 0 then
+    raise exception 'MOVEMENT RLS: inspector vio % órdenes', v_visible_orders;
+  end if;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_operator_id, 'role', 'authenticated')::text, true);
+  select count(*) into v_visible_orders from public.tire_movement_orders;
+  if v_visible_orders <> 2 then
+    raise exception 'MOVEMENT RLS: operario vio % órdenes de su empresa; esperaba 2', v_visible_orders;
+  end if;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_supervisor_id, 'role', 'authenticated')::text, true);
+  select count(*) into v_visible_orders from public.tire_movement_orders;
+  if v_visible_orders <> 2 then
+    raise exception 'MOVEMENT RLS: supervisor vio % órdenes de su empresa; esperaba 2', v_visible_orders;
+  end if;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_other_supervisor_id, 'role', 'authenticated')::text, true);
+  select count(*) into v_visible_orders from public.tire_movement_orders;
+  if v_visible_orders <> 1 then
+    raise exception 'MOVEMENT RLS: supervisor de otra empresa vio % órdenes; esperaba 1', v_visible_orders;
+  end if;
+  execute 'reset role';
+
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', v_supervisor_id, 'role', 'authenticated')::text, true);
+  select id into v_saved_inspector_id from public.fn_require_workshop_profile();
+  if v_saved_inspector_id is distinct from v_supervisor_id then
+    raise exception 'ROLE: supervisor no conservó operaciones de taller';
+  end if;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_operator_id, 'role', 'authenticated')::text, true);
+  begin
+    perform public.fn_require_workshop_profile();
+    raise exception 'WORKSHOP ROLE: operator obtuvo permisos de taller';
+  exception when insufficient_privilege then
+    if sqlerrm not like '%no permite registrar operaciones de taller%' then raise; end if;
+  end;
+  execute 'reset role';
 
   -- Un usuario autenticado sin perfil operativo no obtiene acceso.
   perform set_config('request.jwt.claims', json_build_object('sub', gen_random_uuid(), 'role', 'authenticated')::text, true);
@@ -251,6 +385,6 @@ begin
 
   raise notice 'TESTS_PASSED';
 end;
-$;
+$$;
 
 rollback;

@@ -38,7 +38,7 @@ trazabilidad, pero ya no forman parte del grafo de imports del controlador web.
 
 ## Separación de responsabilidades
 
-- Supervisor web (`tire_supervisor`, `fleet_manager` histórico o `admin`): posición, servicio,
+- Supervisor web (`tire_supervisor`): posición, servicio,
   neumático de inventario que entra, nota y fecha.
 - Operario Android (`operator`): toma la orden y captura código, marca, medida, diseño, RTD,
   condición, reencauche, observaciones y un único odómetro de máquina.

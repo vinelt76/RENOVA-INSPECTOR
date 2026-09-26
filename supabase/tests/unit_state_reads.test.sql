@@ -25,7 +25,7 @@ begin
     into v_profile_a
     from public.profiles p
    where p.active
-     and p.role in ('workshop_manager', 'fleet_manager', 'admin')
+     and p.role = 'tire_supervisor'
      and exists (
        select 1
          from public.units u

@@ -33,8 +33,8 @@ El modo visible **Servicios** vive en `WEB/movimientos/` (módulos ES puros +
 del gemelo digital. Un selector accesible **Inspección / Servicios** (persistido internamente en
 `?mode=movimientos`, sin recarga) alterna panel, dock y selección sin tocar el flujo histórico de
 Inspección. El enlace histórico `?mode=cambios` sigue abriendo Servicios y se canonicaliza a la
-URL nueva. Un perfil activo `supervisor` legado, `tire_supervisor`, `fleet_manager` histórico o `admin` puede armar y
-emitir órdenes. La pantalla separada `instalacion.html` se retiró por redundante.
+URL nueva. Solo `tire_supervisor` puede armar y emitir órdenes. La pantalla separada
+`instalacion.html` se retiró por redundante.
 
 ## Buscador global
 
@@ -159,8 +159,8 @@ La pestaña web dirige el trabajo; no confirma por sí misma movimientos físico
 4. Emitir una orden con `create_tire_movement_order` y seguir `issued → in_progress → completed`.
 5. El operario captura los datos técnicos al ejecutar; la reconciliación física permanece pendiente.
 
-La empresa se deriva del perfil autenticado. La RPC de órdenes admite `tire_supervisor`,
-`fleet_manager` histórico y `admin`.
+La empresa se deriva del perfil autenticado. La RPC de órdenes admite `tire_supervisor`; los
+perfiles activos `fleet_manager` se convierten a ese rol al aplicar la migración de tres roles.
 
 La app del operario permite revisar una orden `issued` sin tomarla. El cambio a `in_progress` se
 realiza únicamente al pulsar **Iniciar orden**; completar permanece bloqueado hasta ese momento.

@@ -33,10 +33,12 @@ begin
   --    posiciones libres en su configuración.
   select p.* into v_movil from public.profiles p
     join public.companies c on c.id = p.company_id
-   where c.name ilike '%MÓVIL%' or c.name ilike '%MOVIL%' limit 1;
+   where p.active and p.role = 'tire_supervisor'
+     and (c.name ilike '%MÓVIL%' or c.name ilike '%MOVIL%') limit 1;
   select p.* into v_cruz from public.profiles p
     join public.companies c on c.id = p.company_id
-   where c.name ilike '%CRUZ%' limit 1;
+   where p.active and p.role = 'tire_supervisor'
+     and c.name ilike '%CRUZ%' limit 1;
   if v_movil.id is null or v_cruz.id is null then
     raise exception 'SETUP: faltan perfiles MOVIL/CRUZ';
   end if;
@@ -72,7 +74,7 @@ begin
     raise exception 'SETUP: no hay posiciones libres para probar';
   end if;
 
-  -- Simular sesión del fleet_manager de MOVIL.
+  -- Simular sesión del supervisor de neumáticos de MOVIL.
   perform set_config('request.jwt.claims', json_build_object('sub', v_movil.id)::text, true);
 
   -- ── T1: instalación desde cero en posición libre.

@@ -10,13 +10,8 @@ export const MOVEMENT_REASONS = Object.freeze({
   balancing: "BALANCEO",
 });
 
-// `fleet_manager` es el rol histórico de las cuentas web que ya operan como
-// Supervisor de Neumáticos. `tire_supervisor` queda como rol dedicado nuevo.
 export const SUPERVISOR_ORDER_ROLES = Object.freeze([
-  "supervisor",
   "tire_supervisor",
-  "fleet_manager",
-  "admin",
 ]);
 
 const DIRECTIONS = new Set(["exit", "entry"]);

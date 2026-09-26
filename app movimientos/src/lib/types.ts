@@ -1,10 +1,7 @@
 export type ProfileRole =
   | 'inspector'
   | 'operator'
-  | 'tire_supervisor'
-  | 'workshop_manager'
-  | 'fleet_manager'
-  | 'admin';
+  | 'tire_supervisor';
 
 export interface OperatorProfile {
   id: string;
