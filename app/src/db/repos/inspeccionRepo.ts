@@ -4,6 +4,7 @@ import type { InspeccionCabecera, InspeccionNeumatico } from '../schema';
 import { calcularRtdMovi, calcularIdi, calcularEstadoRtd, calcularIsaPeso } from '../../core/calculations';
 import { umbralRepo } from './umbralRepo';
 import { syncQueueRepo } from './syncQueueRepo';
+import { supabase } from '../../sync/supabaseClient';
 
 interface NeumaticoInput {
   /** Empresa dueña de la cabecera — resuelve el umbral RTD aplicable (task_16). */
@@ -25,6 +26,27 @@ interface NeumaticoInput {
   anomalia?: string | null;
 }
 
+async function currentInspectorId(): Promise<string> {
+  if (!supabase) throw new Error('La aplicación no tiene sesión de inspector configurada.');
+  const { data, error } = await supabase.auth.getSession();
+  const userId = data.session?.user?.id;
+  if (error || !userId) throw new Error('Inicia sesión antes de capturar o editar una inspección.');
+  return userId;
+}
+
+async function assertInspectionOwner(cabeceraId: string): Promise<string> {
+  const userId = await currentInspectorId();
+  const db = await getDb();
+  const result = await db.query(
+    'SELECT captured_by_user_id FROM inspeccion_cabecera WHERE id = ?',
+    [cabeceraId],
+  );
+  const ownerId = result.values?.[0]?.captured_by_user_id as string | null | undefined;
+  if (!ownerId) throw new Error('La inspección local no tiene inspector de origen y requiere reconciliación.');
+  if (ownerId !== userId) throw new Error('Esta inspección local pertenece a otra sesión.');
+  return userId;
+}
+
 async function calcularDesecho(anomalia: string | null): Promise<number> {
   if (!anomalia) return 0;
   const db = await getDb();
@@ -40,6 +62,7 @@ export const inspeccionRepo = {
     km_odometro: number,
     foto_unidad?: string | null
   ): Promise<InspeccionCabecera> {
+    const capturedByUserId = await currentInspectorId();
     const db = await getDb();
     const id = generateId();
     const now = nowIso();
@@ -50,14 +73,15 @@ export const inspeccionRepo = {
       fecha,
       km_odometro,
       foto_unidad: foto_unidad ?? null,
+      captured_by_user_id: capturedByUserId,
       created_at: now,
       updated_at: now,
       sincronizado: 0,
     };
     await db.run(
-      `INSERT INTO inspeccion_cabecera (id, empresa_id, numero_unidad, fecha, km_odometro, foto_unidad, created_at, updated_at, sincronizado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, empresa_id, numero_unidad, fecha, km_odometro, foto_unidad ?? null, now, now, 0]
+      `INSERT INTO inspeccion_cabecera (id, empresa_id, numero_unidad, fecha, km_odometro, foto_unidad, captured_by_user_id, created_at, updated_at, sincronizado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, empresa_id, numero_unidad, fecha, km_odometro, foto_unidad ?? null, capturedByUserId, now, now, 0]
     );
     await persistDb();
     // Encolar para el drainer (task_17) — una fila por cabecera alcanza: el push
@@ -76,6 +100,7 @@ export const inspeccionRepo = {
   // Reabrir la inspección del día: se actualiza la MISMA cabecera (odómetro/foto),
   // nunca se duplica. Una inspección por unidad por día (decisión task_12 §4).
   async actualizarCabecera(id: string, km_odometro: number, foto_unidad?: string | null): Promise<void> {
+    await assertInspectionOwner(id);
     const db = await getDb();
     const now = nowIso();
     await db.run(
@@ -89,6 +114,7 @@ export const inspeccionRepo = {
   },
 
   async upsertNeumatico(input: NeumaticoInput): Promise<InspeccionNeumatico> {
+    await assertInspectionOwner(input.cabecera_id);
     const db = await getDb();
     const now = nowIso();
     // Reusar el id de la fila existente en (cabecera, posición): el autosave llama

@@ -63,6 +63,9 @@ smokes reales del modo taller.
   porque resolverlo es el mismo problema que la reconciliación pendiente. Detalle en
   `tasks_servicios/PLAN_PAREO.md` y `tasks_servicios/REVISION_FINAL_PAREO.md`; lo que quedó fuera,
   en `tasks_servicios/FASE_FUTURA_ORIGEN_Y_RECONCILIACION.md`.
+- ADR 0010: la aceptación temporal de RPC móviles accesibles por `anon` fue supersedida el
+  2026-09-25. La app y dashboards requieren cuentas; el retiro de permisos `anon` en producción
+  sigue pendiente de migración y verificación.
 - ADR 0011: Rendimiento usa profundidad útil para el desgaste y agregación ponderada para todo
   conjunto, incluso una unidad. Un RTD creciente se excluye y se declara. OTD permanece como base
   provisional hasta resolver D1 con un casco montado usado.

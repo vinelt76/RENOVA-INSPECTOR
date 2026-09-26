@@ -61,6 +61,14 @@ El avance es gradual y se mide con Q6 de `supabase/diagnostics/baseline_profile.
 actual de referencia es 2 094 posiciones pendientes. Las posiciones sin evidencia siguen siendo
 vacías y aceptan el flujo normal de montaje.
 
+## Acceso de inspector
+
+Desde 2026-09-25 la decisión vigente es exigir una cuenta de usuario para la app de inspección y
+los dashboards. El login y la sesión offline están implementados en la app. La API de producción
+aún conserva permisos `anon` en tres RPC móviles; la migración para retirarlos está pendiente de
+validación y aplicación. No presentar el backend como protegido hasta cerrar ese paso. Capturas
+locales antiguas sin UID de origen deben conservarse y reconciliarse, nunca atribuirse a otra cuenta.
+
 ## Interpretación prudente
 
 `Implementado` significa que hay código/migración. `Verificado` exige prueba repetible. Las suites

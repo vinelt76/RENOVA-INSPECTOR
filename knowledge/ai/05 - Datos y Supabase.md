@@ -192,11 +192,16 @@ columna `captured_on_utc`.
 
 ## RLS
 
-Las tablas de negocio se filtran por `company_id` derivado del perfil autenticado. Catálogos estructurales son legibles por usuarios autenticados. Excepciones móviles acotadas permiten a `anon` listar empresas y llamar RPCs específicos mientras la app no tenga login. Las vistas expuestas deben usar `security_invoker=true`.
+Las tablas de negocio se filtran por `company_id` derivado del perfil autenticado. Catálogos estructurales son legibles por usuarios autenticados. Las vistas expuestas deben usar `security_invoker=true`.
 
-La excepción `anon` anterior corresponde a la app de inspecciones. La app de movimientos exige
-sesión, perfil activo `operator` y usa `v_operator_movement_orders` con `security_invoker=true`;
-empresa y rol se vuelven a validar dentro de cada RPC de escritura.
+La app de inspecciones y la app de movimientos requieren inicio de sesión. Sin embargo, en
+producción las tres RPC móviles todavía conservan permisos para `anon` hasta aplicar una migración
+de cierre. La decisión ADR-0010 que aceptaba ese riesgo fue supersedida el 2026-09-25. El PR de
+seguridad añade validación de perfil/empresa y atribución al inspector, pero no se debe declarar
+cerrada la exposición hasta aplicar y verificar la migración en la base activa.
+
+La app de movimientos usa `v_operator_movement_orders` con `security_invoker=true`; empresa y rol
+se vuelven a validar dentro de cada RPC de escritura.
 
 Las vistas nuevas de cambios y `tire_change_batches` solo se leen con `authenticated`; no se
 exponen a `anon`. La tabla permite al cliente consultar lotes de su empresa, pero toda escritura
