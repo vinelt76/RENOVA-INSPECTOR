@@ -94,7 +94,13 @@ begin
     raise exception 'RLS: datos inesperados en órdenes';
   end if;
 
-  perform public.create_tire_movement_order(v_order_id, v_unit_id, current_date, 'TEST order', '[]'::jsonb);
+  perform public.create_tire_movement_order(
+    v_order_id,
+    v_unit_id,
+    current_date,
+    'TEST order',
+    '[{"direction":"exit","position":1,"reason":"repair"}]'::jsonb
+  );
   if not exists (select 1 from public.tire_movement_orders where id = v_order_id and company_id = v_company_id) then
     raise exception 'MOVIMIENTOS: supervisor no pudo emitir una orden';
   end if;
