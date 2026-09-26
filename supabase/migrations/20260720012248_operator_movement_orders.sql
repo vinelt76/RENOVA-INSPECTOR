@@ -139,14 +139,14 @@ create policy "select_movement_orders_own_company"
   on public.tire_movement_orders for select to authenticated
   using (
     company_id = (select public.current_company_id())
-    and (select public.current_profile_role()) in ('operator', 'tire_supervisor', 'admin')
+    and (select public.current_profile_role()) in ('operator', 'tire_supervisor')
   );
 
 create policy "select_movement_executions_own_company"
   on public.tire_movement_executions for select to authenticated
   using (
     company_id = (select public.current_company_id())
-    and (select public.current_profile_role()) in ('operator', 'tire_supervisor', 'admin')
+    and (select public.current_profile_role()) in ('operator', 'tire_supervisor')
   );
 
 revoke all on table public.tire_movement_orders from public, anon, authenticated;
@@ -213,7 +213,7 @@ declare
   v_reason text;
 begin
   v_profile := public.fn_require_tire_movement_profile(
-    array['tire_supervisor', 'admin']
+    array['tire_supervisor']
   );
 
   if p_order_id is null or p_unit_id is null then
