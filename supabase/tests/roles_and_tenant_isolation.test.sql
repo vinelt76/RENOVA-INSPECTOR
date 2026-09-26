@@ -41,10 +41,10 @@ begin
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename in ('tire_movement_orders', 'tire_movement_executions')
-      and (polqual::text like '%fleet_manager%'
-        or polqual::text like '%workshop_manager%'
-        or polqual::text like '%supervisor%'
-        or polqual::text like '%admin%')
+      and (qual::text like '%fleet_manager%'
+        or qual::text like '%workshop_manager%'
+        or qual::text like '%supervisor%'
+        or qual::text like '%admin%')
   ) then
     raise exception 'RLS: una política de Movimientos conserva roles heredados';
   end if;
