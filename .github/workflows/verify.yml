@@ -46,8 +46,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes postgresql-client
-      - name: Test authenticated inspector RPCs
+      - name: Test authenticated inspector and role isolation RPCs
         run: >-
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           --set ON_ERROR_STOP=1
           --file supabase/tests/mobile_inspector_rpcs_auth.test.sql
+          --file supabase/tests/roles_and_tenant_isolation.test.sql
