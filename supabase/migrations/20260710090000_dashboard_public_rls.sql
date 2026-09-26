@@ -56,7 +56,6 @@ alter table public.tire_installations enable row level security;
 alter table public.tire_removals enable row level security;
 alter table public.inspections enable row level security;
 alter table public.inspection_measurements enable row level security;
-alter table public.company_settings enable row level security;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Políticas — solo SELECT (los dashboards son de solo lectura; la
@@ -103,10 +102,6 @@ create policy "select_own_company" on public.inspections
   using (company_id = (select public.current_company_id()));
 
 create policy "select_own_company" on public.inspection_measurements
-  for select to authenticated
-  using (company_id = (select public.current_company_id()));
-
-create policy "select_own_company" on public.company_settings
   for select to authenticated
   using (company_id = (select public.current_company_id()));
 
