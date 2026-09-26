@@ -48,7 +48,7 @@ begin
     raise exception 'RLS: una política de Movimientos conserva roles heredados';
   end if;
 
-  insert into public.companies (id, name, slug)
+  insert into public.companies (id, name, legacy_code)
   values
     (v_company_id, 'TEST-ROLES-A', 'test-roles-a'),
     (v_other_company_id, 'TEST-ROLES-B', 'test-roles-b');
