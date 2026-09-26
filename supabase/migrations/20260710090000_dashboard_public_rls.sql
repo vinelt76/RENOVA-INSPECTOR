@@ -131,7 +131,7 @@ revoke insert, update, delete, truncate, references, trigger
   on public.companies, public.profiles, public.vehicle_configs, public.axles,
      public.tire_positions, public.units, public.rtd_thresholds, public.tire_casings,
      public.tire_life_cycles, public.tire_installations, public.tire_removals,
-     public.inspections, public.inspection_measurements, public.company_settings
+     public.inspections, public.inspection_measurements
   from anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────────
