@@ -12,7 +12,7 @@
 --   * La empresa NUNCA viaja desde el navegador: se deriva del profile del
 --     usuario autenticado (fn_require_workshop_profile) y toda entidad tocada
 --     se valida contra esa empresa.
---   * Rol requerido: workshop_manager, fleet_manager o admin (activo).
+--   * Rol requerido: tire_supervisor (activo).
 --   * REVOKE de PUBLIC/anon; EXECUTE solo para authenticated.
 --
 -- Integridad (los índices parciales existentes son el candado final):
