@@ -20,6 +20,8 @@ export interface InspeccionCabecera {
   fecha: string;
   km_odometro: number;
   foto_unidad: string | null;
+  /** UID del inspector que capturó offline; null en cabeceras anteriores a schema v5. */
+  captured_by_user_id: string | null;
   created_at: string;
   updated_at: string;
   sincronizado: number;

@@ -1,0 +1,31 @@
+name: Verify RENOVA
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install root tools
+        run: npm ci
+      - name: Install inspection app
+        run: npm ci
+        working-directory: app
+      - name: Install operator app
+        run: npm ci
+        working-directory: app movimientos
+      - name: Install dashboard test runner
+        run: npm ci
+        working-directory: WEB/movimientos
+      - name: Run tests, lint, docs checks, builds, and static bundle
+        run: npm run verify
