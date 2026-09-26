@@ -9,6 +9,7 @@ declare
   v_other_company_id uuid := gen_random_uuid();
   v_inspector_id uuid := gen_random_uuid();
   v_operator_id uuid := gen_random_uuid();
+  v_supervisor_id uuid := gen_random_uuid();
   v_company_name text;
   v_config_id uuid := gen_random_uuid();
   v_unit_id uuid := gen_random_uuid();
@@ -109,12 +110,14 @@ begin
   insert into auth.users (id, aud, role, email, raw_app_meta_data, raw_user_meta_data)
   values
     (v_inspector_id, 'authenticated', 'authenticated', 'test-inspector-' || left(v_inspector_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
-    (v_operator_id, 'authenticated', 'authenticated', 'test-operator-' || left(v_operator_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb);
+    (v_operator_id, 'authenticated', 'authenticated', 'test-operator-' || left(v_operator_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb),
+    (v_supervisor_id, 'authenticated', 'authenticated', 'test-supervisor-' || left(v_supervisor_id::text, 8) || '@invalid.example', '{}'::jsonb, '{}'::jsonb);
 
   insert into public.profiles (id, company_id, full_name, role)
   values
     (v_inspector_id, v_company_id, 'TEST Inspector', 'inspector'),
-    (v_operator_id, v_company_id, 'TEST Operator', 'operator');
+    (v_operator_id, v_company_id, 'TEST Operator', 'operator'),
+    (v_supervisor_id, v_company_id, 'TEST Supervisor', 'tire_supervisor');
 
   insert into public.vehicle_configs (id, vehicle_type, notation, is_mvp)
   values (v_config_id, 'TEST BUS', 'TEST-RPC-' || left(v_config_id::text, 8), false);
@@ -139,6 +142,15 @@ begin
   begin
     perform * from public.get_umbrales_rtd(v_company_name);
     raise exception 'ROLE: permitió a operator usar la RPC de inspector';
+  exception when insufficient_privilege then
+    if sqlerrm not like '%perfil activo de inspector%' then raise; end if;
+  end;
+
+  -- La cuenta de supervisor (rol técnico `tire_supervisor`) tampoco usa las RPC de inspección.
+  perform set_config('request.jwt.claims', json_build_object('sub', v_supervisor_id, 'role', 'authenticated')::text, true);
+  begin
+    perform * from public.get_umbrales_rtd(v_company_name);
+    raise exception 'ROLE: permitió a tire_supervisor usar la RPC de inspector';
   exception when insufficient_privilege then
     if sqlerrm not like '%perfil activo de inspector%' then raise; end if;
   end;
