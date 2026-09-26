@@ -49,13 +49,17 @@ interface Props {
   onAccordionChange?: (expanded: boolean) => void;
   showBuscarOtra?: boolean;
   onBuscarOtra?: () => void;
+  positionState: 'empty' | 'partial' | 'invalid' | 'complete';
+  invalidFields: string[];
+  rtdMovi: number | null;
+  idi: number | null;
 }
 
 export default function FormBody({
   data, commit, marcas, modelos, medidas, reencauches, anomalias, valvulas, condiciones,
   r1Ref, r2Ref, r3Ref, r4Ref, presionRef,
   onNewMarca, onNewModelo, onNewMedida, onNewReencauche, onAccordionChange,
-  showBuscarOtra, onBuscarOtra,
+  showBuscarOtra, onBuscarOtra, positionState, invalidFields, rtdMovi, idi,
 }: Props) {
   const remRefs = { r1: r1Ref, r2: r2Ref, r3: r3Ref, r4: r4Ref };
   // R4 siempre alcanzable por Enter, en cualquier eje: es un campo opcional,
@@ -140,6 +144,7 @@ export default function FormBody({
             onBlur={() => setFocusedRem(null)}
             onKeyDown={handleRemKey(key)}
             placeholder="—"
+            aria-invalid={invalidFields.includes(key)}
             style={{
               width: '100%', border: 'none', outline: 'none', textAlign: 'center',
               fontSize: 24, fontWeight: 800,
@@ -278,6 +283,11 @@ export default function FormBody({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
           {remCell('r1', 'R1')}{remCell('r2', 'R2')}{remCell('r3', 'R3')}{remCell('r4', 'R4')}
         </div>
+        {positionState === 'invalid' && (
+          <div role="alert" style={{ fontSize: 11, color: ORANGE, fontWeight: 800, marginTop: 8 }}>
+            Revisa {invalidFields.filter(field => field !== 'presion').map(field => field.toUpperCase()).join(', ') || 'los remanentes'}: ingresa valores entre 0 y 22 mm.
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '0 2px' }}>
@@ -296,6 +306,7 @@ export default function FormBody({
             onBlur={presionDone}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
             placeholder="—"
+            aria-invalid={invalidFields.includes('presion')}
             style={{
               flex: 1, minWidth: 0, border: 'none', outline: 'none', fontSize: 32, fontWeight: 800,
               color: data.presion ? VALUE_COLOR : BORDER_DARK, padding: 0, background: 'transparent',
@@ -304,7 +315,23 @@ export default function FormBody({
           />
           <span style={{ fontSize: 13, color: LABEL_BLUE, fontWeight: 700, marginLeft: 8, letterSpacing: '0.04em', flexShrink: 0 }}>psi</span>
         </div>
+        {invalidFields.includes('presion') && (
+          <div role="alert" style={{ fontSize: 11, color: ORANGE, fontWeight: 800, marginTop: 8 }}>
+            Revisa la presión: ingresa un valor entre 60 y 200 psi.
+          </div>
+        )}
       </div>
+
+      {(rtdMovi !== null || positionState === 'partial') && (
+        <div style={{ margin: '0 2px', border: `2px solid ${BORDER_DARK}`, borderRadius: 10, padding: '12px 14px', background: FIELD_DARK }}>
+          <div style={{ color: LABEL_BLUE, fontSize: 10, fontWeight: 800, letterSpacing: '0.1em' }}>ESTADO DE LA POSICIÓN</div>
+          {rtdMovi !== null ? (
+            <div style={{ display: 'flex', gap: 16, marginTop: 7, color: VALUE_COLOR, fontSize: 15, fontWeight: 800, fontVariantNumeric: 'tabular-nums' as const }}>
+              <span>RTD MOVI {rtdMovi} mm</span><span>IDI {idi}</span>
+            </div>
+          ) : <div style={{ color: YELLOW, fontSize: 12, fontWeight: 800, marginTop: 7 }}>Faltan mediciones para completar esta posición.</div>}
+        </div>
+      )}
 
       <div style={{ padding: '0 2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>

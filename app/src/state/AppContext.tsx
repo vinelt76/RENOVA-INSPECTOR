@@ -5,7 +5,7 @@ import { pullEmpresas } from '../sync/pullEmpresas';
 import { pullUmbrales } from '../sync/pullUmbrales';
 import { drainSyncQueue } from '../sync/drainQueue';
 import { AppContext, type AppState } from './context';
-import { loadInspectorProfile, signOutInspector } from '../auth/auth';
+import { cachedInspectorProfile, loadInspectorProfile, signOutInspector } from '../auth/auth';
 import { supabase } from '../sync/supabaseClient';
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -29,8 +29,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const profile = await loadInspectorProfile(userId);
-        await pullEmpresas();
+        let profile;
+        try {
+          profile = await loadInspectorProfile(userId);
+        } catch (error) {
+          profile = cachedInspectorProfile(userId);
+          if (!profile) throw error;
+          console.warn('Usando perfil local del inspector hasta recuperar conexión.', error);
+        }
+        await pullEmpresas().catch(error => console.warn('pullEmpresas error:', error));
         const empresas = await empresaRepo.listAll();
         const empresa = empresas.find(e => e.nombre.trim().toLowerCase() === profile.company.name.trim().toLowerCase());
         if (!empresa) throw new Error(`No se encontró localmente la empresa ${profile.company.name}.`);

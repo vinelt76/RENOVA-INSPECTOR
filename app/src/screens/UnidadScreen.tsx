@@ -57,6 +57,7 @@ export default function UnidadScreen() {
   const [recientes, setRecientes] = useState<Unidad[]>([]);
   const [focusedField, setFocusedField] = useState<'search' | 'odometro' | null>(null);
   const [loadingSupabase, setLoadingSupabase] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [terminando, setTerminando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -81,7 +82,7 @@ export default function UnidadScreen() {
   const q = query.trim();
   const showResult = q.length >= 1;
   const match = sugerencias.length === 1 && sugerencias[0].numero === q ? sugerencias[0] : null;
-  const noExiste = showResult && !loadingSupabase && !match && sugerencias.length === 0;
+  const noExiste = showResult && !loadingSupabase && !searchError && !match && sugerencias.length === 0;
 
   const kmPrev = match ? (ultimaInsp?.odometro ?? 0) : 0;
   const kmActual = parseInt(odometro || '0', 10);
@@ -107,6 +108,7 @@ export default function UnidadScreen() {
     setConfig('');
     setUltimaInsp(null);
     setLoadingSupabase(false);
+    setSearchError(null);
     if (clean.length >= 1 && empresaId) {
       const results = await unidadRepo.search(empresaId, clean);
       if (latestQuery.current !== clean) return; // resultado obsoleto
@@ -128,6 +130,13 @@ export default function UnidadScreen() {
             if (imported) await selectUnidad(imported);
           } else {
             setShowSugerencias(true);
+          }
+        } catch (error) {
+          if (latestQuery.current === clean) {
+            console.warn('No se pudo verificar la unidad en Supabase:', error);
+            setSugerencias([]);
+            setShowSugerencias(false);
+            setSearchError('No pudimos verificar esta unidad sin conexión. Revisa la señal antes de registrarla como nueva.');
           }
         } finally {
           if (latestQuery.current === clean) setLoadingSupabase(false);
@@ -167,6 +176,7 @@ export default function UnidadScreen() {
     setSugerencias([]);
     setShowSugerencias(false);
     setUltimaInsp(null);
+    setSearchError(null);
     inputRef.current?.focus();
   };
 
@@ -346,7 +356,7 @@ export default function UnidadScreen() {
 
         <div style={{ fontSize: 11, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', marginBottom: 10, flexShrink: 0 }}>UNIDAD</div>
 
-        <div style={{ border: `2px solid ${focusedField === 'search' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ border: `2px solid ${focusedField === 'search' ? ORANGE : BORDER_DARK}`, borderRadius: 14, display: 'flex', alignItems: 'center', padding: '0 16px', background: FIELD_DARK, transition: 'border-color 0.15s', flexShrink: 0, position: 'relative' }}>
           <SearchIcon active={!!match} />
           <input
             ref={inputRef}
@@ -356,6 +366,9 @@ export default function UnidadScreen() {
             onBlur={() => { setFocusedField(null); setTimeout(() => setShowSugerencias(false), 150); }}
             autoCapitalize="characters"
             autoCorrect="off"
+            aria-autocomplete="list"
+            aria-expanded={showSugerencias}
+            aria-controls="sugerencias-unidad"
             placeholder="N.º de unidad"
             className="dark-input"
             style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', padding: '16px 0', fontSize: 20, fontWeight: 800, color: VALUE_COLOR, background: 'transparent', fontFamily: MONO, letterSpacing: '0.04em' }}
@@ -364,10 +377,12 @@ export default function UnidadScreen() {
             <button onClick={reset} aria-label="Borrar" style={{ background: 'none', border: 'none', color: LABEL_BLUE, fontSize: 16, cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
           )}
           {showSugerencias && sugerencias.length > 0 && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: -2, right: -2, background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`, borderRadius: 12, overflow: 'hidden', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+            <div id="sugerencias-unidad" role="listbox" aria-label="Unidades encontradas" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: -2, right: -2, background: FIELD_DARK, border: `2px solid ${BORDER_DARK}`, borderRadius: 12, overflow: 'hidden', zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
               {sugerencias.map(u => (
                 <button
                   key={u.numero}
+                  role="option"
+                  aria-selected={u.numero === match?.numero}
                   onMouseDown={e => { e.preventDefault(); selectUnidad(u); setShowSugerencias(false); }}
                   style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: `1px solid ${BORDER_DARK}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: MONO, textAlign: 'left', minHeight: 52 }}
                 >
@@ -378,6 +393,13 @@ export default function UnidadScreen() {
             </div>
           )}
         </div>
+
+        {searchError && (
+          <div role="alert" style={{ marginTop: 10, border: `2px solid ${ORANGE}`, borderRadius: 10, padding: '11px 13px', color: ORANGE, fontSize: 11, fontWeight: 800, lineHeight: 1.45 }}>
+            {searchError}
+            <button type="button" onClick={() => void handleSearch(query)} style={{ display: 'block', marginTop: 8, padding: 0, border: 'none', background: 'none', color: VALUE_COLOR, font: `800 11px ${MONO}`, textDecoration: 'underline' }}>VOLVER A INTENTAR</button>
+          </div>
+        )}
 
         {!showResult && recientes.length > 0 && (
           <div style={{ marginTop: 20 }}>

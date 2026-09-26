@@ -1,6 +1,6 @@
 ---
 title: "Flujo de inspección y sincronización"
-updated: 2026-07-12
+updated: 2026-09-22
 status: vigente
 sources: [specs/flujo_inspeccion.md, app/src/screens, app/src/db, app/src/sync]
 ---
@@ -44,11 +44,13 @@ sequenceDiagram
 
 ## Fallos y garantías
 
+- Inicio sin red con sesión previa: si el perfil remoto no responde, la app recupera el perfil de inspector almacenado en el equipo y conserva su empresa. Si no existe una sesión o perfil local válido, solicita iniciar sesión.
 - Sin configuración Supabase: no se intenta enviar y la app sigue local.
 - Error aislado: no bloquea otras cabeceras.
 - Reintento: `2^intentos` segundos, tope 300 s.
 - Disparadores: montaje de app, evento `online`, nuevo guardado y cierre del día.
 - No existe un temporizador autónomo que despierte justo al vencer el backoff.
+- La UI distingue **guardando en este equipo**, **guardado en este equipo**, **pendiente de sincronizar**, **enviado** y errores de persistencia local. «Enviado» exige que no queden filas pendientes, incluidas las que esperan backoff.
 - Edición durante push: el guard por `created_at` evita marcar como enviada una versión vieja.
 - Cierre del día: solo borra local si existe confirmación positiva; cabeceras legacy sin cola se pushean directamente antes de borrar.
 

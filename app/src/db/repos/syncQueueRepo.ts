@@ -33,6 +33,14 @@ export const syncQueueRepo = {
     return (result.values ?? []) as SyncQueue[];
   },
 
+  async pendientesTotales(): Promise<number> {
+    const db = await getDb();
+    const result = await db.query(
+      'SELECT COUNT(*) AS total FROM sync_queue WHERE enviado = 0',
+    );
+    return Number(result.values?.[0]?.total ?? 0);
+  },
+
   async getByRegistro(tabla: string, registroId: string): Promise<SyncQueue | null> {
     const db = await getDb();
     const result = await db.query(

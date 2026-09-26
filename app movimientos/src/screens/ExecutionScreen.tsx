@@ -10,6 +10,7 @@ import {
   validateDraft,
 } from '../lib/model';
 import { claimMovementOrder, completeMovementOrder, loadLatestInspectionForPosition } from '../lib/supabase';
+import { saveDraft } from '../lib/draftStorage';
 import type { ExecutionItem, MovementDraft, MovementOrder, OperatorProfile } from '../lib/types';
 
 interface Props {
@@ -39,6 +40,7 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
   const [showErrors, setShowErrors] = useState(false);
   const [prefilledPositions, setPrefilledPositions] = useState<Set<number>>(() => new Set());
   const [complete, setComplete] = useState(order.status === 'completed');
+  const [draftSaveState, setDraftSaveState] = useState<'saved' | 'saving' | 'error'>('saved');
   const errors = useMemo(() => validateDraft(draft, order.last_odometer), [draft, order.last_odometer]);
   const services = useMemo(() => groupExecutionServices(draft.items), [draft.items]);
   const completion = useMemo(() => completionSummary(draft), [draft]);
@@ -99,8 +101,10 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
 
   useEffect(() => {
     if (complete) return;
+    setDraftSaveState('saving');
     const timer = window.setTimeout(() => {
-      localStorage.setItem(storageKey, JSON.stringify({ ...draft, updatedAt: new Date().toISOString() }));
+      const saved = saveDraft(storageKey, { ...draft, updatedAt: new Date().toISOString() });
+      setDraftSaveState(saved ? 'saved' : 'error');
     }, 250);
     return () => window.clearTimeout(timer);
   }, [complete, draft, storageKey]);
@@ -243,8 +247,8 @@ export default function ExecutionScreen({ order, profile, onBack, onSignOut }: P
             </div>
           ) : (
             <div>
-              <span>BORRADOR GUARDADO EN ESTE EQUIPO</span>
-              <small>Si falla la señal, no pierdes lo escrito.</small>
+              <span>{draftSaveState === 'saving' ? 'GUARDANDO BORRADOR…' : draftSaveState === 'error' ? 'NO SE PUDO GUARDAR EL BORRADOR' : 'BORRADOR GUARDADO EN ESTE EQUIPO'}</span>
+              <small>{draftSaveState === 'error' ? 'Libera espacio en el equipo y vuelve a editar un dato para reintentar.' : 'Si falla la señal, no pierdes lo escrito.'}</small>
             </div>
           )}
           <button className={started ? 'primary-button' : 'secondary-button'} type="button" onClick={() => void (started ? submit() : startOrder())} disabled={submitting || starting}>

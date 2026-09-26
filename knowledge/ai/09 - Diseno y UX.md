@@ -1,6 +1,6 @@
 ---
 title: "Diseño y UX"
-updated: 2026-07-21
+updated: 2026-09-22
 status: vigente
 sources: [DESIGN.md, PRODUCT.md, design-principle.md, app/src/index.css, app/src/theme.ts, UI, WEB/buscador, WEB/servicios/servicios.css, WEB/shared/filter-bar.js, WEB/shared/filter-bar.css, WEB/movimientos/a11y.js, decisions/0005-buscador-global-objetos-navegables.md, decisions/0006-filtros-facetados-inspecciones-rendimiento.md, decisions/0007-definicion-de-servicio-ejecutado.md]
 ---
@@ -28,6 +28,8 @@ sources: [DESIGN.md, PRODUCT.md, design-principle.md, app/src/index.css, app/src
 - Mapa de posiciones comunica pendiente/parcial/completa.
 - Autoavance y teclado deben reducir toques, nunca ocultar errores.
 - Los objetivos táctiles deben tolerar trabajo de campo.
+- El mapa de posiciones distingue vacía, parcial, con datos por corregir y completa. Completa requiere R1/R2/R3 y presión en los rangos de `specs/flujo_inspeccion.md`; la salida a otra unidad exige que todas estén completas. Los estados llevan texto accesible además del color.
+- La búsqueda que necesita consultar el servidor no ofrece registrar una unidad como nueva si la verificación falla por falta de señal; explica el estado y permite reintentar.
 
 ## Patrón de filtro
 
@@ -128,6 +130,9 @@ son superficies vigentes.
   usa «Cancelar orden» para una cancelación auditada, en vez de presentar la operación como borrado.
 - El acceso del operario identifica el campo como «Correo o usuario» y muestra un ejemplo de correo
   CIVA; en móvil conserva el estado del borrador y resalta la posición con errores de validación.
+- En la vista web de unidad, el chip de sesión se resuelve desde el perfil autenticado y muestra el
+  rol efectivo. Así una cuenta de inspector no se presenta como supervisora cuando la pestaña de
+  Movimientos bloquea la emisión de órdenes.
 - La web exige elegir explícitamente la razón de salida antes de agregar un servicio, limita el
   listado inicial de inventario a búsquedas concretas y muestra el estado del borrador local.
 - La app de Movimientos identifica los datos precargados desde la última inspección y lleva el foco

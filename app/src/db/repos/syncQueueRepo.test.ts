@@ -49,4 +49,13 @@ describe('syncQueueRepo — guard contra push en vuelo con edición nueva (race 
     // porque el created_at capturado antes del push ya no matchea el de la fila.
     expect(run.mock.calls[0][0]).toContain('created_at = excluded.created_at');
   });
+
+  it('cuenta pendientes incluso cuando están esperando su próximo reintento', async () => {
+    query.mockResolvedValueOnce({ values: [{ total: 2 }] });
+
+    await expect(syncQueueRepo.pendientesTotales()).resolves.toBe(2);
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('WHERE enviado = 0'),
+    );
+  });
 });

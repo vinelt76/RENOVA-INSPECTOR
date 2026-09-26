@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { MONO, NAVY, LABEL_BLUE, BORDER_DARK, FIELD_DARK, VALUE_COLOR, ORANGE } from '../theme';
 
@@ -30,6 +30,8 @@ export default function AutocompleteField({
   const [open, setOpen] = useState(false);
   const [menuRect, setMenuRect] = useState({ left: 0, top: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputId = useId();
+  const listboxId = `${inputId}-opciones`;
 
   useEffect(() => { setQuery(value); }, [value]);
 
@@ -102,7 +104,7 @@ export default function AutocompleteField({
 
   return (
     <div style={{ width: '100%', boxSizing: 'border-box' }} ref={containerRef}>
-      {label && <label style={labelStyle}>{label}</label>}
+      {label && <label htmlFor={inputId} style={labelStyle}>{label}</label>}
       <div style={{ position: 'relative', width: '100%' }}>
         <div style={{
           display: 'flex', alignItems: 'center',
@@ -113,6 +115,11 @@ export default function AutocompleteField({
         }}>
           <input
             className="dark-input"
+            id={inputId}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={showDropdown}
+            aria-controls={listboxId}
             value={query}
             onChange={e => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
@@ -136,7 +143,7 @@ export default function AutocompleteField({
         </div>
 
         {showDropdown && createPortal(
-          <div style={{
+          <div id={listboxId} role="listbox" style={{
             position: 'fixed', top: menuRect.top, left: menuRect.left, width: menuRect.width, zIndex: 9999,
             background: NAVY, borderRadius: 6,
             marginTop: 4, maxHeight: 220, overflowY: 'auto',
@@ -145,6 +152,8 @@ export default function AutocompleteField({
             {filtered.map(opt => (
               <button
                 key={opt}
+                role="option"
+                aria-selected={opt === value}
                 onPointerDown={e => { e.preventDefault(); select(opt); }}
                 style={{
                   width: '100%', textAlign: 'left',
@@ -158,6 +167,7 @@ export default function AutocompleteField({
             {showAddNew && (
               <button
                 onPointerDown={e => { e.preventDefault(); handleNew(); }}
+                role="option"
                 style={{
                   width: '100%', textAlign: 'left', background: 'transparent',
                   border: 'none', padding: '10px 14px', fontSize: 13, fontWeight: 700,

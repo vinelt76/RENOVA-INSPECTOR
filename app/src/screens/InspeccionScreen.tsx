@@ -5,12 +5,15 @@ import { inspeccionRepo } from '../db/repos/inspeccionRepo';
 import { catalogoRepo } from '../db/repos/catalogoRepo';
 import { unidadRepo } from '../db/repos/unidadRepo';
 import { drainSyncQueue } from '../sync/drainQueue';
+import { syncQueueRepo } from '../db/repos/syncQueueRepo';
 import { waitForUmbralesPendientes } from '../sync/pullUmbrales';
 import { supabaseEnabled } from '../sync/supabaseClient';
 import { MONO, NAVY, ORANGE, YELLOW, GREEN, RED, SCREEN_DARK, FIELD_DARK, BORDER_DARK, LABEL_BLUE, VALUE_COLOR } from '../theme';
 import type { CatMarca, CatModelo, CatMedida, CatReencauche, CatAnomalia, CatValvula, CatConfiguracion, CatCondicion } from '../db/schema';
 import FormBody from './FormBody';
 import catalogoFlota from '../db/seed_data/catalogo_flota.json';
+import { assessInspectionPosition } from '../core/inspectionProgress';
+import { calcularIdi, calcularRtdMovi } from '../core/calculations';
 
 const empty = (): Record<string, string> => ({
   codigo: '', r1: '', r2: '', r3: '', r4: '',
@@ -31,11 +34,8 @@ export default function InspeccionScreen() {
   // snapshot de `data` de su render (lost update).
   const dataRef = useRef<Record<string, string>>(empty());
   const [store, setStore] = useState<Record<number, Record<string, string>>>({});
-  // Posiciones que el inspector ya visitó/vio en esta sesión — independiente de si
-  // quedaron completas. Habilita "cambiar de unidad" para poder probar el flujo
-  // sin llenar todos los campos obligatoriamente (ver commit de este cambio).
-  const [visitedPositions, setVisitedPositions] = useState<Set<number>>(new Set([1]));
-  const [flash, setFlash] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveRevisionRef = useRef(0);
   const [slideDir, setSlideDir] = useState<'up' | 'down' | null>(null);
   const [showSheet, setShowSheet] = useState(false);
 
@@ -51,7 +51,7 @@ export default function InspeccionScreen() {
   // Envío mínimo a Supabase (integración demo) — sin VITE_SUPABASE_URL/ANON_KEY
   // configuradas, supabaseEnabled es false y este estado nunca sale de 'idle'
   // (cero cambio de comportamiento respecto a hoy).
-  const [syncState, setSyncState] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
+  const [syncState, setSyncState] = useState<'idle' | 'sending' | 'ok' | 'pending' | 'error'>('idle');
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [syncRevision, setSyncRevision] = useState(0);
 
@@ -139,9 +139,6 @@ export default function InspeccionScreen() {
       };
     }
     setStore(newStore);
-    if (Object.keys(newStore).length > 0) {
-      setVisitedPositions(v => new Set([...v, ...Object.keys(newStore).map(Number)]));
-    }
     if (newStore[pos]) { setData(newStore[pos]); dataRef.current = newStore[pos]; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCabId]);
@@ -151,8 +148,6 @@ export default function InspeccionScreen() {
   const FILAS = configPos.map(c => c.posicion);
   const TOTAL = FILAS.length;
 
-  const flashSave = () => { setFlash(true); setTimeout(() => setFlash(false), 1400); };
-
   // commit por PARCHE: merge contra dataRef (estado real), nunca contra el
   // snapshot del render del caller — evita que un blur diferido pise teclas.
   const commit = async (patch: Record<string, string>) => {
@@ -160,25 +155,34 @@ export default function InspeccionScreen() {
     dataRef.current = next;
     setData(next);
     setStore(s => ({ ...s, [pos]: next }));
-    flashSave();
+    const revision = ++saveRevisionRef.current;
+    setSaveState('saving');
     if (activeCabId && empresaId) {
       // Si el pull de umbrales de la empresa (disparado sin esperar al elegirla,
       // AppContext.setEmpresa) todavía está en vuelo, esperarlo acá (con tope) para
       // no snapshotear el umbral sembrado 4/7/8 en vez del real de la empresa —
       // race detectada en code review de task_17 (2026-07-11). Resuelve al toque
       // si ya terminó (caso normal: buscar unidad + tipear odómetro ya da tiempo).
-      await waitForUmbralesPendientes();
-      const toNum = (v: string) => v === '' ? null : Number(v);
-      await inspeccionRepo.upsertNeumatico({
-        empresa_id: empresaId,
-        cabecera_id: activeCabId, posicion: pos,
-        codigo: next.codigo || null, marca: next.marca || null, modelo: next.modelo || null,
-        condicion: next.condicion || null, reencauche: next.reencauche || null,
-        medida: next.medida || null, r1: toNum(next.r1), r2: toNum(next.r2),
-        r3: toNum(next.r3), r4: toNum(next.r4), presion: toNum(next.presion),
-        tapa_valvula: next.tapaValvula || null, anomalia: next.anomalia || null,
-      });
-      setSyncRevision(r => r + 1);
+      try {
+        await waitForUmbralesPendientes();
+        const toNum = (v: string) => v === '' ? null : Number(v);
+        await inspeccionRepo.upsertNeumatico({
+          empresa_id: empresaId,
+          cabecera_id: activeCabId, posicion: pos,
+          codigo: next.codigo || null, marca: next.marca || null, modelo: next.modelo || null,
+          condicion: next.condicion || null, reencauche: next.reencauche || null,
+          medida: next.medida || null, r1: toNum(next.r1), r2: toNum(next.r2),
+          r3: toNum(next.r3), r4: toNum(next.r4), presion: toNum(next.presion),
+          tapa_valvula: next.tapaValvula || null, anomalia: next.anomalia || null,
+        });
+        if (revision === saveRevisionRef.current) setSaveState('saved');
+        setSyncRevision(r => r + 1);
+      } catch (error) {
+        console.error('No se pudo guardar la posición localmente:', error);
+        if (revision === saveRevisionRef.current) setSaveState('error');
+      }
+    } else if (revision === saveRevisionRef.current) {
+      setSaveState('error');
     }
   };
 
@@ -187,7 +191,6 @@ export default function InspeccionScreen() {
     const nextStore = { ...store, [pos]: dataRef.current };
     setStore(nextStore);
     setPos(n);
-    setVisitedPositions(v => v.has(n) ? v : new Set(v).add(n));
     const nextData = nextStore[n] || empty();
     dataRef.current = nextData;
     setData(nextData);
@@ -207,12 +210,9 @@ export default function InspeccionScreen() {
   // Estado de cada posición para el grid del sheet.
   // R4 es opcional en cualquier eje (reglas_negocio.md §1): A/B/C alcanzan
   // para marcar "completa", sin importar tipo_eje.
-  const posStatus = (p: number): 'completa' | 'parcial' | 'vacia' => {
+  const posStatus = (p: number) => {
     const d = p === pos ? data : (store[p] || empty());
-    const rtdOk = !!(d.r1 && d.r2 && d.r3);
-    if (rtdOk && d.presion) return 'completa';
-    if (d.r1 || d.r2 || d.r3 || d.r4 || d.presion) return 'parcial';
-    return 'vacia';
+    return assessInspectionPosition(d).state;
   };
 
   const posLabel = (p: number): string => {
@@ -222,20 +222,23 @@ export default function InspeccionScreen() {
     return `${eje}·${cfg.lado ?? ''}`;
   };
 
-  const statusColor = (s: 'completa' | 'parcial' | 'vacia') =>
-    s === 'completa' ? GREEN : s === 'parcial' ? YELLOW : BORDER_DARK;
+  const statusColor = (s: ReturnType<typeof posStatus>) =>
+    s === 'complete' ? GREEN : s === 'partial' ? YELLOW : s === 'invalid' ? ORANGE : BORDER_DARK;
 
-  const completas = FILAS.filter(p => posStatus(p) === 'completa').length;
+  const completas = FILAS.filter(p => posStatus(p) === 'complete').length;
 
   // Reset del indicador al entrar a una inspección distinta.
   useEffect(() => { setSyncState('idle'); }, [activeCabId]);
-  useEffect(() => { setVisitedPositions(new Set([1])); }, [activeCabId]);
 
-  // Cambiar de unidad NO exige campos completos, solo haber recorrido todas las
-  // posiciones (permite probar el flujo sin llenar RTD/presión/anomalía/etc.).
-  // La validación de campos obligatorios queda reservada al guardado final.
-  const allPositionsViewed = TOTAL > 0 && FILAS.every(p => visitedPositions.has(p));
-  const canChangeUnit = allPositionsViewed;
+  const allPositionsComplete = TOTAL > 0 && FILAS.every(p => posStatus(p) === 'complete');
+  const canChangeUnit = allPositionsComplete;
+  const assessment = assessInspectionPosition(data);
+  const rtdMovi = assessment.state === 'complete'
+    ? calcularRtdMovi(Number(data.r1), Number(data.r2), Number(data.r3), data.r4 ? Number(data.r4) : undefined)
+    : null;
+  const idi = assessment.state === 'complete'
+    ? calcularIdi(Number(data.r1), Number(data.r2), Number(data.r3), data.r4 ? Number(data.r4) : undefined)
+    : null;
 
   // Envío a Supabase: cada guardado local (vía `commit`) ya encoló la cabecera en
   // sync_queue (inspeccionRepo, task_17); este efecto solo dispara el drenado con
@@ -247,8 +250,14 @@ export default function InspeccionScreen() {
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
       setSyncState('sending');
-      const res = await drainSyncQueue();
-      setSyncState(res.pendientes === 0 ? 'ok' : 'error');
+      try {
+        await drainSyncQueue();
+        const totalPendientes = await syncQueueRepo.pendientesTotales();
+        setSyncState(totalPendientes === 0 ? 'ok' : 'pending');
+      } catch (error) {
+        console.warn('No se pudo actualizar el estado de sincronización:', error);
+        setSyncState('error');
+      }
     }, 1200);
     return () => { if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -287,18 +296,19 @@ export default function InspeccionScreen() {
           </div>
 
           {/* Tick de guardado — feedback de autosave local (SQLite) */}
-          {flash && (
-            <div className="tick-in" aria-label="Guardado" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: 'rgba(244,184,33,0.14)', borderRadius: 6, padding: '4px 8px' }}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 6.5L4.5 9L10 3" stroke={YELLOW} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span style={{ color: YELLOW, fontWeight: 800, fontSize: 10, letterSpacing: '0.06em' }}>GUARDADO EN ESTE EQUIPO</span>
+          {saveState !== 'idle' && (
+            <div aria-live="polite" className={saveState === 'saved' ? 'tick-in' : ''} style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: saveState === 'error' ? 'rgba(240,104,34,0.16)' : 'rgba(244,184,33,0.14)', borderRadius: 6, padding: '4px 8px' }}>
+              <span style={{ color: saveState === 'error' ? ORANGE : YELLOW, fontWeight: 800, fontSize: 10, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+                {saveState === 'saving' ? 'GUARDANDO…' : saveState === 'saved' ? 'GUARDADO EN ESTE EQUIPO' : 'NO SE PUDO GUARDAR'}
+              </span>
             </div>
           )}
 
           {/* Estado de envío a Supabase — solo visible si la integración está configurada (.env) */}
           {supabaseEnabled && syncState !== 'idle' && (
-            <div aria-label="Estado de sincronización" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: syncState === 'error' ? 'rgba(229,72,77,0.16)' : 'rgba(31,157,107,0.16)', borderRadius: 6, padding: '4px 8px' }}>
-              <span style={{ color: syncState === 'sending' ? LABEL_BLUE : syncState === 'ok' ? GREEN : RED, fontWeight: 800, fontSize: 10, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
-                {syncState === 'sending' ? 'SINCRONIZANDO…' : syncState === 'ok' ? '☁ ENVIADO' : '⚠ PENDIENTE DE SINCRONIZAR'}
+            <div aria-label="Estado de sincronización" style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, background: syncState === 'error' ? 'rgba(229,72,77,0.16)' : syncState === 'pending' ? 'rgba(244,184,33,0.14)' : 'rgba(31,157,107,0.16)', borderRadius: 6, padding: '4px 8px' }}>
+              <span style={{ color: syncState === 'sending' ? LABEL_BLUE : syncState === 'ok' ? GREEN : syncState === 'pending' ? YELLOW : RED, fontWeight: 800, fontSize: 10, letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                {syncState === 'sending' ? 'SINCRONIZANDO…' : syncState === 'ok' ? '☁ ENVIADO' : syncState === 'pending' ? '⚠ PENDIENTE DE SINCRONIZAR' : '⚠ ERROR DE SINCRONIZACIÓN'}
               </span>
             </div>
           )}
@@ -331,6 +341,10 @@ export default function InspeccionScreen() {
           onNewModelo={handleNewModelo}
           onNewMedida={handleNewMedida}
           onNewReencauche={handleNewReencauche}
+          positionState={assessment.state}
+          invalidFields={assessment.invalidFields}
+          rtdMovi={rtdMovi}
+          idi={idi}
           showBuscarOtra={canChangeUnit && posIdx === FILAS.length - 1}
           onBuscarOtra={handleExit}
         />
@@ -372,12 +386,16 @@ export default function InspeccionScreen() {
         >
           <div
             className="sheet-enter"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Elegir posición de inspección"
             style={{ background: FIELD_DARK, borderRadius: '16px 16px 0 0', width: '100%', minHeight: '62%', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', boxShadow: '0 -8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="hazard-edge" />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `12px 16px calc(20px + env(safe-area-inset-bottom, 0px))` }}>
               <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER_DARK, margin: '0 auto 16px' }} />
+              <button type="button" onClick={() => setShowSheet(false)} style={{ alignSelf: 'flex-end', border: 'none', background: 'transparent', color: VALUE_COLOR, minWidth: 44, minHeight: 44, font: `800 12px ${MONO}`, cursor: 'pointer' }}>CERRAR</button>
               <div style={{ fontSize: 10, fontWeight: 800, color: LABEL_BLUE, letterSpacing: '0.14em', textAlign: 'center', marginBottom: 16 }}>
                 POSICIONES — {completas}/{TOTAL} completas
               </div>
@@ -388,6 +406,7 @@ export default function InspeccionScreen() {
                   return (
                     <button
                       key={p}
+                      aria-label={`Posición ${p}, ${posStatus(p) === 'complete' ? 'completa' : posStatus(p) === 'partial' ? 'parcial' : posStatus(p) === 'invalid' ? 'con datos por corregir' : 'vacía'}`}
                       onClick={() => { setShowSheet(false); if (p !== pos) switchPos(p); }}
                       className="pressable"
                       style={{

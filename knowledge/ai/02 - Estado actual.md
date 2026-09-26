@@ -1,6 +1,6 @@
 ---
 title: "Estado actual verificado"
-updated: 2026-07-19
+updated: 2026-09-22
 status: vigente
 sources: [git, app/src, WEB, supabase/migrations, supabase/diagnostics/baseline_profile.sql, tasks_puesta_en_marcha_movimientos/STATE.md, tasks_pantalla_inventario/STATE.md]
 ---
@@ -11,7 +11,7 @@ sources: [git, app/src, WEB, supabase/migrations, supabase/diagnostics/baseline_
 
 | Subsistema | Estado al 2026-07-12 |
 |---|---|
-| App de inspección | Funcional, Android/Capacitor presente, tres rutas activas: empresa, unidad, inspección |
+| App de inspección | Funcional, Android/Capacitor presente, tres rutas activas: empresa, unidad, inspección; recupera perfil local con sesión previa sin red y muestra estados de persistencia y validación por posición |
 | App de movimientos | Android/Capacitor en `app movimientos/`: login de operario, empresa derivada del perfil, órdenes, captura salida/ingreso y borrador local |
 | Persistencia local | SQLite versionado hasta v4, seed idempotente y repositorios |
 | Cálculos | Motor TS con golden reference Python; RTD/IDI/presión FRÍO/VUR/tasa/ISA |

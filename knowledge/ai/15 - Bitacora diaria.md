@@ -1,6 +1,6 @@
 ---
 title: "Bitácora diaria"
-updated: 2026-08-23
+updated: 2026-09-22
 status: vigente
 sources: [knowledge/ai/bitacora, git, scripts/knowledge-day.mjs]
 ---
@@ -23,6 +23,7 @@ puede describir una decisión pasada, pero no tiene más autoridad que una spec 
 <!-- daily-index:start -->
 ### 2026
 
+- [[2026-09-22]]
 - [[2026-08-23]]
 - [[2026-07-29]]
 - [[2026-07-26]]

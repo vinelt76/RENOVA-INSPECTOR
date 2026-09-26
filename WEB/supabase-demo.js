@@ -73,6 +73,45 @@ function showBadge(mode /* "supabase" | "empty" */, detail) {
   }
 }
 
+const ROLE_LABELS = Object.freeze({
+  inspector: "INSPECTOR",
+  operator: "OPERARIO",
+  supervisor: "SUPERVISOR DE NEUMÁTICOS",
+  tire_supervisor: "SUPERVISOR DE NEUMÁTICOS",
+  fleet_manager: "JEFE DE FLOTA",
+});
+
+function profileLabel(profile) {
+  return ROLE_LABELS[profile?.role] || "USUARIO";
+}
+
+function profileInitials(profile) {
+  const names = String(profile?.full_name || "").trim().split(/\s+/).filter(Boolean);
+  return (names.slice(0, 2).map((name) => name[0]).join("") || "US").toUpperCase();
+}
+
+async function refreshUserChip(session) {
+  const chip = document.getElementById("user-chip");
+  if (!chip || !session?.user?.id) return null;
+
+  try {
+    const rows = await fetchView("profiles", {
+      select: "full_name,role,active",
+      id: `eq.${session.user.id}`,
+      limit: "1",
+    });
+    const profile = rows[0] || null;
+    const role = profile?.active ? profileLabel(profile) : "USUARIO INACTIVO";
+    chip.innerHTML = `<span class="ice">${profileInitials(profile)}</span>· ${role}`;
+    chip.setAttribute("aria-label", `Sesión: ${profile?.full_name || "usuario"}, ${role}`);
+    return profile;
+  } catch {
+    chip.innerHTML = '<span class="ice">US</span>· SESIÓN ACTIVA';
+    chip.setAttribute("aria-label", "Sesión activa");
+    return null;
+  }
+}
+
 function signIn(email, password) {
   if (!enabled) return Promise.reject(new Error("Supabase no configurado"));
   return supabase.auth.signInWithPassword({ email, password });
@@ -159,8 +198,12 @@ function requireAuth() {
   if (!enabled) return Promise.resolve(null);
   return new Promise((resolve) => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) return resolve(data.session);
-      renderLoginModal(resolve);
+      const finish = (session) => {
+        void refreshUserChip(session);
+        resolve(session);
+      };
+      if (data.session) return finish(data.session);
+      renderLoginModal(finish);
     });
   });
 }
@@ -197,6 +240,7 @@ window.RenovaSupabase = {
   signIn,
   signOut,
   getSession,
+  refreshUserChip,
   onAuthStateChange,
   requireAuth,
   onDataChange,
