@@ -77,9 +77,7 @@ function showBadge(mode /* "supabase" | "empty" */, detail) {
 const ROLE_LABELS = Object.freeze({
   inspector: "INSPECTOR",
   operator: "OPERARIO",
-  supervisor: "SUPERVISOR DE NEUMÁTICOS",
   tire_supervisor: "SUPERVISOR DE NEUMÁTICOS",
-  fleet_manager: "JEFE DE FLOTA",
 });
 
 function profileLabel(profile) {
